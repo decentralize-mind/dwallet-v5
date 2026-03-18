@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "dWallet",
+  "version": "2.0.0",
+  "description": "Your keys. Your crypto. Your freedom. A non-custodial Web3 wallet.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "dWallet",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://mainnet.infura.io/*",
+    "https://bsc-dataseed.binance.org/*",
+    "https://polygon-rpc.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

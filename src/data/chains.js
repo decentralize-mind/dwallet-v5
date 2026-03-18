@@ -1,0 +1,116 @@
+export const CHAINS = {
+  ethereum: {
+    id: "ethereum",
+    name: "Ethereum",
+    symbol: "ETH",
+    chainId: 1,
+    rpc: "https://mainnet.infura.io/v3/",
+    explorer: "https://etherscan.io",
+    color: "#627EEA",
+    icon: "⟠",
+    tokens: ["ETH", "USDC", "USDT", "DAI", "WBTC", "UNI", "LINK"],
+  },
+  bnb: {
+    id: "bnb",
+    name: "BNB Chain",
+    symbol: "BNB",
+    chainId: 56,
+    rpc: "https://bsc-dataseed.binance.org/",
+    explorer: "https://bscscan.com",
+    color: "#F0B90B",
+    icon: "⬡",
+    tokens: ["BNB", "CAKE", "USDT", "BUSD", "XVS"],
+  },
+  polygon: {
+    id: "polygon",
+    name: "Polygon",
+    symbol: "MATIC",
+    chainId: 137,
+    rpc: "https://polygon-rpc.com/",
+    explorer: "https://polygonscan.com",
+    color: "#8247E5",
+    icon: "◈",
+    tokens: ["MATIC", "USDC", "USDT", "WETH", "AAVE"],
+  },
+  solana: {
+    id: "solana",
+    name: "Solana",
+    symbol: "SOL",
+    chainId: null,
+    rpc: "https://api.mainnet-beta.solana.com",
+    explorer: "https://solscan.io",
+    color: "#9945FF",
+    icon: "◎",
+    tokens: ["SOL", "USDC", "RAY", "SRM", "MNGO"],
+  },
+};
+
+export const TOKEN_PRICES = {
+  ETH: 3200,
+  BNB: 420,
+  MATIC: 0.85,
+  SOL: 180,
+  USDC: 1.0,
+  USDT: 1.0,
+  DAI: 1.0,
+  WBTC: 67000,
+  UNI: 8.5,
+  LINK: 14.2,
+  CAKE: 2.5,
+  BUSD: 1.0,
+  XVS: 7.3,
+  WETH: 3200,
+  AAVE: 92.0,
+  RAY: 1.8,
+  SRM: 0.4,
+  MNGO: 0.03,
+};
+
+export const TOKEN_ICONS = {
+  ETH: "⟠",
+  BNB: "⬡",
+  MATIC: "◈",
+  SOL: "◎",
+  USDC: "$",
+  USDT: "₮",
+  DAI: "⬙",
+  WBTC: "₿",
+  UNI: "🦄",
+  LINK: "⬡",
+  CAKE: "🎂",
+  BUSD: "$",
+};
+
+export const DEFAULT_TOKENS = {
+  ethereum: ["ETH", "USDC", "USDT", "DAI"],
+  bnb: ["BNB", "CAKE", "USDT", "BUSD"],
+  polygon: ["MATIC", "USDC", "USDT"],
+  solana: ["SOL", "USDC"],
+};
+
+export const SWAP_PAIRS = [
+  { from: "ETH", to: "USDC", rate: 3200, fee: 0.003 },
+  { from: "USDC", to: "ETH", rate: 0.0003125, fee: 0.003 },
+  { from: "ETH", to: "DAI", rate: 3195, fee: 0.003 },
+  { from: "BNB", to: "USDT", rate: 418, fee: 0.002 },
+  { from: "MATIC", to: "USDC", rate: 0.84, fee: 0.002 },
+  { from: "SOL", to: "USDC", rate: 179, fee: 0.0025 },
+];
+
+export const MOCK_NFTS = [
+  { id: 1, name: "CryptoPunk #4821", collection: "CryptoPunks", floor: "68.5 ETH", image: "👾", chain: "ethereum" },
+  { id: 2, name: "Bored Ape #9381", collection: "BAYC", floor: "12.2 ETH", image: "🐒", chain: "ethereum" },
+  { id: 3, name: "Azuki #2042", collection: "Azuki", floor: "4.8 ETH", image: "🌸", chain: "ethereum" },
+  { id: 4, name: "DeGod #1337", collection: "DeGods", floor: "18 SOL", image: "👑", chain: "solana" },
+];
+
+export const DAPPS = [
+  { name: "Uniswap", category: "DEX", icon: "🦄", url: "https://app.uniswap.org", chain: "ethereum" },
+  { name: "Aave", category: "Lending", icon: "👻", url: "https://app.aave.com", chain: "ethereum" },
+  { name: "OpenSea", category: "NFT", icon: "🌊", url: "https://opensea.io", chain: "ethereum" },
+  { name: "PancakeSwap", category: "DEX", icon: "🥞", url: "https://pancakeswap.finance", chain: "bnb" },
+  { name: "QuickSwap", category: "DEX", icon: "⚡", url: "https://quickswap.exchange", chain: "polygon" },
+  { name: "Raydium", category: "DEX", icon: "☀️", url: "https://raydium.io", chain: "solana" },
+  { name: "MakerDAO", category: "Stablecoin", icon: "🔨", url: "https://makerdao.com", chain: "ethereum" },
+  { name: "Compound", category: "Lending", icon: "🏦", url: "https://app.compound.finance", chain: "ethereum" },
+];

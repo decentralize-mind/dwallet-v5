@@ -1,0 +1,26 @@
+{
+  "name": "dwallet",
+  "private": true,
+  "version": "5.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview --port ${PORT:-3000} --host"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ethers": "^6.13.4",
+    "@scure/bip39": "^1.4.0",
+    "@scure/bip32": "^1.5.0",
+    "@noble/hashes": "^1.6.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.5"
+  }
+}
