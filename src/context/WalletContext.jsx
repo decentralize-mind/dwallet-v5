@@ -197,16 +197,29 @@ export function WalletProvider({ children }) {
   };
 
   // ── Create wallet ──────────────────────────────────────────────────────────
+  // Step 1: generate mnemonic and password — does NOT save yet
+  // Returns the mnemonic for display on backup screen
   const createWallet = async (pwd) => {
-    const mnemonic   = generateMnemonic();
-    const seed       = mnemonicToSeedSync(mnemonic);
-    const derived    = deriveWalletFromSeed(seed, 0);
-    const walletData = {
+    const mnemonic = generateMnemonic();
+    // Store pending wallet in sessionStorage only — not saved until confirmWallet()
+    const seed    = mnemonicToSeedSync(mnemonic);
+    const derived = deriveWalletFromSeed(seed, 0);
+    const pending = {
       mnemonic,
       accounts: [{ name: "Account 1", address: derived.address, privateKey: derived.privateKey, index: 0 }],
       activeAccount: 0,
       createdAt: Date.now(),
     };
+    sessionStorage.setItem("toklo_pending_wallet", JSON.stringify({ data: pending, pwd }));
+    // Do NOT call setWallet or setIsLocked here — stay on onboarding
+    return mnemonic;
+  };
+
+  // Step 2: called after user verifies seed phrase — NOW save permanently
+  const confirmWallet = async () => {
+    const raw = sessionStorage.getItem("toklo_pending_wallet");
+    if (!raw) throw new Error("No pending wallet found");
+    const { data: walletData, pwd } = JSON.parse(raw);
     const encrypted = await encryptData(JSON.stringify(walletData), pwd);
     localStorage.setItem(STORAGE_KEY, encrypted);
     setPassword(pwd);
@@ -214,7 +227,7 @@ export function WalletProvider({ children }) {
     setIsLocked(false);
     saveSession(walletData, pwd);
     resetInactivityTimer();
-    return mnemonic;
+    sessionStorage.removeItem("toklo_pending_wallet");
   };
 
   // ── Import wallet ──────────────────────────────────────────────────────────
@@ -239,6 +252,16 @@ export function WalletProvider({ children }) {
   };
 
   // ── Unlock ─────────────────────────────────────────────────────────────────
+  // Verify password and return decrypted mnemonic — used by Settings
+  const verifyPassword = async (pwd) => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    try {
+      const data = JSON.parse(await decryptData(stored, pwd));
+      return data.mnemonic || null;
+    } catch { return null; }
+  };
+
   const unlockWallet = async (pwd) => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) throw new Error("No wallet found");
@@ -382,7 +405,7 @@ export function WalletProvider({ children }) {
       currentAddress, currentChain, totalUSDValue,
       loadingBal, loadingTx, gasInfo, ensName, setEnsName,
       notification, notify,
-      createWallet, importWallet, unlockWallet,
+      createWallet, confirmWallet, importWallet, unlockWallet, verifyPassword,
       lockWallet, resetWallet,
       sendTransaction, addAccount, switchAccount,
       refreshBalances: (addr) => refreshBalances(addr, activeChain),

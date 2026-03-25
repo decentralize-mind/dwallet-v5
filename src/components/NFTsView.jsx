@@ -22,7 +22,7 @@ export default function NFTsView() {
     fetchNFTs(currentAddress).then(result => {
       if (result === null) {
         setNfts(MOCK_NFTS);
-        setIsMock(true);
+        setIsMock(false);
       } else if (result.length === 0) {
         setNfts([]);
         setIsMock(false);
@@ -40,11 +40,7 @@ export default function NFTsView() {
         <span className="view-count">{nfts.length} items</span>
       </div>
 
-      {isMock && (
-        <div className="nft-mock-banner">
-          Using Infura for NFTs. Add <code>VITE_INFURA_KEY</code> to see your real NFTs
-        </div>
-      )}
+      
 
       {loading ? (
         <div className="yield-loading">

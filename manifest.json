@@ -1,18 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "dWallet",
+  "name": "Toklo \u2014 DeFi Wallet",
   "version": "2.0.0",
-  "description": "Your keys. Your crypto. Your freedom. A non-custodial Web3 wallet.",
+  "description": "Non-custodial DeFi wallet with AI agent and DWT token ecosystem",
   "action": {
     "default_popup": "index.html",
     "default_title": "dWallet",
     "default_icon": {
-      "16":  "icons/icon16.png",
-      "48":  "icons/icon48.png",
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://mainnet.infura.io/*",
     "https://bsc-dataseed.binance.org/*",
@@ -21,9 +23,18 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
-  "icons": {
-    "16":  "icons/icon16.png",
-    "48":  "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "short_name": "Toklo",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "theme_color": "#6366f1",
+  "background_color": "#f0f2f5"
 }

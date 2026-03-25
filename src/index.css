@@ -1,10 +1,28 @@
+/* ─── Toklo Light Theme ─────────────────────────────────────── */
+:root {
+  --bg:      #f0f2f5 !important;
+  --bg2:     #ffffff !important;
+  --bg3:     #f8fafc !important;
+  --bg4:     #f1f5f9 !important;
+  --text:    #0f172a !important;
+  --text2:   #475569 !important;
+  --text3:   #94a3b8 !important;
+  --border:  rgba(0,0,0,0.08) !important;
+  --shadow:  0 2px 12px rgba(0,0,0,0.06) !important;
+}
+
+html, body, #root {
+  background: #f0f2f5 !important;
+  color: #0f172a !important;
+}
+
 /* ─── dWallet Global Styles ─────────────────────────────────────── */
 :root {
-  --bg: #0d0f14;
+  --bg: #f0f2f5;
   --bg2: #151820;
   --bg3: #1c1f2a;
   --bg4: #242838;
-  --border: rgba(255,255,255,0.08);
+  --border: rgba(0,0,0,0.08);
   --border-hover: rgba(255,255,255,0.15);
   --text: #f0f2f8;
   --text2: #9ca3b0;
@@ -31,7 +49,7 @@
 
 body {
   font-family: var(--font);
-  background: var(--bg);
+  background: #f0f2f5;
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -2355,4 +2373,243 @@ select.field {
   flex-shrink: 0; margin-top: 2px;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+/* ─── WalletConnect modal ─────────────────────────────────────── */
+.wc-how {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wc-step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.wc-step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wc-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 8px;
+}
+.wc-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0;
+  gap: 12px;
+}
+.wc-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.wc-loading-text { font-size: 15px; font-weight: 600; }
+.wc-loading-sub  { font-size: 13px; color: var(--text3); }
+.wc-proposal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.wc-dapp-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wc-dapp-name { font-size: 16px; font-weight: 700; margin: 0; }
+.wc-dapp-desc { font-size: 12px; color: var(--text3); margin: 0; }
+.wc-permissions {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wc-perm-title { font-size: 12px; color: var(--text3); margin: 0 0 4px; }
+.wc-perm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.wc-perm-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wc-perm--ok   { background: var(--green-light); color: var(--green); }
+.wc-perm--warn { background: var(--amber-light); color: var(--amber); }
+.wc-connecting-as {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.wc-connecting-label { color: var(--text3); }
+.wc-connecting-addr  { color: var(--text); }
+.wc-connected { text-align: center; }
+.wc-session-info {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin: 12px 0;
+  text-align: left;
+}
+
+
+/* ─── Portfolio chart ─────────────────────────────────────── */
+.portfolio-chart-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.portfolio-chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.portfolio-change{font-size:14px;font-weight:700}
+.portfolio-period-label{font-size:12px;color:var(--text3)}
+.portfolio-period-tabs{display:flex;gap:4px}
+.period-tab{background:none;border:1px solid var(--border);border-radius:12px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text3);font-family:var(--font);transition:all 0.12s}
+.period-tab--active{background:var(--accent);border-color:var(--accent);color:white}
+.portfolio-canvas-wrap{height:80px;position:relative}
+.portfolio-canvas{width:100%;height:100%;display:block}
+.portfolio-loading{display:flex;align-items:center;justify-content:center;height:80px}
+
+/* ─── Price alerts ─────────────────────────────────────────── */
+.alert-perm-banner{display:flex;align-items:center;justify-content:space-between;background:var(--amber-light);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--amber);margin-bottom:12px;gap:10px}
+.alert-form{display:flex;flex-direction:column;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px}
+.alert-form-row{display:flex;gap:8px}
+.alert-list{display:flex;flex-direction:column;gap:6px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.alert-item--triggered{border-color:var(--green);background:var(--green-light)}
+.alert-icon{font-size:16px;flex-shrink:0}
+.alert-info{flex:1;display:flex;flex-direction:column;gap:3px}
+.alert-title{font-size:13px;font-weight:600}
+.alert-sub{font-size:11px;color:var(--text3)}
+.alert-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px}
+.alert-delete:hover{color:var(--red)}
+
+/* ─── DWT staking ──────────────────────────────────────────── */
+.staking-panel{display:flex;flex-direction:column;gap:12px}
+.dwt-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dwt-stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.dwt-stat-label{font-size:11px;color:var(--text3)}
+.dwt-stat-value{font-size:18px;font-weight:700}
+.dwt-stat-sub{font-size:11px;color:var(--text3)}
+.dwt-reward-banner{display:flex;align-items:center;justify-content:space-between;background:var(--green-light);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-sm);padding:12px 14px;gap:10px}
+.dwt-reward-label{font-size:12px;color:var(--green)}
+.dwt-reward-amount{font-size:16px;font-weight:700;color:var(--green)}
+.staking-tabs{display:flex;gap:4px}
+.staking-tab{flex:1;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3);font-family:var(--font);transition:all 0.12s}
+.staking-tab--active{background:var(--accent);border-color:var(--accent);color:white}
+.staking-form{display:flex;flex-direction:column;gap:8px}
+.dwt-projection{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.dwt-proj-title{font-size:11px;color:var(--text3);margin-bottom:4px}
+.dwt-proj-row{display:flex;justify-content:space-between;font-size:13px}
+.dwt-info{display:flex;flex-direction:column;gap:12px}
+.dwt-info-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px}
+.dwt-info-label{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.dwt-info-text{font-size:13px;color:var(--text2);line-height:1.5}
+
+/* ─── Address book ─────────────────────────────────────── */
+.ab-form{display:flex;flex-direction:column;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
+.ab-list{display:flex;flex-direction:column;gap:6px}
+.ab-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.ab-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-light);color:var(--accent);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ab-info{flex:1;display:flex;flex-direction:column;gap:2px}
+.ab-name{font-size:13px;font-weight:600}
+.ab-address{font-size:11px;color:var(--text3)}
+.ab-actions{display:flex;align-items:center;gap:4px}
+.ab-use-btn{background:var(--accent);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:var(--font)}
+.ab-copy-btn,.ab-del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px}
+.ab-del-btn:hover{color:var(--red)}
+
+/* ─── Onboarding light theme override ───────────────────────── */
+.onboarding .logo-title {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.onboarding .logo-sub   { color: #64748b; }
+.onboarding .step-title { color: #0f172a; }
+.onboarding .step-sub   { color: #64748b; }
+.onboarding .field {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+.onboarding .field:focus { border-color: #6366f1; }
+.onboarding .btn-link   { color: #94a3b8; }
+.onboarding .btn-link:hover { color: #6366f1; }
+.onboarding .seed-grid  { background: #f1f5f9; border-color: #e2e8f0; }
+.onboarding .seed-word  { background: #ffffff; border-color: #e2e8f0; }
+.onboarding .seed-num   { color: #94a3b8; }
+.onboarding .seed-text  { color: #0f172a; }
+.onboarding .error-msg  { color: #dc2626; }
+
+/* ─── Settings select fix ────────────────────────────────────── */
+.settings-select {
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+  background: var(--bg3) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  font-family: var(--font) !important;
+  padding: 4px 8px !important;
+  cursor: pointer !important;
+  min-width: 80px !important;
+  display: block !important;
+}
+.settings-select option {
+  display: block !important;
+  background: var(--bg2) !important;
+  color: var(--text) !important;
+  padding: 4px 8px !important;
 }

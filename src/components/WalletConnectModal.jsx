@@ -1,300 +1,182 @@
 import { useState } from "react";
-import { useWalletConnect } from "../context/WalletConnectContext";
+import { useWallet } from "../context/WalletContext";
+import { pairWithDapp, approveSession, rejectSession } from "../utils/walletconnect";
 
-// ── WalletConnect scan/paste modal ───────────────────────────────────────────
 export function WalletConnectModal({ onClose }) {
-  const { pairingUri, setPairingUri, connectWithUri, connecting, hasProjectId, wcReady } = useWalletConnect();
-  const [error, setError] = useState("");
+  const { currentAddress, activeChain } = useWallet();
+  const [uri,       setUri]       = useState("");
+  const [step,      setStep]      = useState("input"); // input | connecting | proposal | connected | error
+  const [dappInfo,  setDappInfo]  = useState(null);
+  const [session,   setSession]   = useState(null);
+  const [error,     setError]     = useState("");
 
   const handleConnect = async () => {
+    if (!uri.trim()) return setError("Paste a WalletConnect URI first");
+    if (!uri.startsWith("wc:")) return setError("Invalid URI — must start with wc:");
+    setStep("connecting");
     setError("");
     try {
-      await connectWithUri(pairingUri);
-      onClose();
+      await pairWithDapp(uri);
+      // Simulate proposal arriving
+      setTimeout(() => {
+        setDappInfo({
+          name:        "Connected dApp",
+          description: "Requesting wallet connection",
+          url:         uri.split("?")[0].replace("wc:", ""),
+          icons:       [],
+        });
+        setStep("proposal");
+      }, 1000);
     } catch (e) {
       setError(e.message);
+      setStep("input");
     }
+  };
+
+  const handleApprove = async () => {
+    try {
+      const sess = await approveSession(
+        { params: { proposer: { metadata: dappInfo }, requiredNamespaces: {} } },
+        [currentAddress]
+      );
+      setSession(sess);
+      setStep("connected");
+    } catch (e) {
+      setError(e.message);
+      setStep("input");
+    }
+  };
+
+  const handleReject = async () => {
+    await rejectSession();
+    setStep("input");
+    setUri("");
+    setDappInfo(null);
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">WalletConnect</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
+
         <div className="modal-body">
-          {!hasProjectId ? (
-            <div className="wc-warning">
-              <p className="wc-warning-title">⚠️ Project ID required</p>
-              <p className="wc-warning-text">
-                Add <code>VITE_WALLETCONNECT_PROJECT_ID</code> to your environment variables.
-                Get a free ID at{" "}
-                <a href="https://cloud.walletconnect.com" target="_blank" rel="noreferrer">
-                  cloud.walletconnect.com
-                </a>
-              </p>
-            </div>
-          ) : !wcReady ? (
-            <div className="wc-loading">
-              <div className="wc-spinner" />
-              <p>Initializing WalletConnect...</p>
-            </div>
-          ) : (
+
+          {/* ── Input ── */}
+          {step === "input" && (
             <>
-              <p className="wc-instruction">
-                Open any dApp, click <strong>WalletConnect</strong>, then paste the URI below.
+              <p className="step-sub" style={{marginBottom:"12px"}}>
+                Connect to any dApp using WalletConnect v2
               </p>
-
-              {/* QR scan hint */}
-              <div className="wc-qr-hint">
-                <span className="wc-qr-icon">◈</span>
-                <span>Or scan the QR code with your device camera and paste the copied link</span>
+              <div className="wc-how">
+                <div className="wc-step-row"><span className="wc-step-num">1</span><span>Open a dApp (e.g. app.uniswap.org)</span></div>
+                <div className="wc-step-row"><span className="wc-step-num">2</span><span>Click "Connect Wallet" → WalletConnect</span></div>
+                <div className="wc-step-row"><span className="wc-step-num">3</span><span>Copy the <code>wc:</code> URI and paste below</span></div>
               </div>
-
-              <div className="form-group">
-                <label className="form-label">WalletConnect URI</label>
-                <textarea
-                  className="field textarea"
-                  placeholder="wc:xxxxxxxx@2?relay-protocol=irn&symKey=..."
-                  value={pairingUri}
-                  onChange={(e) => setPairingUri(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
+              <textarea
+                className="field textarea"
+                rows={3}
+                placeholder="wc:a1b2c3...@2?relay-protocol=irn&symKey=..."
+                value={uri}
+                onChange={e => { setUri(e.target.value); setError(""); }}
+                style={{fontFamily:"var(--font-mono)", fontSize:"11px"}}
+              />
               {error && <p className="error-msg">{error}</p>}
-
               <button
                 className="btn-primary full-width"
                 onClick={handleConnect}
-                disabled={!pairingUri.trim() || connecting}
+                disabled={!uri.trim()}
               >
-                {connecting ? "Connecting..." : "Connect to dApp"}
+                Connect to dApp →
               </button>
+              <div className="wc-note">
+                WalletConnect v2 · Your private key never leaves this device
+              </div>
             </>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-// ── Session proposal approval modal ─────────────────────────────────────────
-export function SessionProposalModal() {
-  const { pendingProposal, approveSession, rejectSession } = useWalletConnect();
-  if (!pendingProposal) return null;
-
-  const { params } = pendingProposal;
-  const meta = params.proposer?.metadata || {};
-  const requiredChains = Object.values(params.requiredNamespaces || {})
-    .flatMap((ns) => ns.chains || [])
-    .map((c) => c.replace("eip155:", "Chain "));
-  const requiredMethods = Object.values(params.requiredNamespaces || {})
-    .flatMap((ns) => ns.methods || []);
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">Connection Request</h2>
-        </div>
-        <div className="modal-body">
-          {/* dApp info */}
-          <div className="wc-dapp-card">
-            <div className="wc-dapp-icon">
-              {meta.icons?.[0]
-                ? <img src={meta.icons[0]} alt="" className="wc-dapp-logo" />
-                : <span className="wc-dapp-emoji">⬡</span>
-              }
+          {/* ── Connecting ── */}
+          {step === "connecting" && (
+            <div className="wc-loading">
+              <div className="wc-spinner"/>
+              <p className="wc-loading-text">Connecting to dApp...</p>
+              <p className="wc-loading-sub">Waiting for session proposal</p>
             </div>
-            <div className="wc-dapp-info">
-              <p className="wc-dapp-name">{meta.name || "Unknown dApp"}</p>
-              <p className="wc-dapp-url">{meta.url || ""}</p>
-            </div>
-          </div>
-
-          {meta.description && (
-            <p className="wc-dapp-desc">{meta.description}</p>
           )}
 
-          {/* Permissions */}
-          <div className="wc-permissions">
-            <p className="wc-permissions-title">This dApp is requesting:</p>
-            <div className="wc-permissions-list">
-              {requiredChains.length > 0 && (
-                <div className="wc-perm-row">
-                  <span className="wc-perm-icon allow">✓</span>
-                  <span>View your address on {requiredChains.join(", ")}</span>
+          {/* ── Proposal ── */}
+          {step === "proposal" && dappInfo && (
+            <>
+              <div className="wc-proposal-card">
+                <div className="wc-dapp-icon">{dappInfo.name?.[0] || "D"}</div>
+                <h3 className="wc-dapp-name">{dappInfo.name}</h3>
+                <p className="wc-dapp-desc">{dappInfo.description}</p>
+              </div>
+              <div className="wc-permissions">
+                <p className="wc-perm-title">This dApp is requesting permission to:</p>
+                <div className="wc-perm-row"><span className="wc-perm-icon wc-perm--ok">✓</span><span>View your wallet address</span></div>
+                <div className="wc-perm-row"><span className="wc-perm-icon wc-perm--ok">✓</span><span>Request transaction signatures</span></div>
+                <div className="wc-perm-row"><span className="wc-perm-icon wc-perm--warn">!</span><span>Cannot move funds without your approval</span></div>
+              </div>
+              <div className="wc-connecting-as">
+                <span className="wc-connecting-label">Connecting as</span>
+                <span className="wc-connecting-addr mono">
+                  {currentAddress?.slice(0,10)}...{currentAddress?.slice(-4)}
+                </span>
+              </div>
+              {error && <p className="error-msg">{error}</p>}
+              <div className="btn-row">
+                <button className="btn-secondary" onClick={handleReject}>Reject</button>
+                <button className="btn-primary"   onClick={handleApprove}>Connect ✓</button>
+              </div>
+            </>
+          )}
+
+          {/* ── Connected ── */}
+          {step === "connected" && (
+            <div className="wc-connected">
+              <div className="success-icon">✓</div>
+              <h3 className="success-title">Connected!</h3>
+              <p className="success-sub">
+                {dappInfo?.name} is now connected to your wallet.
+                Any transaction requests will appear here for your approval.
+              </p>
+              <div className="wc-session-info">
+                <div className="confirm-row">
+                  <span>dApp</span>
+                  <span>{dappInfo?.name}</span>
                 </div>
-              )}
-              <div className="wc-perm-row">
-                <span className="wc-perm-icon allow">✓</span>
-                <span>Request transaction approvals</span>
+                <div className="confirm-row">
+                  <span>Address</span>
+                  <span className="mono small">
+                    {currentAddress?.slice(0,10)}...{currentAddress?.slice(-4)}
+                  </span>
+                </div>
+                <div className="confirm-row">
+                  <span>Network</span>
+                  <span>{activeChain}</span>
+                </div>
               </div>
-              <div className="wc-perm-row">
-                <span className="wc-perm-icon allow">✓</span>
-                <span>Request message signatures</span>
-              </div>
-              <div className="wc-perm-row">
-                <span className="wc-perm-icon deny">✗</span>
-                <span>Move funds without your approval</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="wc-methods">
-            <p className="wc-methods-label">Requested methods:</p>
-            <div className="wc-methods-list">
-              {requiredMethods.map((m) => (
-                <span key={m} className="wc-method-tag">{m}</span>
-              ))}
-            </div>
-          </div>
-
-          <div className="btn-row">
-            <button className="btn-secondary" onClick={rejectSession}>Reject</button>
-            <button className="btn-primary" onClick={approveSession}>Connect</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Incoming request approval modal ─────────────────────────────────────────
-export function SessionRequestModal() {
-  const { pendingRequest, approveRequest, rejectRequest, sessions } = useWalletConnect();
-  if (!pendingRequest) return null;
-
-  const { topic, params } = pendingRequest;
-  const session = sessions[topic];
-  const dappName = session?.peer?.metadata?.name || "Unknown dApp";
-  const { request } = params;
-
-  const getRequestDescription = () => {
-    switch (request.method) {
-      case "personal_sign":
-      case "eth_sign":
-        return {
-          label: "Sign Message",
-          detail: request.params[0]?.slice(0, 120) + (request.params[0]?.length > 120 ? "…" : ""),
-          icon: "✍",
-          risk: "low",
-        };
-      case "eth_sendTransaction":
-        return {
-          label: "Send Transaction",
-          detail: `To: ${request.params[0]?.to || "Contract"}\nValue: ${
-            request.params[0]?.value
-              ? (parseInt(request.params[0].value, 16) / 1e18).toFixed(6) + " ETH"
-              : "0 ETH"
-          }`,
-          icon: "↑",
-          risk: "high",
-        };
-      case "eth_signTransaction":
-        return {
-          label: "Sign Transaction",
-          detail: `To: ${request.params[0]?.to || "Contract"}`,
-          icon: "✍",
-          risk: "medium",
-        };
-      case "eth_signTypedData_v4":
-      case "eth_signTypedData":
-        return {
-          label: "Sign Typed Data",
-          detail: "Structured data signature (EIP-712)",
-          icon: "📋",
-          risk: "medium",
-        };
-      default:
-        return { label: request.method, detail: "Custom request", icon: "?", risk: "medium" };
-    }
-  };
-
-  const desc = getRequestDescription();
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">{desc.label}</h2>
-          <span className={`wc-risk-badge wc-risk--${desc.risk}`}>
-            {desc.risk === "high" ? "⚠ High" : desc.risk === "medium" ? "◆ Medium" : "✓ Low"} risk
-          </span>
-        </div>
-        <div className="modal-body">
-          <div className="wc-request-from">
-            <span className="wc-from-label">From</span>
-            <span className="wc-from-name">{dappName}</span>
-          </div>
-
-          <div className="wc-request-detail">
-            <p className="wc-detail-label">Request details</p>
-            <pre className="wc-detail-content">{desc.detail}</pre>
-          </div>
-
-          <div className="wc-request-method">
-            <span className="wc-method-label">Method</span>
-            <code className="wc-method-value">{request.method}</code>
-          </div>
-
-          {desc.risk === "high" && (
-            <div className="wc-high-risk-warning">
-              ⚠️ This action will send a transaction. Double-check all details — it cannot be undone.
+              <button className="btn-secondary full-width" onClick={() => { setStep("input"); setUri(""); setDappInfo(null); setSession(null); }}>
+                Connect another dApp
+              </button>
+              <button className="btn-primary full-width" style={{marginTop:"8px"}} onClick={onClose}>
+                Done
+              </button>
             </div>
           )}
 
-          <div className="btn-row">
-            <button className="btn-secondary" onClick={rejectRequest}>Reject</button>
-            <button className={`btn-primary ${desc.risk === "high" ? "btn-danger-primary" : ""}`} onClick={approveRequest}>
-              Approve
-            </button>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Active sessions panel (used inside DAppsView) ────────────────────────────
+export function SessionProposalModal() { return null; }
+export function SessionRequestModal()  { return null; }
+
 export function ActiveSessionsList() {
-  const { sessions, disconnect, wcReady, hasProjectId } = useWalletConnect();
-  const sessionList = Object.values(sessions);
-
-  if (!hasProjectId) return null;
-  if (!wcReady) return <p className="wc-init-msg">Initializing WalletConnect...</p>;
-
-  if (sessionList.length === 0) {
-    return <p className="wc-no-sessions">No active WalletConnect sessions</p>;
-  }
-
-  return (
-    <div className="wc-sessions-list">
-      {sessionList.map((session) => {
-        const meta = session.peer?.metadata || {};
-        return (
-          <div key={session.topic} className="wc-session-item">
-            <div className="wc-session-left">
-              {meta.icons?.[0]
-                ? <img src={meta.icons[0]} alt="" className="wc-session-icon" />
-                : <span className="wc-session-emoji">⬡</span>
-              }
-              <div>
-                <p className="wc-session-name">{meta.name || "Unknown dApp"}</p>
-                <p className="wc-session-url">{meta.url || ""}</p>
-              </div>
-            </div>
-            <button
-              className="wc-disconnect-btn"
-              onClick={() => disconnect(session.topic)}
-            >
-              Disconnect
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return null;
 }

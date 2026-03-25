@@ -3,6 +3,7 @@ import SwapPanel from "./defi/SwapPanel";
 import StakingPanel from "./defi/StakingPanel";
 import LendingPanel from "./defi/LendingPanel";
 import YieldPanel from "./defi/YieldPanel";
+import DWTStakingPanel from "./DWTStakingPanel";
 
 const TABS = [
   { id: "swap",    label: "Swap",    icon: "⇄" },
