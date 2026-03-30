@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "preinstall": "npm config set legacy-peer-deps true",
     "start": "vite preview --port ${PORT:-3000} --host",
     "compile": "hardhat compile",
     "test": "hardhat test",
@@ -77,5 +78,9 @@
     "typechain": "^8.3.2",
     "typescript": "^6.0.2",
     "vite": "^6.0.5"
+  },
+  "overrides": {
+    "ethers": "^6.13.4",
+    "ajv": "^8.0.1"
   }
 }
