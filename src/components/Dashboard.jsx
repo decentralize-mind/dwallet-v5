@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { DEFAULT_TOKENS } from "../data/chains";
-import { DWT, getDWTTier, formatDWT } from "../utils/dwt";
+import { DWT as DWT_CONFIG, getDWTTier, formatDWT } from "../utils/dwt";
 import { fetchPriceHistory, getPrice } from "../utils/prices";
 import { fetchMarketData, formatPrice, formatMarketCap } from "../utils/market";
 import PortfolioChart from "./PortfolioChart";
@@ -29,8 +29,8 @@ function DWTBanner({ chainBalances, activeChain }) {
   const dwtBal  = parseFloat(chainBalances?.DWT ?? 0);
   const hasDWT  = dwtBal > 0;
   const tier    = getDWTTier(dwtBal);
-  const explorer = DWT.explorerUrl(activeChain) || DWT.explorerUrl("sepolia");
-  const dwtAddr  = DWT.addresses[activeChain] || DWT.addresses.sepolia;
+  const explorer = DWT_CONFIG.explorerUrl(activeChain) || DWT_CONFIG.explorerUrl("sepolia");
+  const dwtAddr  = DWT_CONFIG.addresses[activeChain] || DWT_CONFIG.addresses.sepolia;
 
   const [copied, setCopied] = useState(false);
   const copyAddr = () => {
@@ -68,7 +68,7 @@ function DWTBanner({ chainBalances, activeChain }) {
                 fontSize:9,padding:"2px 6px",borderRadius:8,fontWeight:700,
                 background:"rgba(99,102,241,0.15)",color:"var(--accent)"
               }}>dWallet Token</span>
-              {DWT.addresses[activeChain] && (
+              {DWT_CONFIG.addresses[activeChain] && (
                 <span style={{
                   fontSize:9,padding:"2px 6px",borderRadius:8,fontWeight:700,
                   background:"rgba(16,185,129,0.12)",color:"var(--green)"
@@ -106,7 +106,7 @@ function DWTBanner({ chainBalances, activeChain }) {
           </p>
         </div>
         <div>
-          {DWT.tiers.map(t => (
+          {DWT_CONFIG.tiers.map(t => (
             <div key={t.name} style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
               <span style={{
                 width:6,height:6,borderRadius:"50%",flexShrink:0,
