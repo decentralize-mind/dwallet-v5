@@ -116,7 +116,7 @@ export function WalletProvider({ children }) {
   const [gasInfo, setGasInfo] = useState({ gwei: '—', ethCost: '—' })
   const [prices, setPrices] = useState({})
   const [ensName, setEnsName] = useState(null)
-  const [, setNotification] = useState(null)
+  const [notification, setNotification] = useState(null)
   const [sessionReady, setSessionReady] = useState(false)
   const inactivityTimer = useRef(null)
 
@@ -543,6 +543,7 @@ export function WalletProvider({ children }) {
         gasInfo,
         ensName,
         setEnsName,
+        notification,
         notify,
         createWallet,
         confirmWallet,
