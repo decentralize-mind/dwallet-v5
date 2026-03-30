@@ -21,7 +21,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.coingecko.com https://mainnet.infura.io https://sepolia.infura.io https://bsc-dataseed.binance.org https://polygon-rpc.com https://api.opensea.io https://rpc.ankr.com https://api.simplehash.com wss://mainnet.infura.io; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.coingecko.com https://mainnet.infura.io https://sepolia.infura.io https://bsc-dataseed.binance.org https://polygon-rpc.com https://api.opensea.io https://rpc.ankr.com https://api.simplehash.com https://api.etherscan.io https://sepolia.etherscan.io https://basescan.org https://sepolia.basescan.org wss://mainnet.infura.io; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none';"
         }
       ]
     }

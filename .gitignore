@@ -7,7 +7,7 @@ cache/
 typechain-types/
 coverage/
 coverage.json
-
+.qoder
 # Environment & Secrets (CRITICAL)
 .env
 .env*

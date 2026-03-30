@@ -326,43 +326,76 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
 
           {/* ── DWT always shown under assets ── */}
           {(() => {
-            const dwtBal = parseFloat(chainBalances?.DWT ?? 0);
-            const dwtPx  = 3.50;
-            const dwtUSD = (dwtBal * dwtPx).toFixed(2);
-            return (
-              <div className="token-row" style={{borderColor:"rgba(99,102,241,0.2)"}}>
-                <div className="token-icon-wrap" style={{
-                  background:"rgba(99,102,241,0.12)",
-                  color:"var(--accent)",fontSize:16,fontWeight:800
-                }}>◈</div>
-                <div className="token-info">
-                  <span className="token-name">DWT</span>
-                  <span className="token-network" style={{color:"var(--accent)",fontWeight:600}}>
-                    dWallet Token
-                  </span>
+            try {
+              const dwtBal = parseFloat(chainBalances?.DWT ?? 0);
+              const dwtPx  = 3.50;
+              const dwtUSD = (dwtBal * dwtPx).toFixed(2);
+              console.log('✅ DWT RENDERING:', { 
+                balance: dwtBal, 
+                price: dwtPx, 
+                usd: dwtUSD,
+                chainBalances_DWT: chainBalances?.DWT,
+                hasChainBalances: !!chainBalances
+              });
+                        
+              // Safety check for sparkline
+              let sparkPoints = '';
+              try {
+                const min = Math.min(...DWT_SPARKLINE);
+                const max = Math.max(...DWT_SPARKLINE);
+                sparkPoints = DWT_SPARKLINE.map((v,i) => {
+                  const x = (i / (DWT_SPARKLINE.length - 1)) * 60;
+                  const y = 24 - ((v - min) / (max - min || 1)) * 22;
+                  return x + ',' + y;
+                }).join(' ');
+              } catch (e) {
+                console.warn('Sparkline error:', e);
+              }
+                        
+              return (
+                <div className="token-row" style={{borderColor:"rgba(99,102,241,0.2)"}}>
+                  <div className="token-icon-wrap" style={{
+                    background:"rgba(99,102,241,0.12)",
+                    color:"var(--accent)",fontSize:16,fontWeight:800
+                  }}>◈</div>
+                  <div className="token-info">
+                    <span className="token-name">DWT</span>
+                    <span className="token-network" style={{color:"var(--accent)",fontWeight:600}}>
+                      dWallet Token
+                    </span>
+                  </div>
+                  <div className="token-sparkline">
+                    {sparkPoints ? (
+                      <svg width="60" height="24" style={{overflow:"visible"}}>
+                        <polyline
+                          fill="none" stroke="#10b981" strokeWidth="1.8"
+                          strokeLinecap="round" strokeLinejoin="round"
+                          points={sparkPoints}
+                        />
+                      </svg>
+                    ) : (
+                      <span style={{fontSize:10,color:"var(--text3)"}}>--</span>
+                    )}
+                    <span className="token-change positive">▲ +12.4%</span>
+                  </div>
+                  <div className="token-balance">
+                    <span className="token-amount">{dwtBal.toFixed(4)} DWT</span>
+                    <span className="token-usd">{"$" + dwtUSD}</span>
+                  </div>
                 </div>
-                <div className="token-sparkline">
-                  <svg width="60" height="24" style={{overflow:"visible"}}>
-                    <polyline
-                      fill="none" stroke="#10b981" strokeWidth="1.8"
-                      strokeLinecap="round" strokeLinejoin="round"
-                      points={DWT_SPARKLINE.map((v,i)=>{
-                        const min=Math.min(...DWT_SPARKLINE);
-                        const max=Math.max(...DWT_SPARKLINE);
-                        const x=(i/(DWT_SPARKLINE.length-1))*60;
-                        const y=24-((v-min)/(max-min||1))*22;
-                        return x+","+y;
-                      }).join(" ")}
-                    />
-                  </svg>
-                  <span className="token-change positive">▲ +12.4%</span>
+              );
+            } catch (error) {
+              console.error('❌ CRITICAL: DWT rendering failed:', error);
+              // Fallback simple display
+              return (
+                <div className="token-row">
+                  <div className="token-info">
+                    <span className="token-name">DWT</span>
+                    <span className="token-network">dWallet Token (Error loading)</span>
+                  </div>
                 </div>
-                <div className="token-balance">
-                  <span className="token-amount">{dwtBal.toFixed(4)} DWT</span>
-                  <span className="token-usd">{"$" + dwtUSD}</span>
-                </div>
-              </div>
-            );
+              );
+            }
           })()}
 
           {tokens.filter(token => token !== 'DWT').map(token => {
