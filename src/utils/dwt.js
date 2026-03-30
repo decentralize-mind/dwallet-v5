@@ -10,8 +10,8 @@ export const DWT = {
 
   addresses: {
     sepolia: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', // ✅ live
-    baseSepolia: '', // deploy pending
-    base: '', // deploy pending
+    baseSepolia: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', // ✅ live
+    base: '0x9ce235f8574bde67393884550F02135CE4fB8387', // ✅ live
     ethereum: '', // deploy pending
     polygon: '', // deploy pending
     arbitrum: '', // deploy pending

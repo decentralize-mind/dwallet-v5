@@ -7,7 +7,7 @@ import { getContacts } from '../utils/addressBook'
 import { DWT } from '../utils/dwt'
 
 const CHAIN_TOKENS = {
-  ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK'],
+  ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK', 'DWT'],
   bnb: ['BNB', 'CAKE', 'USDT', 'BUSD'],
   polygon: ['MATIC', 'USDC', 'USDT'],
   sepolia: ['ETH', 'DWT'],

@@ -44,7 +44,7 @@ export const CHAINS = {
     explorer: 'https://etherscan.io',
     color: '#627EEA',
     icon: '⟠',
-    tokens: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK'],
+    tokens: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK', 'DWT'],
   },
   bnb: {
     id: 'bnb',
@@ -118,7 +118,7 @@ export const TOKEN_ICONS = {
 }
 
 export const DEFAULT_TOKENS = {
-  ethereum: ['ETH', 'USDC', 'USDT', 'DAI'],
+  ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'DWT'],
   sepolia: ['ETH', 'DWT'],
   baseSepolia: ['ETH', 'DWT'],
   base: ['ETH', 'DWT', 'USDC'],
