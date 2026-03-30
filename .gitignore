@@ -13,6 +13,10 @@ coverage.json
 .env*
 !.env.example
 *.local
+!.env.local.example
+.env.preproduction
+.env.preproduction.local
+.env.production.template
 
 # Deployment Logs and Metadata
 *.log

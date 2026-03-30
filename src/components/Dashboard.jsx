@@ -365,7 +365,7 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
             );
           })()}
 
-          {tokens.map(token => {
+          {tokens.filter(token => token !== 'DWT').map(token => {
             const balance = chainBalances[token] || 0;
             const price = prices[token] ?? getPrice(token);
             const usdValue = balance * price;
