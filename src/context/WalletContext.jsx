@@ -34,18 +34,19 @@ const TOKEN_CONTRACTS = {
     WBTC: { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 },
     LINK: { address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', decimals: 18 },
     UNI: { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18 },
+    DWT: { address: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', decimals: 18 },
   },
   // ── Sepolia testnet ───────────────────────────────────────────────────
   sepolia: {
-    DWT: { address: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', decimals: 18 },
+    DWT: { address: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', decimals: 18 },
   },
   // ── Base Sepolia testnet ──────────────────────────────────────────────
   baseSepolia: {
-    DWT: { address: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', decimals: 18 },
+    DWT: { address: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', decimals: 18 },
   },
   // ── Base mainnet ──────────────────────────────────────────────────────
   base: {
-    DWT:  { address: '0x9ce235f8574bde67393884550F02135CE4fB8387', decimals: 18 },
+    DWT:  { address: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', decimals: 18 },
     USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
   },
   polygon: {

@@ -100,6 +100,7 @@ export const TOKEN_PRICES = {
   RAY: 1.8,
   SRM: 0.4,
   MNGO: 0.03,
+  DWT: 3.5,
 }
 
 export const TOKEN_ICONS = {
@@ -115,6 +116,7 @@ export const TOKEN_ICONS = {
   LINK: '⬡',
   CAKE: '🎂',
   BUSD: '$',
+  DWT: '◈',
 }
 
 export const DEFAULT_TOKENS = {

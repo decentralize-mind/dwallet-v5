@@ -9,9 +9,9 @@ export const DWT = {
   color: '#6366f1',
 
   addresses: {
-    sepolia: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', // ✅ live
-    baseSepolia: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', // ✅ live
-    base: '0x9ce235f8574bde67393884550F02135CE4fB8387', // ✅ live
+    sepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
+    baseSepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
+    base: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
     ethereum: '', // deploy pending
     polygon: '', // deploy pending
     arbitrum: '', // deploy pending

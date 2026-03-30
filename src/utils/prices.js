@@ -36,6 +36,7 @@ const FALLBACK_PRICES = {
   AAVE: 92,
   stETH: 3185,
   rETH: 3350,
+  DWT: 3.5,
 }
 
 let priceCache = { ...FALLBACK_PRICES }
