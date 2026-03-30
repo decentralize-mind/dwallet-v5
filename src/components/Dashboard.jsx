@@ -330,6 +330,7 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
               const dwtBal = parseFloat(chainBalances?.DWT ?? 0);
               const dwtPx  = 3.50;
               const dwtUSD = (dwtBal * dwtPx).toFixed(2);
+              console.log('🔍 DWT Debug:', { balance: dwtBal, price: dwtPx, usd: dwtUSD });
               return (
                 <div className="token-row" style={{borderColor:"rgba(99,102,241,0.2)"}}>
                   <div className="token-icon-wrap" style={{
@@ -365,7 +366,7 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
                 </div>
               );
             } catch (error) {
-              console.error('Error rendering DWT:', error);
+              console.error('❌ Error rendering DWT:', error);
               return null;
             }
           })()}
