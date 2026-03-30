@@ -12,10 +12,10 @@ export const DWT = {
   priceChange: 12.4,
 
   addresses: {
-    sepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
-    baseSepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
-    base: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
-    ethereum: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
+    sepolia: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
+    baseSepolia: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
+    base: '0x9ce235f8574bde67393884550F02135CE4fB8387', // ✅ live on Base mainnet
+    ethereum: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
     polygon: '', // deploy pending
     arbitrum: '', // deploy pending
   },
