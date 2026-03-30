@@ -12,7 +12,7 @@ export const DWT = {
     sepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
     baseSepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
     base: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
-    ethereum: '', // deploy pending
+    ethereum: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
     polygon: '', // deploy pending
     arbitrum: '', // deploy pending
   },

@@ -6,7 +6,7 @@ import { fetchPriceHistory, getPrice } from "../utils/prices";
 import { fetchMarketData, formatPrice, formatMarketCap } from "../utils/market";
 import PortfolioChart from "./PortfolioChart";
 
-const TOKEN_ICONS = { ETH: "⟠", BNB: "⬡", MATIC: "◈", SOL: "◎", USDC: "$", USDT: "₮", DAI: "⬙", WBTC: "₿", UNI: "🦄", LINK: "⬡" };
+const TOKEN_ICONS = { ETH: "⟠", BNB: "⬡", MATIC: "◈", SOL: "◎", USDC: "$", USDT: "₮", DAI: "⬙", WBTC: "₿", UNI: "🦄", LINK: "⬡", DWT: "◈" };
 
 function Sparkline({ data }) {
   if (!data || data.length < 2) return <span className="spark-placeholder">—</span>;
@@ -85,7 +85,7 @@ function DWTBanner({ chainBalances, activeChain }) {
             {hasDWT ? formatDWT(dwtBal) : "0 DWT"}
           </p>
           <p style={{fontSize:10,color:"var(--text3)",margin:"1px 0 0"}}>
-            ≈ ${hasDWT ? (dwtBal * 0.10).toFixed(2) : "0.00"}
+            ≈ ${hasDWT ? (dwtBal * 3.50).toFixed(2) : "0.00"}
           </p>
         </div>
       </div>
