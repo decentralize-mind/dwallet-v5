@@ -7,7 +7,7 @@ import { fetchMarketData, formatPrice, formatMarketCap } from "../utils/market";
 import PortfolioChart from "./PortfolioChart";
 
 const TOKEN_ICONS = {
-  DWT:"◈", ETH: "⟠", BNB: "⬡", MATIC: "◈", SOL: "◎", USDC: "$", USDT: "₮", DAI: "⬙", WBTC: "₿", UNI: "🦄", LINK: "⬡", DWT: "◈" };
+  DWT:"◈", ETH: "⟠", BNB: "⬡", MATIC: "◈", SOL: "◎", USDC: "$", USDT: "₮", DAI: "⬙", WBTC: "₿", UNI: "🦄", LINK: "⬡" };
 
 function Sparkline({ data }) {
   if (!data || data.length < 2) return <span className="spark-placeholder">—</span>;
