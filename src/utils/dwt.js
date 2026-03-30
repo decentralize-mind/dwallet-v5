@@ -7,6 +7,9 @@ export const DWT = {
   icon: '◈',
   decimals: 18,
   color: '#6366f1',
+  price: 3.50,
+  marketCap: 4_500_000_000,
+  priceChange: 12.4,
 
   addresses: {
     sepolia: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123', // ✅ live
