@@ -7,15 +7,15 @@ Connect to any dApp — Uniswap, Aave, OpenSea, and thousands more.
 
 ## What's new in v3
 
-| Feature | v2 | v3 |
-|---------|----|----|
-| WalletConnect | ✗ | ✅ Full v2 (Web3Wallet SDK) |
-| dApp pairing | Mock only | Real URI pairing |
-| Session approval | ✗ | ✅ Review permissions before connecting |
-| Transaction signing | ✗ | ✅ Approve/reject from wallet |
-| Message signing | ✗ | ✅ personal_sign, eth_sign, eth_signTypedData |
-| Active sessions | ✗ | ✅ View and disconnect anytime |
-| Risk assessment | ✗ | ✅ Low / Medium / High per request |
+| Feature             | v2        | v3                                            |
+| ------------------- | --------- | --------------------------------------------- |
+| WalletConnect       | ✗         | ✅ Full v2 (Web3Wallet SDK)                   |
+| dApp pairing        | Mock only | Real URI pairing                              |
+| Session approval    | ✗         | ✅ Review permissions before connecting       |
+| Transaction signing | ✗         | ✅ Approve/reject from wallet                 |
+| Message signing     | ✗         | ✅ personal_sign, eth_sign, eth_signTypedData |
+| Active sessions     | ✗         | ✅ View and disconnect anytime                |
+| Risk assessment     | ✗         | ✅ Low / Medium / High per request            |
 
 ---
 
@@ -32,10 +32,10 @@ npm run dev
 
 ## Environment Variables
 
-| Variable | Required | Get it from |
-|----------|----------|-------------|
-| `VITE_WALLETCONNECT_PROJECT_ID` | **Yes for WC** | [cloud.walletconnect.com](https://cloud.walletconnect.com) (free, 2 min) |
-| `VITE_INFURA_KEY` | For live balances | [infura.io](https://infura.io) (free) |
+| Variable                        | Required          | Get it from                                                              |
+| ------------------------------- | ----------------- | ------------------------------------------------------------------------ |
+| `VITE_WALLETCONNECT_PROJECT_ID` | **Yes for WC**    | [cloud.walletconnect.com](https://cloud.walletconnect.com) (free, 2 min) |
+| `VITE_INFURA_KEY`               | For live balances | [infura.io](https://infura.io) (free)                                    |
 
 > Without `VITE_WALLETCONNECT_PROJECT_ID`, WalletConnect shows a setup prompt.  
 > Without `VITE_INFURA_KEY`, wallet falls back to realistic mock balances.
@@ -95,13 +95,13 @@ src/
 
 ## Supported WalletConnect Methods
 
-| Method | Description |
-|--------|-------------|
-| `personal_sign` | Sign a plain text message |
-| `eth_sign` | Sign raw bytes |
-| `eth_signTypedData_v4` | Sign structured EIP-712 data |
-| `eth_sendTransaction` | Sign + broadcast a transaction |
-| `eth_signTransaction` | Sign a transaction without broadcasting |
+| Method                 | Description                             |
+| ---------------------- | --------------------------------------- |
+| `personal_sign`        | Sign a plain text message               |
+| `eth_sign`             | Sign raw bytes                          |
+| `eth_signTypedData_v4` | Sign structured EIP-712 data            |
+| `eth_sendTransaction`  | Sign + broadcast a transaction          |
+| `eth_signTransaction`  | Sign a transaction without broadcasting |
 
 ---
 

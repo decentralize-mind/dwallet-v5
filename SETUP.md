@@ -21,8 +21,9 @@ VITE_WALLETCONNECT_PROJECT_ID=your_wc_project_id_here
 ```
 
 Get them free:
-- Infura key → https://infura.io  (New Project → Ethereum → copy Project ID)
-- WalletConnect ID → https://cloud.walletconnect.com  (New Project → copy Project ID)
+
+- Infura key → https://infura.io (New Project → Ethereum → copy Project ID)
+- WalletConnect ID → https://cloud.walletconnect.com (New Project → copy Project ID)
 
 Both are optional — the wallet works without them (mock mode).
 
@@ -37,21 +38,25 @@ Open → http://localhost:5173
 ## Step 4 — Deploy to Vercel
 
 ### Option A: CLI (fastest)
+
 ```bash
 npm install -g vercel
 vercel
 ```
+
 Follow the prompts → it detects Vite automatically → deploys in ~60 seconds.
 
 When asked "Want to override the settings?" → No
 
 ### Option B: GitHub + Vercel Dashboard
+
 ```bash
 git init
 git add .
 git commit -m "dWallet v4"
 gh repo create dwallet --public --push --source=.
 ```
+
 Then go to vercel.com → New Project → import dwallet repo → Deploy
 
 ## Step 5 — Add env vars on Vercel
@@ -70,4 +75,4 @@ Then → Deployments → Redeploy (to pick up the new env vars)
 ## That's it!
 
 Your wallet will be live at:
-https://dwallet.vercel.app  (or whatever Vercel assigns)
+https://dwallet.vercel.app (or whatever Vercel assigns)

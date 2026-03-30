@@ -1,19 +1,19 @@
-import { useState } from "react";
-import SwapPanel from "./defi/SwapPanel";
-import StakingPanel from "./defi/StakingPanel";
-import LendingPanel from "./defi/LendingPanel";
-import YieldPanel from "./defi/YieldPanel";
-import DWTStakingPanel from "./DWTStakingPanel";
+import { useState } from 'react'
+import SwapPanel from './defi/SwapPanel'
+import StakingPanel from './defi/StakingPanel'
+import LendingPanel from './defi/LendingPanel'
+import YieldPanel from './defi/YieldPanel'
+import DWTStakingPanel from './DWTStakingPanel'
 
 const TABS = [
-  { id: "swap",    label: "Swap",    icon: "⇄" },
-  { id: "stake",   label: "Stake",   icon: "⬡" },
-  { id: "lending", label: "Lend",    icon: "⊕" },
-  { id: "yield",   label: "Yield LP",icon: "◈" },
-];
+  { id: 'swap', label: 'Swap', icon: '⇄' },
+  { id: 'stake', label: 'Stake', icon: '⬡' },
+  { id: 'lending', label: 'Lend', icon: '⊕' },
+  { id: 'yield', label: 'Yield LP', icon: '◈' },
+]
 
 export default function DefiView() {
-  const [activeTab, setActiveTab] = useState("swap");
+  const [activeTab, setActiveTab] = useState('swap')
 
   return (
     <div className="view-container defi-view">
@@ -24,10 +24,10 @@ export default function DefiView() {
 
       {/* Tab switcher */}
       <div className="defi-tabs">
-        {TABS.map((tab) => (
+        {TABS.map(tab => (
           <button
             key={tab.id}
-            className={`defi-tab ${activeTab === tab.id ? "defi-tab--active" : ""}`}
+            className={`defi-tab ${activeTab === tab.id ? 'defi-tab--active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="defi-tab-icon">{tab.icon}</span>
@@ -36,13 +36,15 @@ export default function DefiView() {
         ))}
       </div>
 
+      <DWTStakingPanel />
+
       {/* Panel content */}
       <div className="defi-panel">
-        {activeTab === "swap"    && <SwapPanel />}
-        {activeTab === "stake"   && <StakingPanel />}
-        {activeTab === "lending" && <LendingPanel />}
-        {activeTab === "yield"   && <YieldPanel />}
+        {activeTab === 'swap' && <SwapPanel />}
+        {activeTab === 'stake' && <StakingPanel />}
+        {activeTab === 'lending' && <LendingPanel />}
+        {activeTab === 'yield' && <YieldPanel />}
       </div>
     </div>
-  );
+  )
 }

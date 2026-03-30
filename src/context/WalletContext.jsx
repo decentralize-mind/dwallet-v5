@@ -1,436 +1,564 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { generateMnemonic, mnemonicToSeedSync } from "../utils/bip39";
-import { deriveWalletFromSeed, encryptData, decryptData } from "../utils/crypto";
-import { fetchAllBalances, fetchTxHistory, fetchTokenTxHistory, estimateGas } from "../utils/blockchain";
-import { fetchPrices, getPrice } from "../utils/prices";
-import { CHAINS, DEFAULT_TOKENS } from "../data/chains";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react'
+import { generateMnemonic, mnemonicToSeedSync } from '../utils/bip39'
+import {
+  deriveWalletFromSeed,
+  encryptData,
+  decryptData,
+} from '../utils/crypto'
+import {
+  fetchAllBalances,
+  fetchTxHistory,
+  fetchTokenTxHistory,
+  estimateGas,
+} from '../utils/blockchain'
+import { fetchPrices, getPrice } from '../utils/prices'
+import { CHAINS } from '../data/chains'
 
-const WalletContext   = createContext(null);
-const STORAGE_KEY     = "dwallet_v5_encrypted";
-const SESSION_KEY     = "dwallet_v5_session";     // sessionStorage — cleared on tab close
-const AUTO_LOCK_MS    = 30 * 60 * 1000;           // 30 minutes of inactivity
+// eslint-disable-next-line react-refresh/only-export-components
+export const WalletContext = createContext(null)
+const STORAGE_KEY = 'dwallet_v5_encrypted'
+const SESSION_KEY = 'dwallet_v5_session'
+const AUTO_LOCK_MS = 30 * 60 * 1000
 
-// ── Session helpers ────────────────────────────────────────────────────────────
-// We store the decrypted wallet in sessionStorage so it survives page refreshes
-// within the same browser session, but is wiped when the tab/browser closes.
-// The private key is NOT stored in sessionStorage — only address + account names.
-// The encrypted blob stays in localStorage as the source of truth.
+const TOKEN_CONTRACTS = {
+  ethereum: {
+    USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+    USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+    DAI: { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
+    WBTC: { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 },
+    LINK: { address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', decimals: 18 },
+    UNI: { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18 },
+  },
+  // ── Sepolia testnet ───────────────────────────────────────────────────
+  sepolia: {
+    DWT: { address: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', decimals: 18 },
+  },
+  // ── Base Sepolia testnet ──────────────────────────────────────────────
+  baseSepolia: {
+    DWT: { address: '0xdF8efd9F36f55baD4c7f38a7c958202858927743', decimals: 18 },
+  },
+  // ── Base mainnet ──────────────────────────────────────────────────────
+  base: {
+    DWT:  { address: '0x9ce235f8574bde67393884550F02135CE4fB8387', decimals: 18 },
+    USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+  },
+  polygon: {
+    USDC: { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', decimals: 6 },
+    USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
+  },
+  bnb: {
+    CAKE: { address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', decimals: 18 },
+    USDT: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+  },
+}
 
-function saveSession(walletData, pwd) {
-  // Store password hash + wallet metadata in session (not private keys)
+function saveSession(walletData) {
   const session = {
     activeAccount: walletData.activeAccount,
     accounts: walletData.accounts.map(a => ({
-      name:    a.name,
+      name: a.name,
       address: a.address,
-      index:   a.index,
+      index: a.index,
     })),
     savedAt: Date.now(),
-  };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
 }
 
 function loadSession() {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw);
-    // Expire after 30 min of inactivity
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const session = JSON.parse(raw)
     if (Date.now() - session.savedAt > AUTO_LOCK_MS) {
-      sessionStorage.removeItem(SESSION_KEY);
-      return null;
+      sessionStorage.removeItem(SESSION_KEY)
+      return null
     }
-    return session;
-  } catch { return null; }
+    return session
+  } catch {
+    return null
+  }
 }
 
 function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY)
 }
 
 function touchSession() {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const raw = sessionStorage.getItem(SESSION_KEY)
   if (raw) {
     try {
-      const session = JSON.parse(raw);
-      session.savedAt = Date.now();
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch {}
+      const session = JSON.parse(raw)
+      session.savedAt = Date.now()
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    } catch (e) {
+      // Session refresh failed, likely non-critical
+    }
   }
 }
 
 export function WalletProvider({ children }) {
-  const [wallet,         setWallet]         = useState(null);
-  const [activeChain,    setActiveChainRaw] = useState("ethereum");
-  const [balances,       setBalances]       = useState({});
-  const [transactions,   setTransactions]   = useState([]);
-  const [isLocked,       setIsLocked]       = useState(false);
-  const [password,       setPassword]       = useState(null);
-  const [loadingBal,     setLoadingBal]     = useState(false);
-  const [loadingTx,      setLoadingTx]      = useState(false);
-  const [gasInfo,        setGasInfo]        = useState({ gwei: "—", ethCost: "—" });
-  const [prices,         setPrices]         = useState({});
-  const [ensName,        setEnsName]        = useState(null);
-  const [notification,   setNotification]   = useState(null);
-  const [sessionReady,   setSessionReady]   = useState(false);
-  const inactivityTimer = useRef(null);
+  const [wallet, setWallet] = useState(null)
+  const [activeChain, setActiveChainRaw] = useState('ethereum')
+  const [balances, setBalances] = useState({})
+  const [transactions, setTransactions] = useState([])
+  const [isLocked, setIsLocked] = useState(false)
+  const [password, setPassword] = useState(null)
+  const [loadingBal, setLoadingBal] = useState(false)
+  const [loadingTx, setLoadingTx] = useState(false)
+  const [gasInfo, setGasInfo] = useState({ gwei: '—', ethCost: '—' })
+  const [prices, setPrices] = useState({})
+  const [ensName, setEnsName] = useState(null)
+  const [, setNotification] = useState(null)
+  const [sessionReady, setSessionReady] = useState(false)
+  const inactivityTimer = useRef(null)
 
-  // ── Boot: restore session on page refresh ─────────────────────────────────
+  const lockWallet = useCallback(() => {
+    clearSession()
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    setWallet(null)
+    setIsLocked(true)
+    setPassword(null)
+    setBalances({})
+    setTransactions([])
+    setEnsName(null)
+  }, [])
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    touchSession()
+    inactivityTimer.current = setTimeout(() => {
+      lockWallet()
+    }, AUTO_LOCK_MS)
+  }, [lockWallet])
+
+  const restoreFromSession = useCallback(
+    async session => {
+      const partialWallet = {
+        accounts: session.accounts.map(a => ({ ...a, privateKey: null })),
+        activeAccount: session.activeAccount,
+        mnemonic: null,
+        restored: true,
+      }
+      setWallet(partialWallet)
+      setIsLocked(false)
+      setSessionReady(true)
+      resetInactivityTimer()
+    },
+    [resetInactivityTimer],
+  )
+
   useEffect(() => {
-    const hasEncrypted = !!localStorage.getItem(STORAGE_KEY);
-    const session      = loadSession();
+    const hasEncrypted = !!localStorage.getItem(STORAGE_KEY)
+    const session = loadSession()
 
     if (!hasEncrypted) {
-      // Fresh install — no wallet at all
-      setSessionReady(true);
-      return;
+      setSessionReady(true)
+      return
     }
 
     if (session) {
-      // Valid session exists — restore wallet metadata WITHOUT re-entering password
-      // Private keys are re-derived on demand from localStorage when needed
-      restoreFromSession(session);
+      restoreFromSession(session)
     } else {
-      // Wallet exists but session expired — show unlock screen
-      setIsLocked(true);
-      setSessionReady(true);
+      setIsLocked(true)
+      setSessionReady(true)
     }
 
-    fetchPrices().then(setPrices);
-  }, []);
-
-  // ── Restore wallet from session (no password needed) ──────────────────────
-  const restoreFromSession = async (session) => {
-    // We load the encrypted blob and try to reconstruct wallet metadata
-    // For display purposes (address, name) we use session data
-    // For signing we require the stored password (re-prompt if needed)
-    const partialWallet = {
-      accounts:      session.accounts.map(a => ({ ...a, privateKey: null })), // no keys in session
-      activeAccount: session.activeAccount,
-      mnemonic:      null, // not stored in session
-      restored:      true, // flag to show we're in restored state
-    };
-    setWallet(partialWallet);
-    setIsLocked(false);
-    setSessionReady(true);
-    resetInactivityTimer();
-  };
-
-  // ── Inactivity auto-lock ───────────────────────────────────────────────────
-  const resetInactivityTimer = useCallback(() => {
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-    touchSession();
-    inactivityTimer.current = setTimeout(() => {
-      lockWallet();
-    }, AUTO_LOCK_MS);
-  }, []);
+    fetchPrices().then(setPrices)
+  }, [restoreFromSession])
 
   useEffect(() => {
-    if (!wallet) return;
-    const events = ["mousemove", "keydown", "click", "touchstart"];
-    events.forEach(e => window.addEventListener(e, resetInactivityTimer, { passive: true }));
-    return () => events.forEach(e => window.removeEventListener(e, resetInactivityTimer));
-  }, [wallet, resetInactivityTimer]);
+    if (!wallet) return
+    const events = ['mousemove', 'keydown', 'click', 'touchstart']
+    const handler = () => resetInactivityTimer()
+    events.forEach(e =>
+      window.addEventListener(e, handler, { passive: true }),
+    )
+    return () =>
+      events.forEach(e => window.removeEventListener(e, handler))
+  }, [wallet, resetInactivityTimer])
 
-  // ── Refresh prices every 60s ───────────────────────────────────────────────
   useEffect(() => {
-    const t = setInterval(() => fetchPrices().then(setPrices), 60_000);
-    return () => clearInterval(t);
-  }, []);
+    const t = setInterval(() => fetchPrices().then(setPrices), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
-  // ── Refresh balances every 30s when wallet open ────────────────────────────
-  useEffect(() => {
-    if (!wallet) return;
-    const addr = wallet.accounts[wallet.activeAccount]?.address;
-    if (!addr) return;
-    refreshAll(addr, activeChain);
-    const t = setInterval(() => refreshAll(addr, activeChain), 30_000);
-    return () => clearInterval(t);
-  }, [wallet?.activeAccount, activeChain]);
-
-  const refreshAll = useCallback(async (address, chain) => {
-    refreshBalances(address, chain);
-    refreshTxHistory(address, chain);
-    estimateGas(chain).then(setGasInfo);
-  }, []);
-
-  const refreshBalances = async (address, chain) => {
-    setLoadingBal(true);
+  const refreshBalances = useCallback(async (address, chain) => {
+    setLoadingBal(true)
     try {
-      const bal = await fetchAllBalances(address, chain);
+      const bal = await fetchAllBalances(address, chain)
       setBalances(prev => {
-        const next = { ...prev };
-        Object.entries(bal).forEach(([sym, val]) => { next[`${chain}_${sym}`] = val; });
-        return next;
-      });
-    } finally { setLoadingBal(false); }
-  };
+        const next = { ...prev }
+        Object.entries(bal).forEach(([sym, val]) => {
+          next[`${chain}_${sym}`] = val
+        })
+        return next
+      })
+    } finally {
+      setLoadingBal(false)
+    }
+  }, [])
 
-  const refreshTxHistory = async (address, chain) => {
-    setLoadingTx(true);
-    try {
-      const [native, tokens] = await Promise.all([
-        fetchTxHistory(address, chain),
-        fetchTokenTxHistory(address, chain),
-      ]);
-      const merged = [...native, ...tokens]
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 60);
-      setTransactions(merged.length > 0 ? merged : buildMockTxs(address));
-    } catch {
-      setTransactions(buildMockTxs(address));
-    } finally { setLoadingTx(false); }
-  };
+  const buildMockTxs = useCallback(address => {
+    const tokens = ['ETH', 'USDC', 'USDT', 'DAI']
+    const types = ['send', 'receive', 'swap']
+    return Array.from({ length: 8 }, (_, i) => ({
+      // eslint-disable-next-line no-secrets/no-secrets
+      hash: `0x${i.toString(16).padStart(8, '0')}a1b2c3d4e5f67890abcdef1234567890`,
+      // eslint-disable-next-line no-secrets/no-secrets
+      from: i % 2 === 0 ? address : '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      // eslint-disable-next-line no-secrets/no-secrets
+      to: i % 2 !== 0 ? address : '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      amount: (1.2345 + i / 10).toFixed(4),
+      token: tokens[i % tokens.length],
+      type: types[i % 3],
+      status: 'confirmed',
+      chain: 'ethereum',
+      timestamp: Date.now() - i * 86400000,
+      gasUsed: '0.000420',
+    }))
+  }, [])
 
-  // ── Ensure private keys are loaded (prompt if restored session) ───────────
-  const ensureKeys = async (pwd) => {
-    if (wallet?.accounts?.[0]?.privateKey) return wallet; // already have keys
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) throw new Error("No wallet found");
-    const usePwd = pwd || password;
-    if (!usePwd) throw new Error("Password required to sign transactions");
-    const walletData = JSON.parse(await decryptData(stored, usePwd));
-    setPassword(usePwd);
-    setWallet(walletData);
-    saveSession(walletData, usePwd);
-    return walletData;
-  };
+  const refreshTxHistory = useCallback(
+    async (address, chain) => {
+      setLoadingTx(true)
+      try {
+        const [native, tokens] = await Promise.all([
+          fetchTxHistory(address, chain),
+          fetchTokenTxHistory(address, chain),
+        ])
+        const merged = [...native, ...tokens]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 60)
+        setTransactions(merged.length > 0 ? merged : buildMockTxs(address))
+      } catch {
+        setTransactions(buildMockTxs(address))
+      } finally {
+        setLoadingTx(false)
+      }
+    },
+    [buildMockTxs],
+  )
 
-  // ── Create wallet ──────────────────────────────────────────────────────────
-  // Step 1: generate mnemonic and password — does NOT save yet
-  // Returns the mnemonic for display on backup screen
-  const createWallet = async (pwd) => {
-    const mnemonic = generateMnemonic();
-    // Store pending wallet in sessionStorage only — not saved until confirmWallet()
-    const seed    = mnemonicToSeedSync(mnemonic);
-    const derived = deriveWalletFromSeed(seed, 0);
+  const refreshAll = useCallback(
+    async (address, chain) => {
+      refreshBalances(address, chain)
+      refreshTxHistory(address, chain)
+      estimateGas(chain).then(setGasInfo)
+    },
+    [refreshBalances, refreshTxHistory],
+  )
+
+  useEffect(() => {
+    if (!wallet) return
+    const addr = wallet.accounts[wallet.activeAccount]?.address
+    if (!addr) return
+    refreshAll(addr, activeChain)
+    const t = setInterval(() => refreshAll(addr, activeChain), 30_000)
+    return () => clearInterval(t)
+  }, [wallet, activeChain, refreshAll])
+
+  const notify = useCallback((message, type = 'info') => {
+    setNotification({ message, type, id: Date.now() })
+    setTimeout(() => setNotification(null), 4000)
+  }, [])
+
+  const ensureKeys = async pwd => {
+    if (wallet?.accounts?.[0]?.privateKey) return wallet
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) throw new Error('No wallet found')
+    const usePwd = pwd || password
+    if (!usePwd) throw new Error('Password required to sign transactions')
+    const walletData = JSON.parse(await decryptData(stored, usePwd))
+    setPassword(usePwd)
+    setWallet(walletData)
+    saveSession(walletData)
+    return walletData
+  }
+
+  const createWallet = async () => {
+    const mnemonic = generateMnemonic()
+    const seed = mnemonicToSeedSync(mnemonic)
+    const derived = deriveWalletFromSeed(seed, 0)
     const pending = {
       mnemonic,
-      accounts: [{ name: "Account 1", address: derived.address, privateKey: derived.privateKey, index: 0 }],
+      accounts: [
+        {
+          name: 'Account 1',
+          address: derived.address,
+          privateKey: derived.privateKey,
+          index: 0,
+        },
+      ],
       activeAccount: 0,
       createdAt: Date.now(),
-    };
-    sessionStorage.setItem("toklo_pending_wallet", JSON.stringify({ data: pending, pwd }));
-    // Do NOT call setWallet or setIsLocked here — stay on onboarding
-    return mnemonic;
-  };
-
-  // Step 2: called after user verifies seed phrase — NOW save permanently
-  const confirmWallet = async () => {
-    const raw = sessionStorage.getItem("toklo_pending_wallet");
-    if (!raw) throw new Error("No pending wallet found");
-    const { data: walletData, pwd } = JSON.parse(raw);
-    const encrypted = await encryptData(JSON.stringify(walletData), pwd);
-    localStorage.setItem(STORAGE_KEY, encrypted);
-    setPassword(pwd);
-    setWallet(walletData);
-    setIsLocked(false);
-    saveSession(walletData, pwd);
-    resetInactivityTimer();
-    sessionStorage.removeItem("toklo_pending_wallet");
-  };
-
-  // ── Import wallet ──────────────────────────────────────────────────────────
-  const importWallet = async (mnemonic, pwd) => {
-    const words = mnemonic.trim().split(/\s+/);
-    if (words.length !== 12 && words.length !== 24)
-      throw new Error("Seed phrase must be 12 or 24 words");
-    const seed    = mnemonicToSeedSync(mnemonic.trim());
-    const derived = deriveWalletFromSeed(seed, 0);
-    const data    = {
-      mnemonic: mnemonic.trim(),
-      accounts: [{ name: "Account 1", address: derived.address, privateKey: derived.privateKey, index: 0 }],
-      activeAccount: 0, createdAt: Date.now(),
-    };
-    const encrypted = await encryptData(JSON.stringify(data), pwd);
-    localStorage.setItem(STORAGE_KEY, encrypted);
-    setPassword(pwd);
-    setWallet(data);
-    setIsLocked(false);
-    saveSession(data, pwd);
-    resetInactivityTimer();
-  };
-
-  // ── Unlock ─────────────────────────────────────────────────────────────────
-  // Verify password and return decrypted mnemonic — used by Settings
-  const verifyPassword = async (pwd) => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return null;
-    try {
-      const data = JSON.parse(await decryptData(stored, pwd));
-      return data.mnemonic || null;
-    } catch { return null; }
-  };
-
-  const unlockWallet = async (pwd) => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) throw new Error("No wallet found");
-    try {
-      const walletData = JSON.parse(await decryptData(stored, pwd));
-      setPassword(pwd);
-      setWallet(walletData);
-      setIsLocked(false);
-      saveSession(walletData, pwd);
-      resetInactivityTimer();
-    } catch {
-      throw new Error("Incorrect password");
     }
-  };
+    return { mnemonic, pending }
+  }
 
-  const lockWallet = useCallback(() => {
-    clearSession();
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-    setWallet(null);
-    setIsLocked(true);
-    setPassword(null);
-    setBalances({});
-    setTransactions([]);
-    setEnsName(null);
-  }, []);
+  const confirmWallet = async (walletData, pwd) => {
+    if (!walletData || !pwd) throw new Error('Wallet data and password required')
+    const encrypted = await encryptData(JSON.stringify(walletData), pwd)
+    localStorage.setItem(STORAGE_KEY, encrypted)
+    setPassword(pwd)
+    setWallet(walletData)
+    setIsLocked(false)
+    saveSession(walletData)
+    resetInactivityTimer()
+  }
+
+  const importWallet = async (mnemonic, pwd) => {
+    const words = mnemonic.trim().split(/\s+/)
+    if (words.length !== 12 && words.length !== 24)
+      throw new Error('Seed phrase must be 12 or 24 words')
+    const seed = mnemonicToSeedSync(mnemonic.trim())
+    const derived = deriveWalletFromSeed(seed, 0)
+    const data = {
+      mnemonic: mnemonic.trim(),
+      accounts: [
+        {
+          name: 'Account 1',
+          address: derived.address,
+          privateKey: derived.privateKey,
+          index: 0,
+        },
+      ],
+      activeAccount: 0,
+      createdAt: Date.now(),
+    }
+    setPassword(pwd)
+    setWallet(data)
+    setIsLocked(false)
+    saveSession(data)
+    resetInactivityTimer()
+  }
+
+  const verifyPassword = async pwd => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+    try {
+      const data = JSON.parse(await decryptData(stored, pwd))
+      return data.mnemonic || null
+    } catch {
+      return null
+    }
+  }
+
+  const unlockWallet = async pwd => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) throw new Error('No wallet found')
+    try {
+      const walletData = JSON.parse(await decryptData(stored, pwd))
+      setPassword(pwd)
+      setWallet(walletData)
+      setIsLocked(false)
+      saveSession(walletData)
+      resetInactivityTimer()
+    } catch {
+      throw new Error('Incorrect password')
+    }
+  }
 
   const resetWallet = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    lockWallet();
-    setIsLocked(false);
-  };
+    localStorage.removeItem(STORAGE_KEY)
+    lockWallet()
+    setIsLocked(false)
+  }
 
-  // ── Add / switch accounts ──────────────────────────────────────────────────
   const addAccount = async () => {
-    const fullWallet = await ensureKeys();
-    if (!fullWallet || !password) return;
-    const seed    = mnemonicToSeedSync(fullWallet.mnemonic);
-    const index   = fullWallet.accounts.length;
-    const derived = deriveWalletFromSeed(seed, index);
+    const fullWallet = await ensureKeys()
+    if (!fullWallet || !password) return
+    const seed = mnemonicToSeedSync(fullWallet.mnemonic)
+    const index = fullWallet.accounts.length
+    const derived = deriveWalletFromSeed(seed, index)
     const updated = {
       ...fullWallet,
-      accounts: [...fullWallet.accounts, { name: `Account ${index + 1}`, address: derived.address, privateKey: derived.privateKey, index }],
+      accounts: [
+        ...fullWallet.accounts,
+        {
+          name: `Account ${index + 1}`,
+          address: derived.address,
+          privateKey: derived.privateKey,
+          index,
+        },
+      ],
       activeAccount: index,
-    };
-    const encrypted = await encryptData(JSON.stringify(updated), password);
-    localStorage.setItem(STORAGE_KEY, encrypted);
-    setWallet(updated);
-    saveSession(updated, password);
-  };
-
-  const switchAccount = async (index) => {
-    if (!wallet) return;
-    const updated = { ...wallet, activeAccount: index };
-    setWallet(updated);
-    if (password) {
-      localStorage.setItem(STORAGE_KEY, await encryptData(JSON.stringify(updated), password));
-      saveSession(updated, password);
     }
-  };
+    const encrypted = await encryptData(JSON.stringify(updated), password)
+    localStorage.setItem(STORAGE_KEY, encrypted)
+    setWallet(updated)
+    saveSession(updated)
+    notify(`✓ Account ${index + 1} added`, 'success')
+  }
 
-  const setActiveChain = (chain) => setActiveChainRaw(chain);
+  const renameAccount = async (index, newName) => {
+    if (!wallet || !newName.trim() || !password) return
+    const updatedAccounts = wallet.accounts.map((acc, i) =>
+      i === index ? { ...acc, name: newName.trim() } : acc,
+    )
+    const updated = { ...wallet, accounts: updatedAccounts }
+    const encrypted = await encryptData(JSON.stringify(updated), password)
+    localStorage.setItem(STORAGE_KEY, encrypted)
+    setWallet(updated)
+    saveSession(updated)
+  }
 
-  // ── Send transaction ───────────────────────────────────────────────────────
+  const switchAccount = async index => {
+    if (!wallet) return
+    const updated = { ...wallet, activeAccount: index }
+    setWallet(updated)
+    if (password) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        await encryptData(JSON.stringify(updated), password),
+      )
+      saveSession(updated)
+    }
+  }
+
+  const setActiveChain = chain => setActiveChainRaw(chain)
+
   const sendTransaction = async (to, amount, token, chainId) => {
-    const fullWallet = await ensureKeys();
-    const activeAcc  = fullWallet.accounts[fullWallet.activeAccount];
-    const chain      = chainId || activeChain;
-    const { sendNative, sendERC20 } = await import("../utils/blockchain");
+    const fullWallet = await ensureKeys()
+    const activeAcc = fullWallet.accounts[fullWallet.activeAccount]
+    const chain = chainId || activeChain
+    const { sendNative, sendERC20 } = await import('../utils/blockchain')
 
-    const TOKEN_CONTRACTS = {
-      ethereum: {
-        USDC: { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
-        USDT: { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6 },
-        DAI:  { address: "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals: 18 },
-        WBTC: { address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals: 8 },
-        LINK: { address: "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals: 18 },
-        UNI:  { address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", decimals: 18 },
-      },
-    };
-
-    const nativeSyms = { ethereum:"ETH", bnb:"BNB", polygon:"MATIC" };
-    const isNative   = token === nativeSyms[chain];
-    const pending    = {
-      hash: "pending_" + Date.now(),
-      from: activeAcc.address, to, amount, token,
-      chain, type: "send", status: "pending",
-      timestamp: Date.now(), gasUsed: gasInfo.ethCost,
-    };
-    setTransactions(prev => [pending, ...prev]);
+    const nativeSyms = {
+      ethereum: 'ETH',
+      bnb: 'BNB',
+      polygon: 'MATIC',
+      sepolia: 'ETH',
+      baseSepolia: 'ETH',
+      base: 'ETH',
+      arbitrum: 'ETH',
+    }
+    const isNative = token === nativeSyms[chain]
+    const pending = {
+      hash: 'pending_' + Date.now(),
+      from: activeAcc.address,
+      to,
+      amount,
+      token,
+      chain,
+      type: 'send',
+      status: 'pending',
+      timestamp: Date.now(),
+      gasUsed: gasInfo.ethCost,
+    }
+    setTransactions(prev => [pending, ...prev])
 
     try {
-      let tx;
-      if (import.meta.env.VITE_INFURA_KEY) {
+      let tx
+      if (import.meta.env.VITE_INFURA_KEY && import.meta.env.VITE_INFURA_KEY !== 'YOUR_INFURA_KEY') {
         tx = isNative
           ? await sendNative(to, amount, activeAcc.privateKey, chain)
-          : await sendERC20(TOKEN_CONTRACTS[chain]?.[token]?.address, to, amount, TOKEN_CONTRACTS[chain]?.[token]?.decimals, activeAcc.privateKey, chain);
+          : await sendERC20(
+              TOKEN_CONTRACTS[chain]?.[token]?.address,
+              to,
+              amount,
+              TOKEN_CONTRACTS[chain]?.[token]?.decimals,
+              activeAcc.privateKey,
+              chain,
+            )
       } else {
-        tx = { hash: "0x" + Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,"0")).join("") };
+        if (import.meta.env.DEV) {
+          tx = {
+            hash: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join(''),
+          }
+        } else {
+          throw new Error('Blockchain provider key missing. Please configure INFURA_KEY.')
+        }
       }
 
-      setTransactions(prev => prev.map(t => t.hash === pending.hash ? { ...t, hash: tx.hash } : t));
+      setTransactions(prev =>
+        prev.map(t => (t.hash === pending.hash ? { ...t, hash: tx.hash } : t)),
+      )
 
       const confirm = () => {
-        setTransactions(prev => prev.map(t => t.hash === tx.hash ? { ...t, status: "confirmed" } : t));
+        setTransactions(prev =>
+          prev.map(item => {
+            if (item.hash !== tx.hash) return item
+            return { ...item, status: 'confirmed' }
+          }),
+        )
         setBalances(prev => {
-          const key = `${chain}_${token}`;
-          return { ...prev, [key]: Math.max(0, (prev[key]||0) - parseFloat(amount)) };
-        });
-        notify(`✓ ${amount} ${token} sent`, "success");
-      };
+          const key = `${chain}_${token}`
+          const currentBal = prev[key] || 0
+          return { ...prev, [key]: Math.max(0, currentBal - parseFloat(amount)) }
+        })
+        notify(`✓ ${amount} ${token} sent`, 'success')
+      }
 
-      tx.wait ? tx.wait().then(confirm) : setTimeout(confirm, 3000);
-      return tx;
+      tx.wait ? tx.wait().then(confirm) : setTimeout(confirm, 3000)
+      return tx
     } catch (err) {
-      setTransactions(prev => prev.map(t => t.hash === pending.hash ? { ...t, status: "failed" } : t));
-      throw err;
+      setTransactions(prev =>
+        prev.map(t => (t.hash === pending.hash ? { ...t, status: 'failed' } : t)),
+      )
+      throw err
     }
-  };
+  }
 
-  const notify = (message, type = "info") => {
-    setNotification({ message, type, id: Date.now() });
-    setTimeout(() => setNotification(null), 4000);
-  };
-
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const currentAddress = wallet?.accounts?.[wallet?.activeAccount]?.address;
-  const currentChain   = CHAINS[activeChain];
-  const chainBalances  = Object.entries(balances)
-    .filter(([k]) => k.startsWith(activeChain + "_"))
-    .reduce((acc, [k, v]) => { acc[k.replace(activeChain + "_", "")] = v; return acc; }, {});
+  const currentAddress = wallet?.accounts?.[wallet?.activeAccount]?.address
+  const currentChain = CHAINS[activeChain]
+  const chainBalances = Object.entries(balances)
+    .filter(([k]) => k.startsWith(activeChain + '_'))
+    .reduce((acc, [k, v]) => {
+      acc[k.replace(activeChain + '_', '')] = v
+      return acc
+    }, {})
 
   const totalUSDValue = Object.entries(balances).reduce((sum, [key, amount]) => {
-    const sym = key.split("_")[1];
-    return sum + amount * (prices[sym] ?? getPrice(sym) ?? 1);
-  }, 0);
+    const sym = key.split('_')[1]
+    return sum + amount * (prices[sym] ?? getPrice(sym) ?? 1)
+  }, 0)
 
   return (
-    <WalletContext.Provider value={{
-      wallet, isLocked, sessionReady, activeChain, setActiveChain,
-      balances, chainBalances, transactions, prices,
-      currentAddress, currentChain, totalUSDValue,
-      loadingBal, loadingTx, gasInfo, ensName, setEnsName,
-      notification, notify,
-      createWallet, confirmWallet, importWallet, unlockWallet, verifyPassword,
-      lockWallet, resetWallet,
-      sendTransaction, addAccount, switchAccount,
-      refreshBalances: (addr) => refreshBalances(addr, activeChain),
-      ensureKeys,
-    }}>
+    <WalletContext.Provider
+      value={{
+        wallet,
+        isLocked,
+        sessionReady,
+        activeChain,
+        setActiveChain,
+        balances,
+        chainBalances,
+        transactions,
+        prices,
+        currentAddress,
+        currentChain,
+        totalUSDValue,
+        loadingBal,
+        loadingTx,
+        gasInfo,
+        ensName,
+        setEnsName,
+        notify,
+        createWallet,
+        confirmWallet,
+        importWallet,
+        unlockWallet,
+        verifyPassword,
+        lockWallet,
+        resetWallet,
+        sendTransaction,
+        addAccount,
+        switchAccount,
+        renameAccount,
+        refreshBalances: addr => refreshBalances(addr, activeChain),
+        ensureKeys,
+      }}
+    >
       {children}
     </WalletContext.Provider>
-  );
+  )
 }
-
-function buildMockTxs(address) {
-  const tokens = ["ETH","USDC","USDT","DAI"];
-  const types  = ["send","receive","swap"];
-  return Array.from({ length: 8 }, (_, i) => ({
-    hash:      "0x" + i.toString(16).padStart(8,"0") + "a1b2c3d4e5f67890abcdef1234567890",
-    from:      i%2===0 ? address : "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-    to:        i%2!==0 ? address : "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-    amount:    (Math.random()*2+0.01).toFixed(4),
-    token:     tokens[i%tokens.length],
-    type:      types[i%3],
-    status:    "confirmed",
-    chain:     "ethereum",
-    timestamp: Date.now() - i*86400000,
-    gasUsed:   "0.000420",
-  }));
-}
-
-export function useWallet() { return useContext(WalletContext); }

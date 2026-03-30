@@ -1,12 +1,16 @@
-import { WalletProvider, useWallet } from "./context/WalletContext";
-import { WalletConnectProvider } from "./context/WalletConnectContext";
-import { SessionProposalModal, SessionRequestModal } from "./components/WalletConnectModal";
-import OnboardingScreen from "./components/OnboardingScreen";
-import MainWallet from "./components/MainWallet";
-import "./index.css";
+import { WalletProvider } from './context/WalletContext'
+import { useWallet } from './hooks/useWallet'
+import { WalletConnectProvider } from './context/WalletConnectContext'
+import {
+  SessionProposalModal,
+  SessionRequestModal,
+} from './components/WalletConnectModal'
+import OnboardingScreen from './components/OnboardingScreen'
+import MainWallet from './components/MainWallet'
+import './index.css'
 
 function AppContent() {
-  const { wallet, sessionReady } = useWallet();
+  const { wallet, sessionReady } = useWallet()
 
   // Wait until session check is done to avoid flashing unlock screen
   if (!sessionReady) {
@@ -14,7 +18,7 @@ function AppContent() {
       <div className="app-loading">
         <div className="app-loading-icon">◈</div>
       </div>
-    );
+    )
   }
 
   return (
@@ -23,7 +27,7 @@ function AppContent() {
       <SessionProposalModal />
       <SessionRequestModal />
     </>
-  );
+  )
 }
 
 export default function App() {
@@ -33,5 +37,5 @@ export default function App() {
         <AppContent />
       </WalletConnectProvider>
     </WalletProvider>
-  );
+  )
 }

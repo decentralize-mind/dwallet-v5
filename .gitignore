@@ -1,20 +1,61 @@
+# Dependency directories
 node_modules/
-dist/
-.env.local
-.env*.local
+
+# Hardhat / Compile Outputs
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
+
+# Environment & Secrets (CRITICAL)
+.env
+.env*
+!.env.example
 *.local
+
+# Deployment Logs and Metadata
+*.log
+deployment_*.log
+deployed-*.json
+
+# OS & IDE Junk
 .DS_Store
 Thumbs.db
-.vercel
+.vscode/
+.idea/
+
+# Project-Specific Archives
+*.zip
+*.rar
+*.docx
+
+# Private Documentation & Drafts
 deploy-to-base-network-config.md
-onboarding.md
-revenue.md
+ONBOARDING.md
+REVENUE.md
 revenue-model.md
 server-requirement.md
 wallet-address.md
 dwallet-complete-features.md
+lint_output.txt
+tmp_home/
 step-improvement.md
-onboarding.md
+onboard.md
 next-tasks.md
 settings.md
 more-robust.md
+secure-session.md
+2method-deploy-coins.md
+product-roadmap.md
+PRODUCTION_ROADMAP.md
+dwt-token-allocate.md
+5-lock-types-of-all-10-layers.md
+3-protection-of-all-10-layers.md
+ultime-layer.md
+final-complete-of-smart-10-layer.md
+ultime-protection.md
+10-layer-security.md
+
+# Vercel
+.vercel/

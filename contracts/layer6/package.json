@@ -1,0 +1,22 @@
+{
+  "name": "dwallet-layer6-treasury-fees",
+  "version": "1.0.0",
+  "description": "dWallet Layer 6 — Treasury, FeeSplitter, BuybackAndBurn, VestingContract",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:local": "npx hardhat run scripts/deploy-layer6.js --network localhost",
+    "deploy:sepolia": "npx hardhat run scripts/deploy-layer6.js --network sepolia",
+    "deploy:mainnet": "npx hardhat run scripts/deploy-layer6.js --network mainnet",
+    "node": "npx hardhat node"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.0.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^5.0.0"
+  }
+}

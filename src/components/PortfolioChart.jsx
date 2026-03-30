@@ -1,94 +1,137 @@
-import { useState, useEffect, useRef } from "react";
-import { fetchPriceHistory } from "../utils/prices";
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { fetchPriceHistory } from '../utils/prices'
 
-const PERIODS = [{label:"7D",days:7},{label:"30D",days:30},{label:"90D",days:90}];
+const PERIODS = [
+  { label: '24H', days: 1 },
+  { label: '7D', days: 7 },
+  { label: '30D', days: 30 },
+  { label: '90D', days: 90 },
+]
 
-export default function PortfolioChart({ balances, prices }) {
-  const canvasRef = useRef(null);
-  const [period,  setPeriod]  = useState("7D");
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [change,  setChange]  = useState(null);
+export default function PortfolioChart({ balances }) {
+  const canvasRef = useRef(null)
+  const [period, setPeriod] = useState('7D')
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const days = PERIODS.find(p => p.label === period)?.days || 7;
-    setLoading(true);
-    fetchPriceHistory("ETH", days).then(hist => {
-      if (!hist || hist.length < 2) { setLoading(false); return; }
-      const ethBal = Object.entries(balances || {})
-        .filter(([k]) => k.includes("ETH"))
-        .reduce((s,[,v]) => s + parseFloat(v||0), 0);
-      const totalBal = Object.values(balances||{}).reduce((s,v) => s+parseFloat(v||0),0);
-      const scale = totalBal > 0 ? Math.max(totalBal / Math.max(ethBal,0.001), 1) : 1;
-      const series = hist.map(({ts,price}) => ({ ts, value: price * Math.max(ethBal,0.001) * scale }));
-      setHistory(series);
-      if (series.length >= 2) {
-        const first = series[0].value, last = series[series.length-1].value;
-        setChange(first > 0 ? (last-first)/first*100 : 0);
+    const days = PERIODS.find(p => p.label === period)?.days || 7
+    fetchPriceHistory('ETH', days).then(hist => {
+      if (!hist || hist.length < 2) {
+        setLoading(false)
+        return
       }
-      setLoading(false);
-    });
-  }, [period, balances]);
+      setHistory(hist)
+      setLoading(false)
+    })
+  }, [period])
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || history.length < 2) return;
-    const ctx = canvas.getContext("2d");
-    const W = canvas.offsetWidth, H = canvas.offsetHeight;
-    canvas.width  = W * devicePixelRatio;
-    canvas.height = H * devicePixelRatio;
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-    const values = history.map(h => h.value);
-    const min = Math.min(...values), max = Math.max(...values), range = max-min||1;
-    const isUp = values[values.length-1] >= values[0];
-    const color = isUp ? "#10b981" : "#ef4444";
-    const toX = i => (i/(history.length-1))*W;
-    const toY = v => H - ((v-min)/range)*(H-20) - 10;
-    ctx.clearRect(0,0,W,H);
-    ctx.beginPath();
-    ctx.moveTo(toX(0), toY(values[0]));
-    history.forEach((_,i) => { if(i>0) ctx.lineTo(toX(i), toY(history[i].value)); });
-    ctx.strokeStyle = color; ctx.lineWidth = 2;
-    ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
-    ctx.lineTo(toX(history.length-1), H); ctx.lineTo(0, H); ctx.closePath();
-    const grad = ctx.createLinearGradient(0,0,0,H);
-    grad.addColorStop(0, color+"44"); grad.addColorStop(1, color+"00");
-    ctx.fillStyle = grad; ctx.fill();
-  }, [history]);
+    if (!canvasRef.current || history.length < 2) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const dpr = window.devicePixelRatio || 1
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    ctx.scale(dpr, dpr)
 
-  const isUp = change !== null && change >= 0;
+    const w = rect.width
+    const h = rect.height
+    const prices = history.map(p => p.price)
+    const min = Math.min(...prices)
+    const max = Math.max(...prices)
+    const range = max - min || 1
+
+    ctx.clearRect(0, 0, w, h)
+
+    // Bg gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, h)
+    grad.addColorStop(0, 'rgba(99, 102, 241, 0.1)')
+    grad.addColorStop(1, 'rgba(99, 102, 241, 0)')
+
+    ctx.beginPath()
+    ctx.moveTo(0, h)
+    history.forEach((p, i) => {
+      const x = (i / (history.length - 1)) * w
+      const y = h - ((p.price - min) / range) * h
+      ctx.lineTo(x, y)
+    })
+    ctx.lineTo(w, h)
+    ctx.closePath()
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    ctx.beginPath()
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#6366f1'
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    history.forEach((p, i) => {
+      const x = (i / (history.length - 1)) * w
+      const y = h - ((p.price - min) / range) * h
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    })
+    ctx.stroke()
+  }, [history])
+
+  const { value, change } = useMemo(() => {
+    if (history.length < 2) return { value: '$0.00', change: '0.00%' }
+    const last = history[history.length - 1].price
+    const first = history[0].price
+    const diff = ((last - first) / first) * 100
+    const val = balances?.ETH ? balances.ETH * last : 0
+    return {
+      value: `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      change: `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%`,
+    }
+  }, [history, balances])
+
   return (
-    <div className="portfolio-chart-wrap">
-      <div className="portfolio-chart-header">
-        <div>
-          {change !== null && (
-            <span className={"portfolio-change " + (isUp?"positive":"negative")}>
-              {isUp?"▲":"▼"} {Math.abs(change).toFixed(2)}%
-            </span>
-          )}
-          <span className="portfolio-period-label"> this {period.toLowerCase()}</span>
+    <div className="chart-container">
+      <div className="chart-header">
+        <div className="chart-header-left">
+          <p className="chart-header-label">ETH Performance</p>
+          <div className="chart-header-row">
+            <h3 className="chart-header-title">{value}</h3>
+            {(() => {
+              const chgNum = parseFloat(change.replace(/%/g, ''));
+              return (
+                <span
+                  className="chart-header-value"
+                  style={{
+                    color: chgNum >= 0 ? 'var(--green)' : 'var(--red)',
+                  }}
+                >
+                  {change}
+                </span>
+              )
+            })()}
+          </div>
         </div>
-        <div className="portfolio-period-tabs">
+        <div className="chart-periods">
           {PERIODS.map(p => (
-            <button key={p.label}
-              className={"period-tab " + (period===p.label?"period-tab--active":"")}
-              onClick={() => setPeriod(p.label)}>{p.label}</button>
+            <button
+              key={p.label}
+              className={`chart-period-btn ${period === p.label ? 'active' : ''}`}
+              onClick={() => setPeriod(p.label)}
+            >
+              {p.label}
+            </button>
           ))}
         </div>
       </div>
-      <div className="portfolio-canvas-wrap">
+
+      <div className="chart-main">
         {loading ? (
-          <div className="portfolio-loading">
-            <div className="wc-spinner" style={{width:20,height:20,borderWidth:2}}/>
-          </div>
-        ) : history.length < 2 ? (
-          <div className="portfolio-loading">
-            <span style={{fontSize:12,color:"var(--text3)"}}>Chart unavailable</span>
+          <div className="chart-loading">
+            <div className="wc-spinner" />
           </div>
         ) : (
-          <canvas ref={canvasRef} className="portfolio-canvas"/>
+          <canvas ref={canvasRef} className="portfolio-canvas" />
         )}
       </div>
     </div>
-  );
+  )
 }
