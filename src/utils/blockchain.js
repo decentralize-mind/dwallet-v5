@@ -85,7 +85,7 @@ const TOKEN_ADDRESSES = {
     LINK: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
     // eslint-disable-next-line no-secrets/no-secrets
     stETH: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
-    DWT: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123',
+    DWT: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa',
   },
   polygon: {
     // eslint-disable-next-line no-secrets/no-secrets
@@ -94,13 +94,13 @@ const TOKEN_ADDRESSES = {
     USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
   },
   sepolia: {
-    DWT: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123',
+    DWT: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa',
   },
   baseSepolia: {
-    DWT: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123',
+    DWT: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa',
   },
   base: {
-    DWT: '0xcDa9a9C0FC151Af06C8Fde002563133b86D45123',
+    DWT: '0x9ce235f8574bde67393884550F02135CE4fB8387',
     USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   },
   bnb: {
