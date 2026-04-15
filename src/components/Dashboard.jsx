@@ -128,60 +128,57 @@ function DWTBanner({ chainBalances, activeChain }) {
         </div>
       </div>
 
-      {/* Compact Stats Grid */}
+      {/* Compact Stats Row: Supply + Balance + Fee Tier */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
+        display: "flex",
         gap: 10,
-        marginBottom: 12
+        marginBottom: 10,
+        padding: "10px",
+        background: "rgba(0,0,0,0.15)",
+        borderRadius: "8px",
+        border: "1px solid rgba(99,102,241,0.12)"
       }}>
         {/* Supply */}
-        <div style={{
-          padding:"10px",
-          background:"rgba(99,102,241,0.06)",
-          border:"1px solid rgba(99,102,241,0.15)",
-          borderRadius:"8px"
-        }}>
-          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Supply</p>
-          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--text)"}}>67.5M</p>
-          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:500}}>Circulating</p>
+        <div style={{flex: 1}}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"0 0 3px 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Supply</p>
+          <p style={{fontSize:14,fontWeight:800,margin:0,color:"var(--text)"}}>67.5M <span style={{fontSize:10,fontWeight:600,color:"var(--text3)"}}>DWT</span></p>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"2px 0 0",fontWeight:500}}>Circulating</p>
         </div>
-
+      
+        {/* Divider */}
+        <div style={{width:"1px",background:"rgba(99,102,241,0.15)"}} />
+      
         {/* Your Balance */}
-        <div style={{
-          padding:"10px",
-          background:"rgba(16,185,129,0.06)",
-          border:"1px solid rgba(16,185,129,0.15)",
-          borderRadius:"8px"
-        }}>
-          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Your Balance</p>
-          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--text)"}}>
+        <div style={{flex: 1}}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"0 0 3px 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Your Balance</p>
+          <p style={{fontSize:14,fontWeight:800,margin:0,color:"var(--text)"}}>
             {dwtBal > 0 ? formatDWT(dwtBal) : '0'}
           </p>
-          <p style={{fontSize:9,color:"var(--green)",margin:0,fontWeight:600}}>
+          <p style={{fontSize:9,color:"var(--green)",margin:"2px 0 0",fontWeight:600}}>
             {dwtBal > 0 ? `≈ $${usdVal}` : 'No holdings'}
           </p>
         </div>
-
+      
+        {/* Divider */}
+        <div style={{width:"1px",background:"rgba(99,102,241,0.15)"}} />
+      
         {/* Fee Tier */}
-        <div style={{
-          padding:"10px",
-          background:"rgba(99,102,241,0.06)",
-          border:"1px solid rgba(99,102,241,0.15)",
-          borderRadius:"8px"
-        }}>
-          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Fee Tier</p>
-          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--accent)"}}>{tier.label}</p>
-          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:500}}>{tier.name}</p>
+        <div style={{flex: 1}}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"0 0 3px 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Fee Tier</p>
+          <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+            <p style={{fontSize:14,fontWeight:800,margin:0,color:"var(--accent)"}}>{tier.label}</p>
+            <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600}}>({tier.name})</p>
+          </div>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"2px 0 0",fontWeight:500}}>Current rate</p>
         </div>
       </div>
-
-      {/* Fee Tiers Progress */}
+      
+      {/* Fee Tiers Progress - Compact Row */}
       <div style={{
-        padding:"10px",
-        background:"rgba(0,0,0,0.2)",
-        borderRadius:"8px",
-        border:"1px solid rgba(99,102,241,0.12)",
+        padding:"8px",
+        background:"rgba(0,0,0,0.12)",
+        borderRadius:"6px",
+        border:"1px solid rgba(99,102,241,0.1)",
         marginBottom: 10
       }}>
         <div style={{display:"flex",gap:6}}>
@@ -192,10 +189,10 @@ function DWTBanner({ chainBalances, activeChain }) {
                 flex:1,
                 padding:"6px 4px",
                 background: unlocked 
-                  ? "rgba(16,185,129,0.1)" 
-                  : "rgba(0,0,0,0.15)",
-                border: unlocked ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(99,102,241,0.08)",
-                borderRadius:"6px",
+                  ? "rgba(16,185,129,0.08)" 
+                  : "rgba(0,0,0,0.1)",
+                border: unlocked ? "1px solid rgba(16,185,129,0.2)" : "1px solid rgba(99,102,241,0.06)",
+                borderRadius:"5px",
                 textAlign:"center"
               }}>
                 <p style={{
