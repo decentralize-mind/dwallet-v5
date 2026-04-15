@@ -89,19 +89,50 @@ export default function PortfolioChart({ balances }) {
   }, [history, balances])
 
   return (
-    <div className="chart-container">
-      <div className="chart-header">
-        <div className="chart-header-left">
-          <p className="chart-header-label">ETH Performance</p>
-          <div className="chart-header-row">
-            <h3 className="chart-header-title">{value}</h3>
+    <div style={{
+      background: "var(--bg3)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius)",
+      padding: "12px",
+      marginBottom: "12px"
+    }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: "10px"
+      }}>
+        <div>
+          <p style={{
+            fontSize: "11px",
+            color: "var(--text3)",
+            margin: "0 0 4px 0",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.3px"
+          }}>ETH Performance</p>
+          <div style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "8px"
+          }}>
+            <h3 style={{
+              fontSize: "18px",
+              fontWeight: 800,
+              margin: 0,
+              color: "var(--text)"
+            }}>{value}</h3>
             {(() => {
               const chgNum = parseFloat(change.replace(/%/g, ''));
               return (
                 <span
-                  className="chart-header-value"
                   style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
                     color: chgNum >= 0 ? 'var(--green)' : 'var(--red)',
+                    background: chgNum >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                    padding: "2px 6px",
+                    borderRadius: "4px"
                   }}
                 >
                   {change}
@@ -110,11 +141,25 @@ export default function PortfolioChart({ balances }) {
             })()}
           </div>
         </div>
-        <div className="chart-periods">
+        <div style={{
+          display: "flex",
+          gap: "4px"
+        }}>
           {PERIODS.map(p => (
             <button
               key={p.label}
-              className={`chart-period-btn ${period === p.label ? 'active' : ''}`}
+              style={{
+                background: period === p.label ? 'var(--accent)' : 'transparent',
+                border: "1px solid " + (period === p.label ? 'var(--accent)' : 'var(--border)'),
+                borderRadius: "8px",
+                padding: "4px 8px",
+                fontSize: "10px",
+                fontWeight: 600,
+                cursor: "pointer",
+                color: period === p.label ? 'white' : 'var(--text3)',
+                fontFamily: "var(--font)",
+                transition: "all 0.12s"
+              }}
               onClick={() => setPeriod(p.label)}
             >
               {p.label}
@@ -123,13 +168,28 @@ export default function PortfolioChart({ balances }) {
         </div>
       </div>
 
-      <div className="chart-main">
+      <div style={{
+        height: "60px",
+        position: "relative"
+      }}>
         {loading ? (
-          <div className="chart-loading">
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "60px"
+          }}>
             <div className="wc-spinner" />
           </div>
         ) : (
-          <canvas ref={canvasRef} className="portfolio-canvas" />
+          <canvas 
+            ref={canvasRef} 
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "block"
+            }} 
+          />
         )}
       </div>
     </div>
