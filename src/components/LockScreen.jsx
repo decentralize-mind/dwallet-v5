@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 
 export default function LockScreen() {
-  const { unlockWallet, isLocked, getLockoutTimeRemaining } = useWallet()
+  const { unlockWallet, isLocked, getLockoutTimeRemaining, biometricSupported, unlockWithBiometric } = useWallet()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [lockoutTime, setLockoutTime] = useState(null)
+  const [biometricLoading, setBiometricLoading] = useState(false)
 
   const handleUnlock = async (e) => {
     e.preventDefault()
@@ -35,14 +36,31 @@ export default function LockScreen() {
     }
   }
 
+  const handleBiometricUnlock = async () => {
+    setError('')
+    setBiometricLoading(true)
+    
+    try {
+      await unlockWithBiometric()
+      // Biometric verified - user still needs to enter password for decryption
+      // But we can show a success message
+      setError('')
+    } catch (err) {
+      console.error('Biometric unlock failed:', err)
+      setError(err.message || 'Biometric authentication failed')
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
+
   // Update lockout timer every minute
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       const remaining = getLockoutTimeRemaining()
       setLockoutTime(remaining)
     }, 60000)
     return () => clearInterval(interval)
-  })
+  }, [getLockoutTimeRemaining])
 
   if (!isLocked) return null
 
@@ -146,6 +164,54 @@ export default function LockScreen() {
               'Unlock Wallet'
             )}
           </button>
+
+          {/* Biometric Unlock Button */}
+          {biometricSupported && (
+            <>
+              <div style={{ 
+                textAlign: 'center', 
+                margin: '20px 0',
+                color: 'var(--text3)',
+                fontSize: '13px'
+              }}>
+                — or —
+              </div>
+              <button
+                type="button"
+                onClick={handleBiometricUnlock}
+                disabled={biometricLoading || lockoutTime > 0}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: 'var(--bg3)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: biometricLoading || lockoutTime > 0 ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font)',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {biometricLoading ? (
+                  <>
+                    <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
+                    Authenticating...
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '20px' }}>👆</span>
+                    Use Biometric (Touch ID / Face ID)
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </form>
 
         {/* Security Info */}

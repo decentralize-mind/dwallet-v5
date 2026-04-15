@@ -19,6 +19,14 @@ import {
 } from '../utils/blockchain'
 import { fetchPrices, getPrice } from '../utils/prices'
 import { CHAINS } from '../data/chains'
+import { 
+  enableBiometric, 
+  authenticateWithBiometric, 
+  disableBiometric,
+  isBiometricSupported,
+  isBiometricEnabled,
+  getBiometricStatus
+} from '../utils/biometricAuth'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -192,6 +200,7 @@ export function WalletProvider({ children }) {
   const [ensName, setEnsName] = useState(null)
   const [notification, setNotification] = useState(null)
   const [sessionReady, setSessionReady] = useState(false)
+  const [biometricSupported, setBiometricSupported] = useState(false)
   const inactivityTimer = useRef(null)
 
   const lockWallet = useCallback(() => {
@@ -240,6 +249,9 @@ export function WalletProvider({ children }) {
       localStorageKeys: Object.keys(localStorage),
       encryptedDataLength: localStorage.getItem(STORAGE_KEY)?.length || 0
     })
+
+    // Check biometric support
+    setBiometricSupported(isBiometricSupported())
 
     if (!hasEncrypted) {
       console.log('ℹ️ No encrypted wallet found - user needs to create or import')
@@ -480,6 +492,7 @@ export function WalletProvider({ children }) {
 
   const resetWallet = () => {
     localStorage.removeItem(STORAGE_KEY)
+    disableBiometric() // Also disable biometric on reset
     lockWallet()
     setIsLocked(false)
   }
@@ -635,6 +648,42 @@ export function WalletProvider({ children }) {
     return sum + amount * (prices[sym] ?? getPrice(sym) ?? 1)
   }, 0)
 
+  // ── Biometric Authentication Functions ──────────────────────────────
+  
+  const setupBiometric = useCallback(async (pwd) => {
+    if (!currentAddress) {
+      throw new Error('No wallet address available')
+    }
+    try {
+      await enableBiometric(currentAddress, pwd)
+      console.log('✅ Biometric setup complete')
+      return true
+    } catch (err) {
+      console.error('Biometric setup failed:', err)
+      throw err
+    }
+  }, [currentAddress])
+
+  const unlockWithBiometric = useCallback(async () => {
+    try {
+      await authenticateWithBiometric()
+      
+      // Biometric succeeded, but we still need the password to decrypt the wallet
+      // In a real implementation, you'd store a wrapped key or use a different approach
+      // For now, we'll show the password screen but mark biometric as verified
+      console.log('✅ Biometric verified - user still needs to enter password')
+      return { biometricVerified: true }
+    } catch (err) {
+      console.error('Biometric unlock failed:', err)
+      throw err
+    }
+  }, [])
+
+  const removeBiometric = useCallback(() => {
+    disableBiometric()
+    console.log('✅ Biometric removed')
+  }, [])
+
   return (
     <WalletContext.Provider
       value={{
@@ -672,6 +721,11 @@ export function WalletProvider({ children }) {
         ensureKeys,
         // Security utilities
         getLockoutTimeRemaining,
+        // Biometric authentication
+        biometricSupported,
+        setupBiometric,
+        unlockWithBiometric,
+        removeBiometric,
       }}
     >
       {children}
