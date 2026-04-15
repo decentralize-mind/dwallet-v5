@@ -163,6 +163,11 @@ export async function fetchPriceHistory(symbol, days = 7) {
       )
       
       if (!res.ok) {
+        // Handle rate limiting (429) gracefully
+        if (res.status === 429) {
+          console.warn(`⚠️ CoinGecko rate limited for ${symbol}, using fallback`)
+          throw new Error('Rate limited')
+        }
         throw new Error(`CoinGecko API returned status: ${res.status}`)
       }
       
@@ -185,16 +190,16 @@ export async function fetchPriceHistory(symbol, days = 7) {
       return validatedHistory
     },
     
-    // Fallback: Return empty array
+    // Fallback: Return empty array (silent failure for chart data)
     async () => {
       serviceHealth.recordFailure('coingecko_history')
-      console.warn(`⚠️ Price history fetch failed for ${symbol}`)
+      console.warn(`⚠️ Price history fetch failed for ${symbol}, showing empty chart`)
       return []
     },
     
     {
       context: `price_history_${symbol}`,
-      maxRetries: 2,
+      maxRetries: 1, // Only 1 retry for rate limiting
       timeout: 5000
     }
   )
