@@ -30,9 +30,13 @@ export default function SettingsView({ onNavigate }) {
     localStorage.getItem('dwallet_theme') || 'dark',
   )
   const [copied, setCopied] = useState(false)
-  const [notifPerm, setNotifPerm] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default',
-  )
+  const [notifPerm, setNotifPerm] = useState('default')
+
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      setNotifPerm(Notification.permission)
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('dwallet_currency', currency)
@@ -40,27 +44,31 @@ export default function SettingsView({ onNavigate }) {
 
   useEffect(() => {
     localStorage.setItem('dwallet_theme', themeVal)
-    const r = document.documentElement
-    if (themeVal === 'light') {
-      r.style.setProperty('--bg', '#ffffff')
-      r.style.setProperty('--bg2', '#f8f9fa')
-      r.style.setProperty('--bg3', '#f0f2f5')
-      r.style.setProperty('--bg4', '#e4e6ea')
-      r.style.setProperty('--text', '#0d0f14')
-      r.style.setProperty('--text2', '#4a5568')
-      r.style.setProperty('--text3', '#9aa5b4')
-      r.style.setProperty('--border', 'rgba(0,0,0,0.1)')
-    } else {
-      ;[
-        '--bg',
-        '--bg2',
-        '--bg3',
-        '--bg4',
-        '--text',
-        '--text2',
-        '--text3',
-        '--border',
-      ].forEach(v => r.style.removeProperty(v))
+    try {
+      const r = document.documentElement
+      if (themeVal === 'light') {
+        r.style.setProperty('--bg', '#ffffff')
+        r.style.setProperty('--bg2', '#f8f9fa')
+        r.style.setProperty('--bg3', '#f0f2f5')
+        r.style.setProperty('--bg4', '#e4e6ea')
+        r.style.setProperty('--text', '#0d0f14')
+        r.style.setProperty('--text2', '#4a5568')
+        r.style.setProperty('--text3', '#9aa5b4')
+        r.style.setProperty('--border', 'rgba(0,0,0,0.1)')
+      } else {
+        ;[
+          '--bg',
+          '--bg2',
+          '--bg3',
+          '--bg4',
+          '--text',
+          '--text2',
+          '--text3',
+          '--border',
+        ].forEach(v => r.style.removeProperty(v))
+      }
+    } catch (err) {
+      console.error('Theme application error:', err)
     }
   }, [themeVal])
 
@@ -78,9 +86,14 @@ export default function SettingsView({ onNavigate }) {
   }
 
   const handleCopyRef = () => {
-    navigator.clipboard.writeText(getReferralLink(currentAddress))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(getReferralLink(currentAddress))
+        .then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })
+        .catch(err => console.error('Copy failed:', err))
+    }
   }
 
   const handleEnableNotif = async () => {
@@ -481,9 +494,12 @@ export default function SettingsView({ onNavigate }) {
                   </div>
                   <button
                     className="btn-secondary full-width"
-                    onClick={() =>
-                      navigator.clipboard.writeText(decryptedMnemonic)
-                    }
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(decryptedMnemonic)
+                          .catch(err => console.error('Copy failed:', err))
+                      }
+                    }}
                   >
                     Copy
                   </button>
