@@ -214,6 +214,10 @@ export async function fetchTxHistory(address, chainId = 'ethereum') {
     ethereum: `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_ETHERSCAN_KEY || 'YourApiKeyToken'}`,
     polygon: `https://api.polygonscan.com/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_POLYGONSCAN_KEY || 'YourApiKeyToken'}`,
     bnb: `https://api.bscscan.com/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_BSCSCAN_KEY || 'YourApiKeyToken'}`,
+    arbitrum: `https://api.arbiscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_ARBISCAN_KEY || 'YourApiKeyToken'}`,
+    optimism: `https://api-optimistic.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_OPTIMISM_ETHERSCAN_KEY || 'YourApiKeyToken'}`,
+    avalanche: `https://api.snowtrace.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_SNOWTRACE_KEY || 'YourApiKeyToken'}`,
+    base: `https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_BASESCAN_KEY || 'YourApiKeyToken'}`,
   }
 
   const url = EXPLORERS[chainId]
@@ -232,7 +236,12 @@ export async function fetchTxHistory(address, chainId = 'ethereum') {
       token: (() => {
         if (chainId === 'ethereum') return 'ETH'
         if (chainId === 'bnb') return 'BNB'
-        return 'MATIC'
+        if (chainId === 'polygon') return 'MATIC'
+        if (chainId === 'arbitrum') return 'ETH'
+        if (chainId === 'optimism') return 'ETH'
+        if (chainId === 'avalanche') return 'AVAX'
+        if (chainId === 'base') return 'ETH'
+        return 'ETH'
       })(),
       type:
         tx.from.toLowerCase() === address.toLowerCase() ? 'send' : 'receive',
@@ -254,6 +263,10 @@ export async function fetchTokenTxHistory(address, chainId = 'ethereum') {
     ethereum: `https://api.etherscan.io/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_ETHERSCAN_KEY || 'YourApiKeyToken'}`,
     polygon: `https://api.polygonscan.com/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_POLYGONSCAN_KEY || 'YourApiKeyToken'}`,
     bnb: `https://api.bscscan.com/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_BSCSCAN_KEY || 'YourApiKeyToken'}`,
+    arbitrum: `https://api.arbiscan.io/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_ARBISCAN_KEY || 'YourApiKeyToken'}`,
+    optimism: `https://api-optimistic.etherscan.io/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_OPTIMISM_ETHERSCAN_KEY || 'YourApiKeyToken'}`,
+    avalanche: `https://api.snowtrace.io/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_SNOWTRACE_KEY || 'YourApiKeyToken'}`,
+    base: `https://api.basescan.org/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_BASESCAN_KEY || 'YourApiKeyToken'}`,
   }
   const url = ENDPOINTS[chainId]
   if (!url) return []
