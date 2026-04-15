@@ -26,6 +26,80 @@ const STORAGE_KEY = 'dwallet_v5_encrypted'
 const SESSION_KEY = 'dwallet_v5_session'
 const AUTO_LOCK_MS = 30 * 60 * 1000
 
+// ── Password Rate Limiting Configuration ──────────────────────────────
+const MAX_LOGIN_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_KEY = 'dwallet_login_attempts'
+
+/**
+ * Check if user is rate-limited due to too many failed attempts
+ * @throws Error if locked out
+ */
+function checkRateLimit() {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY)
+    const attempts = raw ? JSON.parse(raw) : { count: 0, lockedUntil: 0 }
+    
+    if (Date.now() < attempts.lockedUntil) {
+      const remaining = Math.ceil((attempts.lockedUntil - Date.now()) / 60000)
+      throw new Error(`Too many failed attempts. Please try again in ${remaining} minute${remaining !== 1 ? 's' : ''}.`)
+    }
+    
+    return attempts
+  } catch (err) {
+    if (err.message.includes('Too many failed attempts')) {
+      throw err
+    }
+    return { count: 0, lockedUntil: 0 }
+  }
+}
+
+/**
+ * Record a failed login attempt
+ */
+function recordFailedAttempt() {
+  try {
+    const attempts = checkRateLimit()
+    attempts.count += 1
+    
+    if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+      attempts.lockedUntil = Date.now() + LOCKOUT_DURATION_MS
+      attempts.count = 0
+      console.warn('🔒 Account locked due to too many failed attempts')
+    }
+    
+    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(attempts))
+  } catch (err) {
+    // Rate limit check failed, don't block the attempt
+    console.error('Rate limit error:', err)
+  }
+}
+
+/**
+ * Clear failed attempts after successful login
+ */
+function clearFailedAttempts() {
+  localStorage.removeItem(RATE_LIMIT_KEY)
+}
+
+/**
+ * Get remaining lockout time (for UI display)
+ * @returns {number|null} Minutes remaining, or null if not locked
+ */
+function getLockoutTimeRemaining() {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY)
+    if (!raw) return null
+    
+    const attempts = JSON.parse(raw)
+    if (Date.now() >= attempts.lockedUntil) return null
+    
+    return Math.ceil((attempts.lockedUntil - Date.now()) / 60000)
+  } catch {
+    return null
+  }
+}
+
 const TOKEN_CONTRACTS = {
   ethereum: {
     USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
@@ -360,27 +434,46 @@ export function WalletProvider({ children }) {
   }
 
   const verifyPassword = async pwd => {
+    // Check rate limit
+    checkRateLimit()
+    
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
     try {
       const data = JSON.parse(await decryptData(stored, pwd))
+      clearFailedAttempts() // Reset on success
       return data.mnemonic || null
     } catch {
+      recordFailedAttempt()
       return null
     }
   }
 
   const unlockWallet = async pwd => {
+    // Check rate limit before attempting
+    checkRateLimit()
+    
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) throw new Error('No wallet found')
     try {
       const walletData = JSON.parse(await decryptData(stored, pwd))
+      clearFailedAttempts() // Reset on success
       setPassword(pwd)
       setWallet(walletData)
       setIsLocked(false)
       saveSession(walletData)
       resetInactivityTimer()
-    } catch {
+      console.log('✅ Wallet unlocked successfully')
+    } catch (err) {
+      recordFailedAttempt()
+      console.warn('❌ Failed wallet unlock attempt')
+      
+      // Check if this attempt triggered a lockout
+      const remaining = getLockoutTimeRemaining()
+      if (remaining) {
+        throw new Error(`Incorrect password. Account locked for ${remaining} minute${remaining !== 1 ? 's' : ''} due to too many failed attempts.`)
+      }
+      
       throw new Error('Incorrect password')
     }
   }
@@ -577,6 +670,8 @@ export function WalletProvider({ children }) {
         renameAccount,
         refreshBalances: addr => refreshBalances(addr, activeChain),
         ensureKeys,
+        // Security utilities
+        getLockoutTimeRemaining,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { decryptData } from '../utils/crypto'
 import { useWallet } from '../hooks/useWallet'
 import { exportTransactionsCSV } from '../utils/csvExport'
@@ -35,6 +35,12 @@ export default function SettingsView({ onNavigate }) {
   )
   const [copied, setCopied] = useState(false)
   const [notifPerm, setNotifPerm] = useState('default')
+  
+  // Seed phrase security features
+  const [seedCountdown, setSeedCountdown] = useState(30) // Auto-hide after 30 seconds
+  const [revealedWords, setRevealedWords] = useState({}) // Track which words are revealed
+  const seedTimerRef = useRef(null)
+  const countdownRef = useRef(null)
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') {
@@ -117,6 +123,25 @@ export default function SettingsView({ onNavigate }) {
       if (phrase && phrase.trim().split(' ').length >= 12) {
         setDecryptedMnemonic(phrase.trim())
         setRevealed(true)
+        setSeedCountdown(30)
+        
+        // Start countdown timer
+        if (countdownRef.current) clearInterval(countdownRef.current)
+        countdownRef.current = setInterval(() => {
+          setSeedCountdown(prev => {
+            if (prev <= 1) {
+              // Auto-hide seed phrase
+              setShowSeed(false)
+              setRevealed(false)
+              setSeedPwd('')
+              setRevealedWords({})
+              if (countdownRef.current) clearInterval(countdownRef.current)
+              if (seedTimerRef.current) clearTimeout(seedTimerRef.current)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
       } else {
         setSeedErr('Seed phrase not found in wallet data')
       }
@@ -125,6 +150,32 @@ export default function SettingsView({ onNavigate }) {
       setSeedErr('Incorrect password — please try again')
     }
   }
+  
+  // Toggle individual word reveal
+  const toggleWordReveal = useCallback((index) => {
+    setRevealedWords(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }))
+  }, [])
+  
+  // Reveal all words
+  const revealAllWords = useCallback(() => {
+    const words = decryptedMnemonic.split(' ').filter(w => w.length > 0)
+    const allRevealed = words.reduce((acc, _, i) => {
+      acc[i] = true
+      return acc
+    }, {})
+    setRevealedWords(allRevealed)
+  }, [decryptedMnemonic])
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current)
+      if (seedTimerRef.current) clearTimeout(seedTimerRef.current)
+    }
+  }, [])
 
   return (
     <div className="view-container">
@@ -446,6 +497,8 @@ export default function SettingsView({ onNavigate }) {
             setShowSeed(false)
             setRevealed(false)
             setSeedPwd('')
+            setRevealedWords({})
+            if (countdownRef.current) clearInterval(countdownRef.current)
           }}
         >
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -457,6 +510,8 @@ export default function SettingsView({ onNavigate }) {
                   setShowSeed(false)
                   setRevealed(false)
                   setSeedPwd('')
+                  setRevealedWords({})
+                  if (countdownRef.current) clearInterval(countdownRef.current)
                 }}
               >
                 ✕
@@ -465,8 +520,23 @@ export default function SettingsView({ onNavigate }) {
             <div className="modal-body">
               {!revealed ? (
                 <>
-                  <div className="seed-warning">
-                    ⚠️ Never share your seed phrase.
+                  <div className="seed-warning" style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '2px solid rgba(239,68,68,0.3)',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    marginBottom: '16px'
+                  }}>
+                    <h3 style={{ color: '#ef4444', margin: '0 0 12px', fontSize: '14px' }}>
+                      ⚠️ CRITICAL WARNING
+                    </h3>
+                    <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.8', color: 'var(--text2)' }}>
+                      <li><strong>Never share this phrase with ANYONE</strong></li>
+                      <li>Toklo support will <strong>NEVER</strong> ask for this</li>
+                      <li>Clipboard may be monitored by malicious apps</li>
+                      <li>Write it down on paper and store securely</li>
+                      <li>This phrase will <strong>auto-hide in 30 seconds</strong></li>
+                    </ul>
                   </div>
                   <input
                     type="password"
@@ -485,14 +555,84 @@ export default function SettingsView({ onNavigate }) {
                 </>
               ) : (
                 <>
+                  {/* Countdown timer */}
+                  <div style={{
+                    background: seedCountdown <= 10 ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                    border: `1px solid ${seedCountdown <= 10 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                    padding: '12px',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: seedCountdown <= 10 ? '#ef4444' : '#f59e0b'
+                    }}>
+                      ⏱️ Auto-hiding in {seedCountdown} seconds
+                    </span>
+                  </div>
+                  
+                  {/* Tap-to-reveal instruction */}
+                  <p style={{
+                    fontSize: '12px',
+                    color: 'var(--text3)',
+                    textAlign: 'center',
+                    margin: '0 0 12px'
+                  }}>
+                    👆 Tap each word to reveal • 
+                    <button
+                      onClick={revealAllWords}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        textDecoration: 'underline',
+                        padding: 0
+                      }}
+                    >
+                      Reveal All
+                    </button>
+                  </p>
+                  
                   <div className="seed-grid">
                     {decryptedMnemonic
                       .split(' ')
                       .filter(w => w.length > 0)
                       .map((word, i) => (
-                        <div key={i} className="seed-word">
+                        <div
+                          key={i}
+                          className="seed-word"
+                          onClick={() => toggleWordReveal(i)}
+                          style={{
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            position: 'relative'
+                          }}
+                          title="Click to reveal/hide"
+                        >
                           <span className="seed-num">{i + 1}</span>
-                          <span className="seed-text">{word}</span>
+                          <span className="seed-text" style={{
+                            filter: revealedWords[i] ? 'none' : 'blur(8px)',
+                            transition: 'filter 0.2s'
+                          }}>
+                            {word}
+                          </span>
+                          {!revealedWords[i] && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              fontSize: '10px',
+                              color: 'var(--text3)',
+                              pointerEvents: 'none'
+                            }}>
+                              Tap
+                            </span>
+                          )}
                         </div>
                       ))}
                   </div>
@@ -501,11 +641,21 @@ export default function SettingsView({ onNavigate }) {
                     onClick={() => {
                       if (navigator.clipboard) {
                         navigator.clipboard.writeText(decryptedMnemonic)
+                          .then(() => {
+                            setCopied(true)
+                            setTimeout(() => setCopied(false), 2000)
+                          })
                           .catch(err => console.error('Copy failed:', err))
                       }
                     }}
+                    style={{
+                      marginTop: '12px',
+                      background: copied ? 'rgba(16,185,129,0.1)' : 'var(--bg3)',
+                      color: copied ? '#10b981' : 'var(--text2)',
+                      border: '1px solid rgba(245,158,11,0.3)'
+                    }}
                   >
-                    Copy
+                    {copied ? '✓ Copied!' : '⚠️ Copy to Clipboard (Warning: May be monitored)'}
                   </button>
                 </>
               )}
