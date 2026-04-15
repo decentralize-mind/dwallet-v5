@@ -5,6 +5,7 @@ import { resolveENS } from '../utils/blockchain'
 import { getPrice } from '../utils/prices'
 import { getContacts, isWhitelisted, isNewAddress, getAddressWarningLevel } from '../utils/addressBook'
 import { DWT } from '../utils/dwt'
+import TransactionSimulation from './TransactionSimulation'
 
 const CHAIN_TOKENS = {
   ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK', 'DWT'],
@@ -27,7 +28,7 @@ const EXPLORERS = {
 }
 
 export default function SendModal({ onClose }) {
-  const { sendTransaction, chainBalances, activeChain, gasInfo } = useWallet()
+  const { sendTransaction, chainBalances, activeChain, gasInfo, wallet } = useWallet()
   const tokens = CHAIN_TOKENS[activeChain] || ['ETH']
 
   const [token, setToken] = useState(tokens[0])
@@ -46,6 +47,7 @@ export default function SendModal({ onClose }) {
   const [confirmCountdown, setConfirmCountdown] = useState(5)
   const [addressVerified, setAddressVerified] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
+  const [showSimulation, setShowSimulation] = useState(false)
   const confirmTimerRef = useRef(null)
 
   const contacts = getContacts()
@@ -194,6 +196,12 @@ export default function SendModal({ onClose }) {
   }
 
   const handleSend = async () => {
+    // SECURITY: Show transaction simulation before sending
+    setShowSimulation(true)
+  }
+
+  const confirmSend = async (txData) => {
+    setShowSimulation(false)
     setSending(true)
     setError('')
     
@@ -947,6 +955,26 @@ export default function SendModal({ onClose }) {
           </div>
         )}
       </div>
+
+      {/* Transaction Simulation */}
+      {showSimulation && (
+        <TransactionSimulation
+          type="send"
+          txData={{
+            from: wallet?.accounts?.[wallet.activeAccount]?.address,
+            to: finalAddr,
+            amount: parseFloat(amount),
+            token,
+            chain: activeChain,
+            balance,
+            gasInfo,
+            price,
+            provider: null, // Would need provider from context
+          }}
+          onClose={() => setShowSimulation(false)}
+          onConfirm={confirmSend}
+        />
+      )}
     </div>
   )
 }

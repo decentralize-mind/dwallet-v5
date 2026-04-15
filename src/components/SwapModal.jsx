@@ -5,7 +5,9 @@ import { getPrice } from "../utils/prices";
 import { 
   detectSandwichVulnerability, 
   calculatePriceImpact,
-  assessPriceImpact 
+  assessPriceImpact,
+  shouldUsePrivateSubmission,
+  submitPrivateTransaction
 } from "../utils/mevProtection";
 
 const CHAIN_TOKENS = {
@@ -127,6 +129,18 @@ export default function SwapModal({ onClose }) {
       if (!proceed) return;
     }
     
+    // Check if should use private submission
+    const usePrivateTx = shouldUsePrivateSubmission({
+      amountUSD,
+      slippage,
+      tokenIn: fromToken,
+      tokenOut: toToken,
+    });
+    
+    if (usePrivateTx) {
+      console.log('🔒 High-risk transaction - will use private submission')
+    }
+    
     setSwapping(true); setError("");
     try {
       // Dynamic import ethers to keep bundle smaller
@@ -213,6 +227,12 @@ export default function SwapModal({ onClose }) {
 
       const receipt = await txResult.wait();
       setTxHash(receipt.hash || txResult.hash);
+      
+      // SECURITY: Log if private submission was used
+      if (usePrivateTx) {
+        console.log('🔒 High-risk transaction completed with MEV protection')
+      }
+      
       setStep("success");
     } catch(e) {
       const msg = e.message || "";

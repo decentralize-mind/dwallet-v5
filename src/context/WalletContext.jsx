@@ -70,6 +70,10 @@ import {
   generateMEVProtectionReport,
   detectSandwichVulnerability
 } from '../utils/mevProtection'
+import {
+  createHardwareSigner,
+  getHardwareWalletName
+} from '../utils/hardwareWallet'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -174,6 +178,10 @@ export function WalletProvider({ children }) {
   const [isLocked, setIsLocked] = useState(false)
   const [password, setPassword] = useState(null)
   const [loadingBal, setLoadingBal] = useState(false)
+  
+  // Hardware wallet state
+  const [hardwareWallet, setHardwareWallet] = useState(null)
+  const [isHardwareWallet, setIsHardwareWallet] = useState(false)
   const [loadingTx, setLoadingTx] = useState(false)
   const [gasInfo, setGasInfo] = useState({ gwei: '—', ethCost: '—' })
   const [prices, setPrices] = useState({})
@@ -802,6 +810,49 @@ export function WalletProvider({ children }) {
     console.log('✅ Biometric removed')
   }, [])
 
+  // ── Hardware Wallet Functions ──────────────────────────────
+  
+  const connectHardwareWallet = useCallback(async (hwData) => {
+    try {
+      setHardwareWallet(hwData)
+      setIsHardwareWallet(true)
+      
+      // Create a pseudo-wallet object for hardware wallet
+      const hwWallet = {
+        accounts: [{
+          name: `${getHardwareWalletName(hwData.type)} Account`,
+          address: hwData.address,
+          privateKey: null, // Hardware wallets don't expose private keys
+          index: 0,
+          isHardware: true,
+        }],
+        activeAccount: 0,
+        type: 'hardware',
+        hardwareType: hwData.type,
+      }
+      
+      setWallet(hwWallet)
+      saveSession(hwWallet)
+      
+      console.log(`✅ ${getHardwareWalletName(hwData.type)} connected: ${hwData.address}`)
+      notify(`✓ ${getHardwareWalletName(hwData.type)} connected`, 'success')
+      
+      return hwWallet
+    } catch (err) {
+      console.error('Hardware wallet setup failed:', err)
+      throw err
+    }
+  }, [notify])
+
+  const disconnectHardwareWallet = useCallback(() => {
+    setHardwareWallet(null)
+    setIsHardwareWallet(false)
+    setWallet(null)
+    localStorage.removeItem(STORAGE_KEY)
+    console.log('✅ Hardware wallet disconnected')
+    notify('Hardware wallet disconnected', 'info')
+  }, [notify])
+
   return (
     <WalletContext.Provider
       value={{
@@ -844,6 +895,11 @@ export function WalletProvider({ children }) {
         setupBiometric,
         unlockWithBiometric,
         removeBiometric,
+        // Hardware wallet support
+        hardwareWallet,
+        isHardwareWallet,
+        connectHardwareWallet,
+        disconnectHardwareWallet,
       }}
     >
       {children}
