@@ -28,7 +28,15 @@ const NAV_ITEMS = [
 
 export default function MainWallet() {
   const { wallet, currentAddress, activeChain, lockWallet } = useWallet()
-  const [activeTab, setActiveTab] = useState('dashboard')
+  
+  // Load saved tab from localStorage, default to 'dashboard'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return localStorage.getItem('dwallet_active_tab') || 'dashboard'
+    } catch {
+      return 'dashboard'
+    }
+  })
   const [subView, setSubView] = useState(null)
   const [modal, setModal] = useState(null)
   const [showChainSelector, setShowChainSelector] = useState(false)
@@ -60,6 +68,13 @@ export default function MainWallet() {
   const handleNavTab = tab => {
     setActiveTab(tab)
     setSubView(null)
+    
+    // Save active tab to localStorage for persistence
+    try {
+      localStorage.setItem('dwallet_active_tab', tab)
+    } catch (e) {
+      console.warn('Failed to save tab preference:', e)
+    }
   }
 
   const renderMain = () => {
