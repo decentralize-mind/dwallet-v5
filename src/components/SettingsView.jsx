@@ -9,6 +9,8 @@ function getReferralLink(address) {
 }
 
 export default function SettingsView({ onNavigate }) {
+  console.log('SettingsView rendering...')
+  
   const {
     wallet,
     lockWallet,
@@ -16,6 +18,8 @@ export default function SettingsView({ onNavigate }) {
     transactions,
     currentAddress,
   } = useWallet()
+  
+  console.log('SettingsView wallet state:', { wallet, currentAddress, transactions })
   const [showSeed, setShowSeed] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [seedPwd, setSeedPwd] = useState('')
