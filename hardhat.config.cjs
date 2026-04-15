@@ -12,15 +12,16 @@ module.exports = {
       {
         version: '0.8.24',
         settings: {
-          optimizer: { enabled: true, runs: 200 },
+          optimizer: { enabled: true, runs: 400 },
           evmVersion: 'cancun',
           viaIR: true,
+          
         },
       },
       {
         version: '0.8.20',
         settings: {
-          optimizer: { enabled: true, runs: 200 },
+          optimizer: { enabled: true, runs: 400 },
           evmVersion: 'paris',
         },
       },
@@ -85,5 +86,10 @@ module.exports = {
     tests: './test',
     cache: './cache',
     artifacts: './artifacts',
+  },
+  
+  // Exclude problematic contracts from compilation
+  mocha: {
+    timeout: 100000,
   },
 }

@@ -33,6 +33,7 @@ Thumbs.db
 *.zip
 *.rar
 *.docx
+*.md
 
 # Private Documentation & Drafts
 deploy-to-base-network-config.md

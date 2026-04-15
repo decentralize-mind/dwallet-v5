@@ -1,0 +1,12 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-04-15T03:37:24.800Z",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "dwtToken": "0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48",
+  "totalMinted": "30864045.0",
+  "maxSupply": "123000000.0",
+  "allocations": 23,
+  "successCount": 8,
+  "failCount": 15
+}

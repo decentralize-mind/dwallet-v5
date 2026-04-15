@@ -159,14 +159,25 @@ export function WalletProvider({ children }) {
     const hasEncrypted = !!localStorage.getItem(STORAGE_KEY)
     const session = loadSession()
 
+    console.log('🔐 Wallet Init Debug:', {
+      hasEncrypted,
+      hasSession: !!session,
+      storageKey: STORAGE_KEY,
+      localStorageKeys: Object.keys(localStorage),
+      encryptedDataLength: localStorage.getItem(STORAGE_KEY)?.length || 0
+    })
+
     if (!hasEncrypted) {
+      console.log('ℹ️ No encrypted wallet found - user needs to create or import')
       setSessionReady(true)
       return
     }
 
     if (session) {
+      console.log('✅ Restoring from session')
       restoreFromSession(session)
     } else {
+      console.log('🔒 Wallet locked - needs password')
       setIsLocked(true)
       setSessionReady(true)
     }
@@ -307,6 +318,14 @@ export function WalletProvider({ children }) {
     if (!walletData || !pwd) throw new Error('Wallet data and password required')
     const encrypted = await encryptData(JSON.stringify(walletData), pwd)
     localStorage.setItem(STORAGE_KEY, encrypted)
+    
+    console.log('💾 Wallet Saved Successfully:', {
+      storageKey: STORAGE_KEY,
+      encryptedLength: encrypted.length,
+      address: walletData.accounts[0]?.address,
+      canRetrieve: !!localStorage.getItem(STORAGE_KEY)
+    })
+    
     setPassword(pwd)
     setWallet(walletData)
     setIsLocked(false)

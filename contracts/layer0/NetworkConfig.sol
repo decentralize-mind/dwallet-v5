@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../SecurityGated.sol";
+import "../layer7/SecurityGated.sol";
 
 /**
  * @title NetworkConfig
@@ -48,11 +48,8 @@ contract NetworkConfig is AccessControl, ReentrancyGuard, SecurityGated {
         address _governor,
         address _securityController,
         address _registry,
-        address _access,
-        address _time,
-        address _state,
-        address _rate,
-        address _verify
+        address _lockEngine,
+        address _invariantChecker
     ) SecurityGated(_securityController) {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE,         _admin);
@@ -60,7 +57,7 @@ contract NetworkConfig is AccessControl, ReentrancyGuard, SecurityGated {
 
         genesisEndTime = block.timestamp + 1 days;
 
-        _initSecurityModules(_registry, _access, _time, _state, _rate, _verify);
+        _initSecuritySystem(_registry, _lockEngine, _invariantChecker);
     }
 
     // ── Config Management ─────────────────────────────────────────────────────

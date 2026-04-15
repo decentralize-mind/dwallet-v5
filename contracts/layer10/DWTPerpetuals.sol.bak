@@ -1,0 +1,548 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "../layer7/SecurityGated.sol";
+
+interface IPriceFeed {
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint80  roundId,
+            int256  answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80  answeredInRound
+        );
+}
+
+/**
+ * @title DWTPerpetuals
+ * @notice Simplified perpetual futures on DWT/USD.
+ *
+ *  - Traders post USDC margin and open LONG or SHORT positions.
+ *  - Funding rate is exchanged every `fundingInterval` seconds between longs and shorts.
+ *  - Positions can be liquidated when margin ratio falls below `maintenanceMarginBps`.
+ *  - Max leverage is configurable (default 10x).
+ *
+ *  Architecture notes
+ *  ------------------
+ *  Longs  profit when price rises.
+ *  Shorts profit when price falls.
+ *  Open interest is tracked separately; in a production system an AMM or
+ *  order-book would balance sides and set the funding direction automatically.
+ */
+contract DWTPerpetuals is AccessControl, ReentrancyGuard, Pausable, SecurityGated {
+    using SafeERC20 for IERC20;
+
+    // ── Roles ─────────────────────────────────────────────────────────────────
+    bytes32 public constant ADMIN_ROLE    = keccak256("ADMIN_ROLE");
+    bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
+    bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
+    
+    bytes32 public constant LAYER_ID      = keccak256("LAYER_10_ECOSYSTEM");
+
+    // ── Action IDs for Rate Limiting ─────────────────────────────────────────
+    bytes32 public constant ACTION_OPEN_POSITION = keccak256("ACTION_OPEN_POSITION");
+
+    // ─────────────────────────────────────────────
+    //  Types
+    // ─────────────────────────────────────────────
+
+    enum Side { LONG, SHORT }
+
+    struct Position {
+        address trader;
+        Side    side;
+        uint256 sizeUsd;          // notional in USDC (6 dec)
+        uint256 margin;           // USDC collateral (6 dec)
+        uint256 entryPrice;       // 18-dec DWT/USD at open
+        int256  fundingDebt;      // cumulative funding debt at open (18 dec)
+        uint256 openTimestamp;
+    }
+
+    // ─────────────────────────────────────────────
+    //  Storage
+    // ─────────────────────────────────────────────
+
+    IERC20     public immutable usdc;
+    IPriceFeed public           priceOracle;
+    IPriceFeed public           backupOracle; // Multi-oracle fallback
+
+    uint256 public constant STALE_PRICE_DELAY = 1 hours;
+    uint256 public constant ORACLE_HEALTH_THRESHOLD = 30 minutes; // For auto-failover
+
+    uint256 public nextPositionId;
+    mapping(uint256 => Position) public positions;
+
+    // Open interest
+    uint256 public totalLongOI;   // notional USDC
+    uint256 public totalShortOI;
+
+    // Risk parameters
+    uint256 public constant MAX_LEVERAGE_BPS         = 1_000_000; // 10x max (1x = 100,000 bps)
+    uint256 public constant MAINTENANCE_MARGIN_BPS   = 500;        // 5% maintenance margin
+    uint256 public constant DEFAULT_LIQUIDATOR_FEE_BPS = 100;      // 1% of margin to liquidator
+    uint256 public constant DEFAULT_PROTOCOL_FEE_BPS   = 30;       // 0.3% protocol fee
+    uint256 public constant MAX_LIQUIDATOR_FEE_BPS   = 500;        // Max 5% - prevents excessive fees
+    uint256 public constant MAX_PROTOCOL_FEE_BPS     = 100;        // Max 1% - prevents excessive fees
+    
+    // Mutable state (can be changed by governance within caps)
+    uint256 public maxLeverageBps                    = MAX_LEVERAGE_BPS;
+    uint256 public maintenanceMarginBps              = MAINTENANCE_MARGIN_BPS;
+    uint256 public liquidatorFeeBps                  = DEFAULT_LIQUIDATOR_FEE_BPS;
+    uint256 public protocolFeeBps                    = DEFAULT_PROTOCOL_FEE_BPS;
+
+    // Funding
+    uint256 public constant FUNDING_INTERVAL         = 8 hours;  // Funding payment interval
+    uint256 public constant DEFAULT_FUNDING_RATE_BPS = 10;       // 0.10% per interval
+    uint256 public fundingInterval                   = FUNDING_INTERVAL;
+    uint256 public fundingRateBps                    = DEFAULT_FUNDING_RATE_BPS;
+    uint256 public lastFundingTime;
+    int256  public cumulativeFundingLong;              // 18 dec, positive = longs pay
+    int256  public cumulativeFundingShort;
+
+    address public feeRecipient;
+    uint256 public insuranceFund;                      // USDC reserve for bad debt
+
+    // ─────────────────────────────────────────────
+    //  Events
+    // ─────────────────────────────────────────────
+
+    event PositionOpened(uint256 indexed id, address indexed trader, Side side,
+                         uint256 sizeUsd, uint256 margin, uint256 entryPrice);
+    event PositionClosed(uint256 indexed id, address indexed trader, int256 pnl);
+    event PositionLiquidated(uint256 indexed id, address indexed liquidator, uint256 liquidatorFee);
+    event FundingSettled(uint256 timestamp, int256 longRate, int256 shortRate);
+    event OracleUpdated(address indexed newOracle, bool isBackup);
+    event OracleFailover(address indexed oldOracle, address indexed newOracle, string reason);
+    event MarginAdded(uint256 indexed id, uint256 amount);
+
+    // ─────────────────────────────────────────────
+    //  Constructor
+    // ─────────────────────────────────────────────
+
+    constructor(
+        address _usdc, 
+        address _oracle, 
+        address _feeRecipient, 
+        address _admin,
+        address _governor,
+        address _guardian,
+        address _securityController,
+        address _registry,
+        address _access,
+        address _time,
+        address _state,
+        address _rate,
+        address _verify
+    ) SecurityGated(_securityController) {
+        usdc          = IERC20(_usdc);
+        priceOracle   = IPriceFeed(_oracle);
+        feeRecipient  = _feeRecipient;
+        lastFundingTime = block.timestamp;
+        
+        emit OracleUpdated(_oracle, false); // Primary oracle
+    }
+
+    // ─────────────────────────────────────────────
+    //  Funding
+    // ─────────────────────────────────────────────
+
+    /**
+     * @notice Settle any pending funding periods. Call before any position action.
+     * @dev Optimized to use single calculation instead of loop for gas efficiency.
+     *      Caches storage reads and uses unchecked arithmetic where safe.
+     */
+    function settleFunding() public whenProtocolNotPaused withStateGuard(LAYER_ID) {
+        uint256 elapsed = block.timestamp - lastFundingTime;
+        if (elapsed < fundingInterval) return;
+
+        uint256 periods = elapsed / fundingInterval;
+        
+        // Cache storage reads to save gas (~2,100 gas per read)
+        uint256 currentLongOI = totalLongOI;
+        uint256 currentShortOI = totalShortOI;
+        uint256 currentRateBps = fundingRateBps;
+        
+        // Pre-calculate rate outside conditional
+        int256 rate = int256(currentRateBps * 1e14);
+        
+        // Single calculation instead of loop - mathematically equivalent
+        // but saves ~500-2,000 gas depending on number of periods
+        if (currentLongOI > 0 || currentShortOI > 0) {
+            unchecked {
+                if (currentLongOI >= currentShortOI) {
+                    // Longs pay shorts
+                    cumulativeFundingLong += rate * int256(periods);
+                    
+                    if (currentShortOI > 0) {
+                        int256 shortPayment = rate * int256(currentLongOI) / int256(currentShortOI);
+                        cumulativeFundingShort -= shortPayment * int256(periods);
+                    }
+                } else {
+                    // Shorts pay longs
+                    cumulativeFundingShort += rate * int256(periods);
+                    
+                    if (currentLongOI > 0) {
+                        int256 longPayment = rate * int256(currentShortOI) / int256(currentLongOI);
+                        cumulativeFundingLong -= longPayment * int256(periods);
+                    }
+                }
+            }
+        }
+
+        lastFundingTime += periods * fundingInterval;
+        emit FundingSettled(block.timestamp, cumulativeFundingLong, cumulativeFundingShort);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Open / Close / Liquidate
+    // ─────────────────────────────────────────────
+
+    /**
+     * @notice Open a leveraged position.
+     * @param side     LONG or SHORT
+     * @param sizeUsd  Notional size in USDC (6 dec)
+     * @param margin   Collateral in USDC (6 dec); leverage = sizeUsd / margin
+     */
+    function openPosition(Side side, uint256 sizeUsd, uint256 margin)
+        external 
+        nonReentrant 
+        whenNotPaused 
+        whenProtocolNotPaused 
+        withStateGuard(LAYER_ID)
+        withRateLimit(ACTION_OPEN_POSITION, sizeUsd)
+        returns (uint256 id)
+    {
+        settleFunding();
+
+        require(margin > 0, "Margin zero");
+        require(sizeUsd >= margin, "Size < margin");
+        // leverage check: sizeUsd / margin <= maxLeverageBps / 100_000
+        require(sizeUsd * 100_000 <= margin * maxLeverageBps, "Exceeds max leverage");
+
+        uint256 openFee = sizeUsd * protocolFeeBps / 10_000;
+        require(margin > openFee, "Margin too small for fee");
+
+        usdc.safeTransferFrom(msg.sender, address(this), margin);
+        usdc.safeTransfer(feeRecipient, openFee);
+        uint256 effectiveMargin = margin - openFee;
+
+        uint256 price = _getPrice();
+
+        id = nextPositionId++;
+        positions[id] = Position({
+            trader:       msg.sender,
+            side:         side,
+            sizeUsd:      sizeUsd,
+            margin:       effectiveMargin,
+            entryPrice:   price,
+            fundingDebt:  side == Side.LONG ? cumulativeFundingLong : cumulativeFundingShort,
+            openTimestamp: block.timestamp
+        });
+
+        if (side == Side.LONG)  totalLongOI  += sizeUsd;
+        else                    totalShortOI += sizeUsd;
+
+        emit PositionOpened(id, msg.sender, side, sizeUsd, effectiveMargin, price);
+    }
+
+    /**
+     * @notice Close your own position and realize PnL.
+     */
+    function closePosition(uint256 id) 
+        external 
+        nonReentrant 
+        whenNotPaused 
+        whenProtocolNotPaused 
+        withStateGuard(LAYER_ID)
+    {
+        settleFunding();
+        Position storage pos = positions[id];
+        require(pos.trader == msg.sender, "Not your position");
+        require(pos.sizeUsd > 0,          "Already closed");
+
+        (int256 pnl, uint256 fundingCost) = _calcPnlAndFunding(pos);
+
+        _removeOI(pos);
+
+        int256 remaining = int256(pos.margin) + pnl - int256(fundingCost);
+        delete positions[id];
+
+        if (remaining > 0) {
+            usdc.safeTransfer(msg.sender, uint256(remaining));
+        } else {
+            // Bad debt covered by insurance fund
+            uint256 deficit = uint256(-remaining);
+            if (insuranceFund >= deficit) insuranceFund -= deficit;
+            // else deficit is socialized (simplified)
+        }
+
+        emit PositionClosed(id, msg.sender, pnl);
+    }
+
+    /**
+     * @notice Liquidate an undercollateralised position.
+     */
+    function liquidate(uint256 id) 
+        external 
+        nonReentrant 
+        whenNotPaused 
+        whenProtocolNotPaused 
+        withStateGuard(LAYER_ID)
+    {
+        settleFunding();
+        Position storage pos = positions[id];
+        require(pos.sizeUsd > 0, "Already closed");
+
+        (int256 pnl, uint256 fundingCost) = _calcPnlAndFunding(pos);
+        int256 remaining = int256(pos.margin) + pnl - int256(fundingCost);
+
+        uint256 maintenanceMargin = pos.sizeUsd * maintenanceMarginBps / 10_000;
+        require(remaining < int256(maintenanceMargin), "Not liquidatable");
+
+        _removeOI(pos);
+
+        address trader     = pos.trader;
+        uint256 margin     = pos.margin;
+        delete positions[id];
+
+        uint256 liqFee = margin * liquidatorFeeBps / 10_000;
+        if (liqFee > uint256(remaining > 0 ? remaining : int256(0))) {
+            liqFee = uint256(remaining > 0 ? remaining : int256(0));
+        }
+
+        if (liqFee > 0) usdc.safeTransfer(msg.sender, liqFee);
+
+        emit PositionLiquidated(id, msg.sender, liqFee);
+    }
+
+    /**
+     * @notice Add margin to an existing position to avoid liquidation.
+     */
+    function addMargin(uint256 id, uint256 amount) 
+        external 
+        nonReentrant 
+        whenNotPaused 
+        whenProtocolNotPaused 
+        withStateGuard(LAYER_ID)
+    {
+        Position storage pos = positions[id];
+        require(pos.trader == msg.sender, "Not your position");
+        require(pos.sizeUsd > 0,          "Already closed");
+
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        pos.margin += amount;
+
+        emit MarginAdded(id, amount);
+    }
+
+    // ─────────────────────────────────────────────
+    //  View helpers
+    // ─────────────────────────────────────────────
+
+    function getPositionHealth(uint256 id)
+        external returns (int256 remainingMargin, uint256 maintenanceMargin)
+    {
+        Position storage pos = positions[id];
+        (int256 pnl, uint256 fundingCost) = _calcPnlAndFunding(pos);
+        remainingMargin  = int256(pos.margin) + pnl - int256(fundingCost);
+        maintenanceMargin = pos.sizeUsd * maintenanceMarginBps / 10_000;
+    }
+
+    // ─────────────────────────────────────────────
+    //  Internal
+    // ─────────────────────────────────────────────
+
+    function _calcPnlAndFunding(Position storage pos)
+        internal returns (int256 pnl, uint256 fundingCost)
+    {
+        uint256 currentPrice = _getPrice();
+        int256  priceDelta   = int256(currentPrice) - int256(pos.entryPrice);
+
+        // PnL = (priceDelta / entryPrice) * sizeUsd
+        int256 pnlRaw = priceDelta * int256(pos.sizeUsd) / int256(pos.entryPrice);
+        pnl = pos.side == Side.LONG ? pnlRaw : -pnlRaw;
+
+        // Funding cost = (currentCumulative - debtAtOpen) * sizeUsd / 1e18
+        int256 cumNow = pos.side == Side.LONG ? cumulativeFundingLong : cumulativeFundingShort;
+        int256 fundingDelta = cumNow - pos.fundingDebt;
+        int256 fundingRaw   = fundingDelta * int256(pos.sizeUsd) / 1e18;
+        fundingCost = fundingRaw > 0 ? uint256(fundingRaw) : 0;
+    }
+
+    function _removeOI(Position storage pos) internal {
+        if (pos.side == Side.LONG) {
+            totalLongOI  = totalLongOI  >= pos.sizeUsd ? totalLongOI  - pos.sizeUsd : 0;
+        } else {
+            totalShortOI = totalShortOI >= pos.sizeUsd ? totalShortOI - pos.sizeUsd : 0;
+        }
+    }
+
+    function _getPrice() internal  returns (uint256) {
+        // Get price from primary oracle
+        uint256 price = _fetchSafePrice(priceOracle);
+        
+        // If price is 0 and backup oracle exists, try backup
+        if (price == 0 && address(backupOracle) != address(0)) {
+            emit OracleFailover(address(priceOracle), address(backupOracle), "Primary oracle returned 0");
+            price = _fetchSafePrice(backupOracle);
+        }
+        
+        if (price == 0) {
+            revert("All oracles failed or returned 0");
+        }
+        
+        return price;
+    }
+
+    /**
+     * @notice Safely fetch price with staleness and validity checks.
+     */
+    function _fetchSafePrice(IPriceFeed oracle) internal view returns (uint256) {
+        (, int256 price, , uint256 updatedAt, ) = oracle.latestRoundData();
+        require(price > 0, "Oracle invalid price");
+        require(block.timestamp - updatedAt <= STALE_PRICE_DELAY, "Oracle price stale");
+        return uint256(price);
+    }
+
+    /**
+     * @notice Check if an oracle is healthy (recent update).
+     */
+    function isOracleHealthy(IPriceFeed oracle) public view returns (bool) {
+        try oracle.latestRoundData() returns (
+            uint80,
+            int256 price,
+            uint256,
+            uint256 updatedAt,
+            uint80
+        ) {
+            return (
+                price > 0 && 
+                block.timestamp - updatedAt <= ORACLE_HEALTH_THRESHOLD
+            );
+        } catch {
+            return false;
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    //  Admin
+    // ─────────────────────────────────────────────
+
+    function setOracle(address _oracle, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        require(_oracle != address(0), "Zero address");
+        priceOracle = IPriceFeed(_oracle);
+        emit OracleUpdated(_oracle, false);
+    }
+
+    /**
+     * @notice Set the backup oracle for failover protection.
+     */
+    function setBackupOracle(address _backupOracle, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        backupOracle = IPriceFeed(_backupOracle);
+        emit OracleUpdated(_backupOracle, true);
+    }
+
+    function setMaxLeverage(uint256 _bps, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        maxLeverageBps = _bps; 
+    }
+
+    function setMaintenanceMargin(uint256 _bps, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        maintenanceMarginBps = _bps; 
+    }
+
+    function setFundingRateBps(uint256 _bps, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        fundingRateBps = _bps; 
+    }
+
+    function setFundingInterval(uint256 _secs, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        fundingInterval = _secs; 
+    }
+
+    function setFeeRecipient(address _to, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(ADMIN_ROLE) 
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    { 
+        feeRecipient = _to; 
+    }
+
+    /**
+     * @notice Set the liquidator fee percentage.
+     * @dev Gated by Protocol-wide pause and Signature verification. Capped at MAX_LIQUIDATOR_FEE_BPS.
+     */
+    function setLiquidatorFeeBps(uint256 _feeBps, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE)
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    {
+        require(_feeBps <= MAX_LIQUIDATOR_FEE_BPS, "DWTPerpetuals: fee exceeds 5% cap");
+        liquidatorFeeBps = _feeBps;
+    }
+
+    /**
+     * @notice Set the protocol fee percentage.
+     * @dev Gated by Protocol-wide pause and Signature verification. Capped at MAX_PROTOCOL_FEE_BPS.
+     */
+    function setProtocolFeeBps(uint256 _feeBps, bytes32 hash, bytes calldata signature) 
+        external 
+        onlyRole(GOVERNOR_ROLE)
+        whenProtocolNotPaused 
+        withSignature(hash, signature)
+    {
+        require(_feeBps <= MAX_PROTOCOL_FEE_BPS, "DWTPerpetuals: fee exceeds 1% cap");
+        protocolFeeBps = _feeBps;
+    }
+
+    function pause()   external onlyRole(GUARDIAN_ROLE) { _pause(); }
+    function unpause() external onlyRole(GOVERNOR_ROLE) { _unpause(); }
+
+    function depositInsurance(uint256 amount) 
+        external 
+        onlyRole(GOVERNOR_ROLE) 
+        whenProtocolNotPaused 
+        withStateGuard(LAYER_ID)
+    {
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        insuranceFund += amount;
+    }
+}

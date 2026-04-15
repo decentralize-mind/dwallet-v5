@@ -1,0 +1,26 @@
+
+╔══════════════════════════════════════════════════╗
+║   DWT Token - Quick Testnet Deployment           ║
+╚══════════════════════════════════════════════════╝
+Network:   baseSepolia
+Deployer:  0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5
+Balance:   5.69179238104910692 ETH
+
+📋 Step 1: Deploying Simplified DWT Token...
+
+✅ DWTToken deployed: 0x1e0C0ae387CF2ce1D2ee44c9d297cF0C867583F6
+
+❌ Deployment failed: Error: could not decode result data (value="0x", info={ "method": "MAX_SUPPLY", "signature": "MAX_SUPPLY()" }, code=BAD_DATA, version=6.16.0)
+    at makeError (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/utils/errors.ts:698:21)
+    at assert (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/utils/errors.ts:719:25)
+    at Interface.decodeFunctionResult (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/abi/interface.ts:916:15)
+    at staticCallResult (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/contract/contract.ts:346:35)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at staticCall (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/contract/contract.ts:303:24)
+    at Proxy.MAX_SUPPLY (/Users/macbookpri/Downloads/dwallet-v5/node_modules/ethers/src.ts/contract/contract.ts:351:41)
+    at main (/Users/macbookpri/Downloads/dwallet-v5/scripts/deploy-dwt-quick.cjs:29:21) {
+  code: 'BAD_DATA',
+  value: '0x',
+  info: { method: 'MAX_SUPPLY', signature: 'MAX_SUPPLY()' },
+  shortMessage: 'could not decode result data'
+}

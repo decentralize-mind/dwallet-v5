@@ -1,0 +1,10 @@
+DeclarationError: Undeclared identifier.
+  --> contracts/layer5/FlashLoan.sol:77:9:
+   |
+77 |         _initSecurityModules(_access, _time, _state, _rate, _verify);
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+
+Error HH600: Compilation failed
+
+For more info go to https://v2.hardhat.org/HH600 or run Hardhat with --show-stack-traces

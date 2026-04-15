@@ -25,6 +25,11 @@ async function main() {
   const REWARD_PER_SEC = ethers.parseEther('0.01') // 0.01 tokens/second
   const START_TS = Math.floor(Date.now() / 1000) + 60 // 1 min from now
   const END_TS = START_TS + 365 * 24 * 3600 // 1 year
+  
+  // Layer 7 Security System addresses (required for SecurityGated contracts)
+  const SECURITY_REGISTRY = process.env.SECURITY_REGISTRY || ethers.ZeroAddress
+  const LOCK_ENGINE = process.env.LOCK_ENGINE || ethers.ZeroAddress
+  const INVARIANT_CHECKER = process.env.INVARIANT_CHECKER || ethers.ZeroAddress
 
   console.log('Environment Sync Audit:')
   console.log('- DWT_TOKEN:', process.env.DWT_TOKEN)
@@ -34,9 +39,14 @@ async function main() {
   // ── 1. Deploy PriceOracle ─────────────────────────────────────────────────
   console.log('1/5  Deploying PriceOracle...')
   const PriceOracle = await ethers.getContractFactory('PriceOracle')
-  const priceOracle = await PriceOracle.deploy(deployer.address, {
-    nonce: currentNonce++,
-  })
+  const priceOracle = await PriceOracle.deploy(
+    deployer.address,
+    LAYER7_SECURITY_ADDRESS,
+    SECURITY_REGISTRY,
+    LOCK_ENGINE,
+    INVARIANT_CHECKER,
+    { nonce: currentNonce++ },
+  )
   await priceOracle.waitForDeployment()
   console.log('     PriceOracle:', await priceOracle.getAddress())
 
@@ -81,6 +91,10 @@ async function main() {
     START_TS,
     END_TS,
     deployer.address,
+    LAYER7_SECURITY_ADDRESS,
+    SECURITY_REGISTRY,
+    LOCK_ENGINE,
+    INVARIANT_CHECKER,
     { nonce: currentNonce++ },
   )
   await liquidityIncentive.waitForDeployment()

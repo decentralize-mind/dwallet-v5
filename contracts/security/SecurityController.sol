@@ -58,4 +58,11 @@ contract SecurityController is AccessControl {
     function isSystemHalted() external view returns (bool) {
         return isPaused || threatLevel >= 90;
     }
+
+    /**
+     * @notice Get the current threat level (0-100).
+     */
+    function getThreatLevel() external view returns (uint256) {
+        return threatLevel;
+    }
 }

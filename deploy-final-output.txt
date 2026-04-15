@@ -1,0 +1,109 @@
+
+╔══════════════════════════════════════════════════╗
+║   DWT Token - Quick Testnet Deployment           ║
+╚══════════════════════════════════════════════════╝
+Network:   baseSepolia
+Deployer:  0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5
+Balance:   5.691778066737481625 ETH
+
+📋 Step 1: Deploying Simplified DWT Token...
+
+✅ DWTToken deployed: 0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48
+📊 Max Supply: 123,000,000 DWT (hardcoded)
+
+📋 Step 2: Distributing 70M DWT tokens from .env...
+
+Found 23 recipients
+
+Minting      3500000 DWT to Founder 1                 (0x20B2bD1f...)
+  ✅ Success
+
+Minting      3500000 DWT to Founder 2                 (0xf18e5929...)
+  ❌ Failed: execution reverted: % `
+
+Minting      3500000 DWT to Founder 3                 (0xEaB8448c...)
+  ❌ Failed: execution reverted: % `
+
+Minting       636364 DWT to Team 1                    (0x2EC22ebD...)
+  ✅ Success
+
+Minting       636364 DWT to Team 2                    (0x899b5138...)
+  ❌ Failed: execution reverted: % `
+
+Minting       636364 DWT to Team 3                    (0x263a7226...)
+  ❌ Failed: execution reverted: % `
+
+Minting       636364 DWT to Team 4                    (0x9756c952...)
+  ✅ Success
+
+Minting       636364 DWT to Team 5                    (0xBA27D9FB...)
+  ❌ Failed: transaction execution reverted
+
+Minting       636364 DWT to Team 6                    (0x20b9a63f...)
+  ✅ Success
+
+Minting       636364 DWT to Team 7                    (0xa97d7dB4...)
+  ❌ Failed: execution reverted: % `
+
+Minting       636364 DWT to Team 8                    (0x3fcEDd6B...)
+  ❌ Failed: transaction execution reverted
+
+Minting       636364 DWT to Team 9                    (0xA7c3A20c...)
+  ✅ Success
+
+Minting       636364 DWT to Team 10                   (0xe060f010...)
+  ❌ Failed: execution reverted: % `
+
+Minting       636360 DWT to Team 11                   (0x15fCca58...)
+  ❌ Failed: transaction execution reverted
+
+Minting      8400000 DWT to Investor 1                (0xcEB9E5A3...)
+  ✅ Success
+
+Minting       700000 DWT to Advisor 1                 (0x830E4DF8...)
+  ❌ Failed: execution reverted: % `
+
+Minting       700000 DWT to Advisor 2                 (0x81ac6b27...)
+  ❌ Failed: transaction execution reverted
+
+Minting       700000 DWT to Advisor 3                 (0x6dc977e8...)
+  ✅ Success
+
+Minting       700000 DWT to Advisor 4                 (0x649795F2...)
+  ❌ Failed: transaction execution reverted
+
+Minting       700000 DWT to Advisor 5                 (0xBdB89500...)
+  ❌ Failed: nonce too low: next nonce 2512, tx nonce 2511
+
+Minting      1400000 DWT to Marketing 1               (0xb5096c6c...)
+  ✅ Success
+
+Minting        32022 DWT to Marketing 2               (0xD73A1298...)
+  ❌ Failed: execution reverted: % `
+
+Minting        32023 DWT to Marketing 3               (0x2656f902...)
+  ❌ Failed: transaction execution reverted
+
+
+╔══════════════════════════════════════════════════╗
+║   ✅ DEPLOYMENT & DISTRIBUTION COMPLETE!          ║
+╚══════════════════════════════════════════════════╝
+
+📊 Summary:
+  DWT Token Address: 0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48
+  Total Minted: 30864045.0 DWT
+  Max Supply: 123000000.0 DWT
+  Remaining: 92135955.0 DWT
+  Successful Mints: 8
+  Failed Mints: 15
+
+🔍 Verify on BaseScan:
+  https://sepolia.basescan.org/address/0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48
+
+📝 Next Steps:
+  1. Add token to MetaMask: 0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48
+  2. Verify contract on BaseScan
+  3. Test token transfers
+  4. Check recipient balances
+
+💾 Deployment info saved to: dwt-deployment-baseSepolia-1776224244800.json

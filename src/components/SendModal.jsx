@@ -49,6 +49,14 @@ export default function SendModal({ onClose }) {
   const finalAddr = resolvedAddr || recipient
   const isDWT = token === 'DWT'
   const isTestnet = activeChain === 'sepolia' || activeChain === 'baseSepolia'
+  
+  // Debug: Log actual balance values
+  console.log('🔍 Balance Debug:', {
+    token,
+    balance,
+    chainBalances,
+    activeChain
+  })
 
   useEffect(() => {
     const t = CHAIN_TOKENS[activeChain] || ['ETH']
@@ -85,6 +93,15 @@ export default function SendModal({ onClose }) {
   }, [recipient])
 
   const validate = () => {
+    const amountNum = parseFloat(amount)
+    
+    console.log('✅ Validating transaction:', {
+      amount: amountNum,
+      balance,
+      check: amountNum > balance,
+      result: amountNum <= balance
+    })
+    
     if (!finalAddr || !isValidAddress(finalAddr)) {
       setError(
         recipient.includes('.')
@@ -93,26 +110,170 @@ export default function SendModal({ onClose }) {
       )
       return false
     }
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!amount || amountNum <= 0) {
       setError('Enter an amount')
       return false
     }
-    if (parseFloat(amount) > balance) {
+    if (amountNum > balance) {
+      console.error('❌ Balance check failed:', { amount: amountNum, balance })
       setError('Insufficient balance')
       return false
     }
+    
+    // For native tokens, also check if there's enough for gas
+    const nativeSyms = {
+      ethereum: 'ETH',
+      bnb: 'BNB',
+      polygon: 'MATIC',
+      sepolia: 'ETH',
+      baseSepolia: 'ETH',
+      base: 'ETH',
+      arbitrum: 'ETH',
+    }
+    const isNative = token === nativeSyms[activeChain]
+    
+    if (isNative && gasInfo && gasInfo.ethCost) {
+      const gasCost = parseFloat(gasInfo.ethCost)
+      const totalNeeded = amountNum + gasCost
+      
+      console.log('🔍 Gas validation:', {
+        amount: amountNum,
+        gasCost,
+        totalNeeded,
+        balance,
+        hasEnough: totalNeeded <= balance
+      })
+      
+      if (totalNeeded > balance) {
+        setError(`Insufficient funds. You need ${totalNeeded.toFixed(6)} ${token} total (${amountNum.toFixed(6)} for transfer + ${gasCost.toFixed(6)} for gas fees), but only have ${balance.toFixed(6)} ${token}`)
+        return false
+      }
+    }
+    
+    console.log('✓ Validation passed!')
     return true
   }
 
   const handleSend = async () => {
     setSending(true)
     setError('')
+    
+    // For native token transfers, check if there's enough balance for amount + gas
+    const nativeSyms = {
+      ethereum: 'ETH',
+      bnb: 'BNB',
+      polygon: 'MATIC',
+      sepolia: 'ETH',
+      baseSepolia: 'ETH',
+      base: 'ETH',
+      arbitrum: 'ETH',
+    }
+    const isNative = token === nativeSyms[activeChain]
+    
+    if (isNative) {
+      const amountNum = parseFloat(amount)
+      
+      console.log('💰 Balance Check Debug:', {
+        walletBalance: balance,
+        sendAmount: amountNum,
+        gasInfo,
+        remaining: balance - amountNum,
+        isTestnet,
+        activeChain
+      })
+      
+      // Check balance first
+      if (amountNum > balance) {
+        setError(`Insufficient balance. You're trying to send ${amountNum.toFixed(6)} ${token}, but only have ${balance.toFixed(6)} ${token}`)
+        setSending(false)
+        return
+      }
+      
+      // Check if there's gas info available
+      if (gasInfo && gasInfo.ethCost) {
+        const gasCost = parseFloat(gasInfo.ethCost)
+        const totalNeeded = amountNum + gasCost
+        
+        console.log('🔍 Pre-send validation:', {
+          transferAmount: amountNum,
+          gasCost,
+          totalNeeded,
+          balance,
+          remaining: balance - totalNeeded,
+          hasEnough: totalNeeded <= balance
+        })
+        
+        if (totalNeeded > balance) {
+          setError(
+            `Insufficient funds for transfer + gas fees.\n\n` +
+            `Transfer amount: ${amountNum.toFixed(6)} ${token}\n` +
+            `Estimated gas: ${gasCost.toFixed(6)} ${token}\n` +
+            `Total needed: ${totalNeeded.toFixed(6)} ${token}\n` +
+            `Your balance: ${balance.toFixed(6)} ${token}\n\n` +
+            `Shortfall: ${(totalNeeded - balance).toFixed(6)} ${token}\n\n` +
+            `Please reduce the send amount or add more ${token} to cover gas fees.`
+          )
+          setSending(false)
+          return
+        }
+      } else {
+        console.warn('⚠️ No gas info available, proceeding with caution')
+      }
+    }
+    
     try {
+      console.log('📤 Sending transaction...', {
+        to: finalAddr,
+        amount,
+        token,
+        chain: activeChain,
+        balance,
+        isNative,
+        gasInfo
+      })
+      
       const tx = await sendTransaction(finalAddr, amount, token, activeChain)
       setTxHash(tx.hash)
       setStep('success')
     } catch (e) {
-      setError(e.message || 'Transaction failed')
+      console.error('❌ Transaction failed:', e)
+      console.error('Full error details:', JSON.stringify(e, null, 2))
+      
+      // Provide better error messages based on the error type
+      let errorMessage = e.message || 'Transaction failed'
+      
+      if (errorMessage.includes('insufficient funds') || errorMessage.includes('INSUFFICIENT_FUNDS')) {
+        const nativeSyms = {
+          ethereum: 'ETH',
+          bnb: 'BNB',
+          polygon: 'MATIC',
+          sepolia: 'ETH',
+          baseSepolia: 'ETH',
+          base: 'ETH',
+          arbitrum: 'ETH',
+        }
+        const nativeToken = nativeSyms[activeChain] || 'ETH'
+        
+        // Extract actual amounts from error
+        const valueMatch = e.toString().match(/"value":\s*"0x([0-9a-f]+)"/i)
+        const sentValue = valueMatch ? ethers.formatEther('0x' + valueMatch[1]) : amount
+        
+        errorMessage = `Transaction rejected by blockchain: insufficient ${nativeToken}.\n\n` +
+          `Details:\n` +
+          `• Amount trying to send: ${parseFloat(sentValue).toFixed(6)} ${token}\n` +
+          `• Your current balance: ${balance.toFixed(6)} ${token}\n` +
+          `• Remaining after send: ${(balance - parseFloat(sentValue)).toFixed(6)} ${token}\n\n` +
+          `Possible causes:\n` +
+          `• Balance includes pending transactions (not yet confirmed)\n` +
+          `• Network requires higher gas than estimated\n` +
+          `• Wallet balance on blockchain differs from displayed\n\n` +
+          `Solutions:\n` +
+          `1. Try sending a SMALLER amount (leave more for gas)\n` +
+          `2. Wait for any pending transactions to confirm\n` +
+          `3. Check your actual on-chain balance at a block explorer`
+      }
+      
+      setError(errorMessage)
     } finally {
       setSending(false)
     }
@@ -120,6 +281,22 @@ export default function SendModal({ onClose }) {
 
   const explorerTxUrl =
     (EXPLORERS[activeChain] || EXPLORERS.ethereum) + '/tx/' + txHash
+
+  // Faucet links for different networks
+  const FAUCETS = {
+    sepolia: [
+      { name: 'Alchemy Faucet', url: 'https://sepoliafaucet.com/' },
+      { name: 'Chainlink Faucet', url: 'https://faucets.chain.link/sepolia' },
+      { name: 'Infura Faucet', url: 'https://www.infura.io/faucet/sepolia' },
+    ],
+    baseSepolia: [
+      { name: 'Base Faucet', url: 'https://faucets.chain.link/base-sepolia' },
+      { name: 'Coinbase Faucet', url: 'https://faucet.base.org/' },
+    ],
+  }
+  
+  const availableFaucets = FAUCETS[activeChain] || []
+  const hasZeroBalance = balance <= 0.0001 // Consider as zero if less than 0.0001
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -138,49 +315,155 @@ export default function SendModal({ onClose }) {
 
         {step === 'form' && (
           <div className="modal-body">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                marginBottom: 14,
-                background: isTestnet ? 'rgba(245,158,11,0.08)' : 'var(--bg3)',
-                border:
-                  '1px solid ' +
-                  (isTestnet ? 'rgba(245,158,11,0.25)' : 'var(--border)'),
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <span style={{ fontSize: 12 }}>
-                {activeChain === 'baseSepolia'
-                  ? '🔵'
-                  : activeChain === 'sepolia'
-                    ? '⬡'
-                    : '🌐'}
-              </span>
-              <span
-                style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}
+            {/* Zero Balance Warning */}
+            {hasZeroBalance && (
+              <div
+                style={{
+                  padding: '12px',
+                  marginBottom: 14,
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
-                {activeChain === 'baseSepolia'
-                  ? 'Base Sepolia (testnet)'
-                  : activeChain === 'sepolia'
-                    ? 'Ethereum Sepolia (testnet)'
-                    : activeChain}
-              </span>
-              {isTestnet && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: 'var(--amber)',
-                    fontWeight: 600,
-                    marginLeft: 'auto',
-                  }}
-                >
-                  Testnet only
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>⚠️</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ 
+                      fontSize: 12, 
+                      fontWeight: 700, 
+                      color: '#ef4444',
+                      margin: '0 0 8px 0',
+                    }}>
+                      Insufficient Balance
+                    </p>
+                    <p style={{ 
+                      fontSize: 11, 
+                      color: 'var(--text2)',
+                      margin: '0 0 8px 0',
+                      lineHeight: 1.5,
+                    }}>
+                      Your wallet has{' '}
+                      <strong>{balance.toFixed(6)} {token}</strong> but you need at least some funds to send transactions.
+                    </p>
+                    
+                    {isTestnet && availableFaucets.length > 0 && (
+                      <>
+                        <p style={{ 
+                          fontSize: 11, 
+                          color: 'var(--text3)',
+                          margin: '0 0 6px 0',
+                          fontWeight: 600,
+                        }}>
+                          🚰 Get free testnet tokens:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {availableFaucets.map(faucet => (
+                            <a
+                              key={faucet.name}
+                              href={faucet.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 10px',
+                                background: 'rgba(59,130,246,0.1)',
+                                border: '1px solid rgba(59,130,246,0.3)',
+                                borderRadius: '6px',
+                                color: '#3b82f6',
+                                textDecoration: 'none',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={e => {
+                                e.target.style.background = 'rgba(59,130,246,0.15)'
+                                e.target.style.borderColor = 'rgba(59,130,246,0.5)'
+                              }}
+                              onMouseLeave={e => {
+                                e.target.style.background = 'rgba(59,130,246,0.1)'
+                                e.target.style.borderColor = 'rgba(59,130,246,0.3)'
+                              }}
+                            >
+                              <span>🔗</span>
+                              <span>{faucet.name}</span>
+                              <span style={{ marginLeft: 'auto', opacity: 0.6 }}>↗</span>
+                            </a>
+                          ))}
+                        </div>
+                        <p style={{ 
+                          fontSize: 10, 
+                          color: 'var(--text3)',
+                          margin: '8px 0 0 0',
+                          fontStyle: 'italic',
+                        }}>
+                          💡 After receiving testnet tokens, come back and try sending again!
+                        </p>
+                      </>
+                    )}
+                    
+                    {!isTestnet && (
+                      <p style={{ 
+                        fontSize: 11, 
+                        color: 'var(--text3)',
+                        margin: 0,
+                      }}>
+                        💡 You need to add {nativeSyms[activeChain] || 'ETH'} to your wallet from an exchange or another wallet.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Network Info - Only show if balance is sufficient */}
+            {!hasZeroBalance && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  marginBottom: 14,
+                  background: isTestnet ? 'rgba(245,158,11,0.08)' : 'var(--bg3)',
+                  border:
+                    '1px solid ' +
+                    (isTestnet ? 'rgba(245,158,11,0.25)' : 'var(--border)'),
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <span style={{ fontSize: 12 }}>
+                  {activeChain === 'baseSepolia'
+                    ? '🔵'
+                    : activeChain === 'sepolia'
+                      ? '⬡'
+                      : '🌐'}
                 </span>
-              )}
-            </div>
+                <span
+                  style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}
+                >
+                  {activeChain === 'baseSepolia'
+                    ? 'Base Sepolia (testnet)'
+                    : activeChain === 'sepolia'
+                      ? 'Ethereum Sepolia (testnet)'
+                      : activeChain}
+                </span>
+                {isTestnet && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--amber)',
+                      fontWeight: 600,
+                      marginLeft: 'auto',
+                    }}
+                  >
+                    Testnet only
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Token</label>
@@ -359,7 +642,25 @@ export default function SendModal({ onClose }) {
                 <button
                   className="max-btn"
                   onClick={function () {
-                    setAmount(String(balance))
+                    // For native tokens, reserve gas by subtracting estimated gas cost
+                    const nativeSyms = {
+                      ethereum: 'ETH',
+                      bnb: 'BNB',
+                      polygon: 'MATIC',
+                      sepolia: 'ETH',
+                      baseSepolia: 'ETH',
+                      base: 'ETH',
+                      arbitrum: 'ETH',
+                    }
+                    const isNative = token === nativeSyms[activeChain]
+                    
+                    if (isNative && gasInfo && gasInfo.ethCost) {
+                      const gasCost = parseFloat(gasInfo.ethCost)
+                      const maxAmount = Math.max(0, balance - gasCost)
+                      setAmount(String(maxAmount.toFixed(6)))
+                    } else {
+                      setAmount(String(balance))
+                    }
                   }}
                 >
                   MAX
@@ -371,7 +672,8 @@ export default function SendModal({ onClose }) {
                   ' · Balance: ' +
                   balance.toFixed(6) +
                   ' ' +
-                  token}
+                  token +
+                  (isDWT || !gasInfo?.ethCost ? '' : ' (keep ' + parseFloat(gasInfo.ethCost).toFixed(6) + ' for gas)')}
               </p>
             </div>
 

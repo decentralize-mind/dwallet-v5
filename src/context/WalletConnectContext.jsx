@@ -27,6 +27,8 @@ const WalletConnectContext = createContext(null)
 export function WalletConnectProvider({ children }) {
   const { wallet, currentAddress, activeChain } = useWallet()
 
+  const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
+
   const [wcReady, setWcReady] = useState(false)
   const [wcError, setWcError] = useState(null)
   const [sessions, setSessions] = useState({}) // topic → session
@@ -34,30 +36,6 @@ export function WalletConnectProvider({ children }) {
   const [pendingRequest, setPendingRequest] = useState(null) // session_request awaiting approval
   const [pairingUri, setPairingUri] = useState('')
   const [connecting, setConnecting] = useState(false)
-
-  const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
-
-  // ── Initialize Web3Wallet once wallet is unlocked ────────────────────────
-  useEffect(() => {
-    if (!wallet || !projectId) return
-    if (isWCInitialized()) {
-      setSessions(getActiveSessions())
-      setWcReady(true)
-      return
-    }
-
-    initWalletConnect(projectId)
-      .then(wc => {
-        // Restore any active sessions
-        setSessions(wc.getActiveSessions())
-        setWcReady(true)
-        attachListeners(wc)
-      })
-      .catch(err => {
-        console.error('WalletConnect init failed:', err)
-        setWcError(err.message)
-      })
-  }, [wallet, projectId, attachListeners])
 
   // ── Event listeners ───────────────────────────────────────────────────────
   const attachListeners = useCallback(wc => {
@@ -80,6 +58,28 @@ export function WalletConnectProvider({ children }) {
       })
     })
   }, [])
+
+  // ── Initialize Web3Wallet once wallet is unlocked ────────────────────────
+  useEffect(() => {
+    if (!wallet || !projectId) return
+    if (isWCInitialized()) {
+      setSessions(getActiveSessions())
+      setWcReady(true)
+      return
+    }
+
+    initWalletConnect(projectId)
+      .then(wc => {
+        // Restore any active sessions
+        setSessions(wc.getActiveSessions())
+        setWcReady(true)
+        attachListeners(wc)
+      })
+      .catch(err => {
+        console.error('WalletConnect init failed:', err)
+        setWcError(err.message)
+      })
+  }, [wallet, projectId])
 
   // ── Pair via URI ──────────────────────────────────────────────────────────
   const connectWithUri = async uri => {

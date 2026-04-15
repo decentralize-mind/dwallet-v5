@@ -15,7 +15,7 @@ interface IDWTOracle {
 }
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../SecurityGated.sol";
+import "../layer7/SecurityGated.sol";
 
 /**
  * @title DWTMockOracle
@@ -37,11 +37,8 @@ contract DWTMockOracle is IDWTOracle, AccessControl, SecurityGated {
         address _governor,
         address _securityController,
         address _registry,
-        address _access,
-        address _time,
-        address _state,
-        address _rate,
-        address _verify
+        address _lockEngine,
+        address _invariantChecker
     ) SecurityGated(_securityController) {
         _price       = initialPrice;
         _lastUpdated = block.timestamp;
@@ -50,7 +47,7 @@ contract DWTMockOracle is IDWTOracle, AccessControl, SecurityGated {
         _grantRole(ADMIN_ROLE,         _admin);
         _grantRole(GOVERNOR_ROLE,      _governor);
 
-        _initSecurityModules(_registry, _access, _time, _state, _rate, _verify);
+        _initSecuritySystem(_registry, _lockEngine, _invariantChecker);
     }
 
     /**
@@ -97,14 +94,11 @@ contract DWTChainlinkOracle is IDWTOracle, SecurityGated {
         address _feed,
         address _securityController,
         address _registry,
-        address _access,
-        address _time,
-        address _state,
-        address _rate,
-        address _verify
+        address _lockEngine,
+        address _invariantChecker
     ) SecurityGated(_securityController) {
         feed = AggregatorV3Interface(_feed);
-        _initSecurityModules(_registry, _access, _time, _state, _rate, _verify);
+        _initSecuritySystem(_registry, _lockEngine, _invariantChecker);
     }
 
     function latestPrice() external view override withStateGuard(LAYER_ID) returns (uint256) {
