@@ -3,6 +3,7 @@ import { useWallet } from '../hooks/useWallet'
 import Dashboard from './Dashboard'
 import SendModal from './SendModal'
 import ReceiveModal from './ReceiveModal'
+import SwapModal from './SwapModal'
 import NFTsView from './NFTsView'
 import DAppsView from './DAppsView'
 import SettingsView from './SettingsView'
@@ -107,7 +108,7 @@ export default function MainWallet() {
           <Dashboard
             onSend={() => setModal('send')}
             onReceive={() => setModal('receive')}
-            onSwap={() => setActiveTab('defi')}
+            onSwap={() => setModal('swap')}
           />
         )
     }
@@ -177,6 +178,7 @@ export default function MainWallet() {
 
       {modal === 'send' && <SendModal onClose={() => setModal(null)} />}
       {modal === 'receive' && <ReceiveModal onClose={() => setModal(null)} />}
+      {modal === 'swap' && <SwapModal onClose={() => setModal(null)} />}
       {showChainSelector && (
         <ChainSelector onClose={() => setShowChainSelector(false)} />
       )}
