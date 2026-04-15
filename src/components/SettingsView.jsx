@@ -51,6 +51,26 @@ export default function SettingsView({ onNavigate }) {
   const [biometricLoading, setBiometricLoading] = useState(false)
   const [biometricStatus, setBiometricStatus] = useState('')
   
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    wallet: true,
+    tools: true,
+    preferences: true,
+    security: true,
+    referral: false,
+    install: false,
+    about: false,
+    danger: false,
+  })
+  
+  // Toggle section expansion
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+  
   // Seed phrase security features
   const [seedCountdown, setSeedCountdown] = useState(30) // Auto-hide after 30 seconds
   const [revealedWords, setRevealedWords] = useState({}) // Track which words are revealed
@@ -266,7 +286,19 @@ export default function SettingsView({ onNavigate }) {
       </div>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Wallet</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('wallet')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Wallet</span>
+          <span style={{ 
+            transform: expandedSections.wallet ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.wallet && (
         <div className="settings-list">
           <div className="settings-item">
             <div>
@@ -293,10 +325,23 @@ export default function SettingsView({ onNavigate }) {
             <span className="settings-arrow">›</span>
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Tools</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('tools')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Tools</span>
+          <span style={{ 
+            transform: expandedSections.tools ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.tools && (
         <div className="settings-list">
           {[
             ['Address Book', 'Save contacts', 'addressbook'],
@@ -397,10 +442,23 @@ export default function SettingsView({ onNavigate }) {
             <span className="settings-arrow">↓</span>
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Preferences</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('preferences')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Preferences</span>
+          <span style={{ 
+            transform: expandedSections.preferences ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.preferences && (
         <div className="settings-list">
           <div className="settings-item">
             <div>
@@ -458,10 +516,23 @@ export default function SettingsView({ onNavigate }) {
             )}
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Security</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('security')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Security</span>
+          <span style={{ 
+            transform: expandedSections.security ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.security && (
         <div className="settings-list">
           {/* Biometric Authentication */}
           {biometricSupported && (
@@ -620,10 +691,23 @@ export default function SettingsView({ onNavigate }) {
             )}
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Referral Program</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('referral')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Referral Program</span>
+          <span style={{ 
+            transform: expandedSections.referral ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.referral && (
         <div className="settings-list">
           <div
             className="settings-item"
@@ -682,10 +766,23 @@ export default function SettingsView({ onNavigate }) {
             </div>
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">Install App (PWA)</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('install')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Install App (PWA)</span>
+          <span style={{ 
+            transform: expandedSections.install ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.install && (
         <div className="settings-list">
           <div
             className="settings-item"
@@ -711,10 +808,23 @@ export default function SettingsView({ onNavigate }) {
             </div>
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section">
-        <h3 className="settings-group-title">About</h3>
+        <h3 
+          className="settings-group-title" 
+          onClick={() => toggleSection('about')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>About</span>
+          <span style={{ 
+            transform: expandedSections.about ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.about && (
         <div className="settings-list">
           <div className="settings-item">
             <p className="settings-label">Version</p>
@@ -725,13 +835,27 @@ export default function SettingsView({ onNavigate }) {
             <span className="settings-value">Mainnet</span>
           </div>
         </div>
+        )}
       </section>
 
       <section className="settings-section danger-section">
-        <h3 className="settings-group-title danger-title">Danger Zone</h3>
+        <h3 
+          className="settings-group-title danger-title" 
+          onClick={() => toggleSection('danger')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <span>Danger Zone</span>
+          <span style={{ 
+            transform: expandedSections.danger ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+            fontSize: '18px'
+          }}>▾</span>
+        </h3>
+        {expandedSections.danger && (
         <button className="btn-danger" onClick={() => setShowReset(true)}>
           Reset Wallet
         </button>
+        )}
       </section>
 
       {showSeed && (
