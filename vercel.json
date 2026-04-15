@@ -29,18 +29,5 @@
   "rewrites": [
     { "source": "/tokenomics.html", "destination": "/tokenomics.html" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.toklo.xyz"
-        }
-      ],
-      "destination": "https://toklo.xyz/$1",
-      "permanent": true
-    }
   ]
 }
