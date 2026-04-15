@@ -45,7 +45,7 @@ import {
   safeExecute,
   ERROR_CATEGORIES
 } from '../utils/errorHandling'
-import { 
+import {
   saveSecureSession,
   loadSecureSession,
   clearSecureSession,
@@ -55,6 +55,21 @@ import {
   initializeSecureSession,
   logSessionSecurityEvent
 } from '../utils/sessionSecurity'
+import {
+  maskPrivateKey,
+  sanitizeError,
+  logKeyUsage,
+  withPrivateKey
+} from '../utils/secureKeyManagement'
+import {
+  validateTransaction,
+  getTransactionHistory,
+  addToTransactionHistory
+} from '../utils/transactionValidation'
+import {
+  generateMEVProtectionReport,
+  detectSandwichVulnerability
+} from '../utils/mevProtection'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -586,6 +601,7 @@ export function WalletProvider({ children }) {
     const activeAcc = fullWallet.accounts[fullWallet.activeAccount]
     const chain = chainId || activeChain
     
+    // SECURITY: Enhanced transaction validation
     const nativeSyms = {
       ethereum: 'ETH',
       bnb: 'BNB',
@@ -596,6 +612,39 @@ export function WalletProvider({ children }) {
       arbitrum: 'ETH',
     }
     const isNative = token === nativeSyms[chain]
+    
+    // Get token price for validation
+    const tokenPrice = prices[token] || getPrice(token) || 0
+    const txHistory = getTransactionHistory()
+    
+    // Validate transaction
+    const validation = await validateTransaction({
+      from: activeAcc.address,
+      to,
+      amount: parseFloat(amount),
+      token,
+      chain,
+      balance: chainBalances[token] || 0,
+      gasInfo,
+      price: tokenPrice,
+      transactionHistory: txHistory,
+    })
+    
+    // Block if validation fails
+    if (!validation.valid) {
+      const errorMsg = validation.errors.join('\n')
+      console.error('❌ Transaction validation failed:', errorMsg)
+      throw new Error(errorMsg)
+    }
+    
+    // Warn about high risk transactions
+    if (validation.requiresConfirmation) {
+      console.warn('⚠️ High risk transaction detected:', validation.warnings)
+      // In production, you'd show a confirmation dialog here
+    }
+    
+    // Log key usage for auditing
+    logKeyUsage('send_transaction', activeAcc.address)
     const pending = {
       hash: 'pending_' + Date.now(),
       from: activeAcc.address,
@@ -659,6 +708,20 @@ export function WalletProvider({ children }) {
           const currentBal = prev[key] || 0
           return { ...prev, [key]: Math.max(0, currentBal - parseFloat(amount)) }
         })
+        
+        // SECURITY: Add to transaction history
+        addToTransactionHistory({
+          hash: tx.hash,
+          from: activeAcc.address,
+          to,
+          amount: parseFloat(amount),
+          token,
+          chain,
+          type: 'send',
+          amountUSD: parseFloat(amount) * tokenPrice,
+          status: 'confirmed',
+        })
+        
         notify(`✓ ${amount} ${token} sent`, 'success')
       }
 
@@ -667,7 +730,10 @@ export function WalletProvider({ children }) {
     } catch (err) {
       // Log detailed error internally
       const errorLog = getDetailedErrorLog(err, 'send_transaction')
-      console.error('❌ Transaction failed:', errorLog)
+      
+      // SECURITY: Sanitize error message to prevent private key leakage
+      const safeError = sanitizeError(err)
+      console.error('❌ Transaction failed:', safeError, errorLog)
       
       // Handle blockchain-specific errors
       const blockchainError = handleBlockchainError(err, chain)
@@ -682,7 +748,7 @@ export function WalletProvider({ children }) {
       )
       
       // Throw user-safe error message
-      throw new Error(blockchainError.error || 'Transaction failed. Please try again later.')
+      throw new Error(blockchainError.error || safeError || 'Transaction failed. Please try again later.')
     }
   }
 

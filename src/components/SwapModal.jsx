@@ -2,6 +2,11 @@ import { useState, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
 import { DWT, getDWTTier } from "../utils/dwt";
 import { getPrice } from "../utils/prices";
+import { 
+  detectSandwichVulnerability, 
+  calculatePriceImpact,
+  assessPriceImpact 
+} from "../utils/mevProtection";
 
 const CHAIN_TOKENS = {
   ethereum:    ["ETH","USDC","USDT","DAI","WBTC","UNI","LINK"],
@@ -54,6 +59,7 @@ export default function SwapModal({ onClose }) {
   const [toToken,    setToToken]    = useState(tokens[1] || tokens[0]);
   const [fromAmount, setFromAmount] = useState("");
   const [slippage,   setSlippage]   = useState(0.5);
+  const [deadline,   setDeadline]   = useState(20); // minutes
   const [step,       setStep]       = useState("form");
   const [txHash,     setTxHash]     = useState("");
   const [error,      setError]      = useState("");
@@ -97,6 +103,30 @@ export default function SwapModal({ onClose }) {
 
   const handleSwap = async () => {
     if (!validate()) return;
+    
+    // SECURITY: Check for MEV/sandwich vulnerabilities
+    const amountUSD = parseFloat(fromAmount || 0) * fromPx;
+    const mevCheck = detectSandwichVulnerability({
+      tokenIn: fromToken,
+      tokenOut: toToken,
+      slippage,
+      amountUSD,
+      poolLiquidity: 1000000, // Should be fetched from Uniswap
+    });
+    
+    if (mevCheck.riskLevel === 'high') {
+      const proceed = window.confirm(
+        `⚠️ High MEV Risk Detected\n\n` +
+        `This transaction may be vulnerable to sandwich attacks.\n\n` +
+        `Risk factors:\n` +
+        mevCheck.vulnerabilities.map(v => `- ${v.message}`).join('\n') +
+        `\n\nRecommendations:\n` +
+        mevCheck.vulnerabilities.map(v => `- ${v.recommendation}`).join('\n') +
+        `\n\nDo you want to proceed anyway?`
+      );
+      if (!proceed) return;
+    }
+    
     setSwapping(true); setError("");
     try {
       // Dynamic import ethers to keep bundle smaller
@@ -115,7 +145,7 @@ export default function SwapModal({ onClose }) {
         "function balanceOf(address) view returns (uint256)",
       ];
       const routerABI = [
-        "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) external payable returns (uint256)",
+        "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 deadline,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96)) external payable returns (uint256)",
       ];
 
       const tokenInAddr  = TOKEN_CONTRACTS[activeChain]?.[fromToken];
@@ -124,6 +154,9 @@ export default function SwapModal({ onClose }) {
       const minOut       = ethers.parseEther(
         (parseFloat(toAmount) * (1 - slippage/100)).toFixed(18)
       );
+      
+      // SECURITY: Add deadline to prevent stale transactions
+      const deadlineTimestamp = Math.floor(Date.now() / 1000) + (deadline * 60);
 
       let txResult;
 
@@ -142,6 +175,7 @@ export default function SwapModal({ onClose }) {
             tokenOut:           tokenOutAddr,
             fee:                POOL_FEE,
             recipient:          activeAcc.address,
+            deadline:           deadlineTimestamp,
             amountIn,
             amountOutMinimum:   minOut,
             sqrtPriceLimitX96:  0n,
@@ -170,6 +204,7 @@ export default function SwapModal({ onClose }) {
           tokenOut:          tokenOutAddr || WETH_OUT,
           fee:               POOL_FEE,
           recipient:         activeAcc.address,
+          deadline:          deadlineTimestamp,
           amountIn,
           amountOutMinimum:  minOut,
           sqrtPriceLimitX96: 0n,
@@ -308,6 +343,16 @@ export default function SwapModal({ onClose }) {
                     <button key={s}
                       className={`slippage-btn ${slippage===s?"active":""}`}
                       onClick={()=>setSlippage(s)}>{s}%</button>
+                  ))}
+                </div>
+              </div>
+              <div className="swap-detail-row">
+                <span>Transaction Deadline</span>
+                <div className="slippage-btns">
+                  {[10,20,30].map(m=>(
+                    <button key={m}
+                      className={`slippage-btn ${deadline===m?"active":""}`}
+                      onClick={()=>setDeadline(m)}>{m}m</button>
                   ))}
                 </div>
               </div>
