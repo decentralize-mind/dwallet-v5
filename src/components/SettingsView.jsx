@@ -17,6 +17,10 @@ export default function SettingsView({ onNavigate }) {
     resetWallet,
     transactions,
     currentAddress,
+    setupBiometric,
+    removeBiometric,
+    biometricSupported,
+    biometricEnabled,
   } = useWallet()
   
   console.log('SettingsView wallet state:', { wallet, currentAddress, transactions })
@@ -42,6 +46,10 @@ export default function SettingsView({ onNavigate }) {
   )
   const [showPhishingSetup, setShowPhishingSetup] = useState(false)
   const [customPhishingCode, setCustomPhishingCode] = useState('')
+  
+  // Biometric state
+  const [biometricLoading, setBiometricLoading] = useState(false)
+  const [biometricStatus, setBiometricStatus] = useState('')
   
   // Seed phrase security features
   const [seedCountdown, setSeedCountdown] = useState(30) // Auto-hide after 30 seconds
@@ -211,6 +219,44 @@ export default function SettingsView({ onNavigate }) {
   const clearPhishingCode = () => {
     localStorage.removeItem('dwallet_phishing_code')
     setPhishingCode('')
+  }
+
+  // Biometric setup handler
+  const handleSetupBiometric = async () => {
+    if (!biometricSupported) {
+      alert('Biometric authentication is not supported on this device')
+      return
+    }
+    
+    setBiometricLoading(true)
+    setBiometricStatus('')
+    
+    try {
+      // Prompt user for password
+      const password = prompt('Enter your wallet password to enable biometric:')
+      if (!password) {
+        setBiometricLoading(false)
+        return
+      }
+      
+      await setupBiometric(password)
+      setBiometricStatus('success')
+      setTimeout(() => setBiometricStatus(''), 3000)
+    } catch (err) {
+      console.error('Biometric setup failed:', err)
+      setBiometricStatus('error')
+      alert(err.message || 'Failed to setup biometric authentication')
+      setTimeout(() => setBiometricStatus(''), 3000)
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
+
+  // Biometric removal handler
+  const handleRemoveBiometric = () => {
+    removeBiometric()
+    setBiometricStatus('removed')
+    setTimeout(() => setBiometricStatus(''), 3000)
   }
 
   return (
@@ -417,6 +463,94 @@ export default function SettingsView({ onNavigate }) {
       <section className="settings-section">
         <h3 className="settings-group-title">Security</h3>
         <div className="settings-list">
+          {/* Biometric Authentication */}
+          {biometricSupported && (
+            <div
+              className="settings-item"
+              style={{ flexDirection: 'column', gap: 12 }}
+            >
+              <div>
+                <p className="settings-label">Biometric Authentication</p>
+                <p className="settings-sub">
+                  {biometricEnabled 
+                    ? 'Touch ID / Face ID enabled' 
+                    : 'Use Touch ID or Face ID to unlock your wallet'}
+                </p>
+              </div>
+              {!biometricEnabled ? (
+                <button
+                  className="btn-primary"
+                  onClick={handleSetupBiometric}
+                  disabled={biometricLoading}
+                  style={{
+                    width: '100%',
+                    opacity: biometricLoading ? 0.6 : 1
+                  }}
+                >
+                  {biometricLoading ? 'Setting up...' : '👆 Enable Touch ID / Face ID'}
+                </button>
+              ) : (
+                <div style={{ width: '100%' }}>
+                  <div
+                    style={{
+                      background: 'rgba(16,185,129,0.1)',
+                      border: '1px solid rgba(16,185,129,0.3)',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      textAlign: 'center',
+                      marginBottom: '12px',
+                      color: '#10b981',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    ✓ Biometric authentication is enabled
+                  </div>
+                  <button
+                    className="btn-danger"
+                    onClick={handleRemoveBiometric}
+                    style={{ width: '100%', fontSize: '12px', padding: '8px' }}
+                  >
+                    Remove Biometric
+                  </button>
+                </div>
+              )}
+              {biometricStatus === 'success' && (
+                <p style={{
+                  fontSize: '12px',
+                  color: '#10b981',
+                  margin: '8px 0 0',
+                  textAlign: 'center',
+                  fontWeight: '600'
+                }}>
+                  ✓ Biometric setup complete! You can now use Touch ID / Face ID to unlock.
+                </p>
+              )}
+              {biometricStatus === 'removed' && (
+                <p style={{
+                  fontSize: '12px',
+                  color: '#10b981',
+                  margin: '8px 0 0',
+                  textAlign: 'center',
+                  fontWeight: '600'
+                }}>
+                  ✓ Biometric authentication removed
+                </p>
+              )}
+            </div>
+          )}
+          {!biometricSupported && (
+            <div className="settings-item">
+              <div>
+                <p className="settings-label">Biometric Authentication</p>
+                <p className="settings-sub" style={{ color: '#f59e0b' }}>
+                  Not supported on this device
+                </p>
+              </div>
+              <span style={{ fontSize: '16px' }}>⚠️</span>
+            </div>
+          )}
+
           {/* Anti-Phishing Code */}
           <div
             className="settings-item"

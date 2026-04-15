@@ -892,6 +892,7 @@ export function WalletProvider({ children }) {
         getLoginLockoutTimeRemaining,
         // Biometric authentication
         biometricSupported,
+        biometricEnabled: isBiometricEnabled(),
         setupBiometric,
         unlockWithBiometric,
         removeBiometric,
