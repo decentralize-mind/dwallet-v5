@@ -62,9 +62,10 @@ export async function enableBiometric(walletAddress, password) {
     })
 
     // Store credential info (not the private key - that stays in secure enclave)
+    const publicKey = credential.response.getPublicKey ? credential.response.getPublicKey() : new Uint8Array(0)
     const credentialData = {
       id: credential.id,
-      publicKey: Buffer.from(credential.response.getPublicKey ? credential.response.getPublicKey() : []).toString('base64'),
+      publicKey: arrayBufferToBase64(publicKey),
       createdAt: Date.now()
     }
 
@@ -168,6 +169,18 @@ export function getBiometricStatus() {
     hasCredential: !!credential,
     credential: credential ? JSON.parse(credential) : null
   }
+}
+
+/**
+ * Helper: Convert ArrayBuffer to base64 string
+ */
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return window.btoa(binary)
 }
 
 /**
