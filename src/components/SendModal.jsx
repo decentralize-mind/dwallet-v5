@@ -30,6 +30,17 @@ const EXPLORERS = {
 export default function SendModal({ onClose }) {
   const { sendTransaction, chainBalances, activeChain, gasInfo, wallet } = useWallet()
   const tokens = CHAIN_TOKENS[activeChain] || ['ETH']
+  
+  // Define native token symbols for each chain (used throughout component)
+  const nativeSyms = {
+    ethereum: 'ETH',
+    bnb: 'BNB',
+    polygon: 'MATIC',
+    sepolia: 'ETH',
+    baseSepolia: 'ETH',
+    base: 'ETH',
+    arbitrum: 'ETH',
+  }
 
   const [token, setToken] = useState(tokens[0])
   const [recipient, setRecipient] = useState('')
@@ -162,15 +173,6 @@ export default function SendModal({ onClose }) {
     }
     
     // For native tokens, also check if there's enough for gas
-    const nativeSyms = {
-      ethereum: 'ETH',
-      bnb: 'BNB',
-      polygon: 'MATIC',
-      sepolia: 'ETH',
-      baseSepolia: 'ETH',
-      base: 'ETH',
-      arbitrum: 'ETH',
-    }
     const isNative = token === nativeSyms[activeChain]
     
     if (isNative && gasInfo && gasInfo.ethCost) {
@@ -206,15 +208,6 @@ export default function SendModal({ onClose }) {
     setError('')
     
     // For native token transfers, check if there's enough balance for amount + gas
-    const nativeSyms = {
-      ethereum: 'ETH',
-      bnb: 'BNB',
-      polygon: 'MATIC',
-      sepolia: 'ETH',
-      baseSepolia: 'ETH',
-      base: 'ETH',
-      arbitrum: 'ETH',
-    }
     const isNative = token === nativeSyms[activeChain]
     
     if (isNative) {
@@ -290,15 +283,6 @@ export default function SendModal({ onClose }) {
       let errorMessage = e.message || 'Transaction failed'
       
       if (errorMessage.includes('insufficient funds') || errorMessage.includes('INSUFFICIENT_FUNDS')) {
-        const nativeSyms = {
-          ethereum: 'ETH',
-          bnb: 'BNB',
-          polygon: 'MATIC',
-          sepolia: 'ETH',
-          baseSepolia: 'ETH',
-          base: 'ETH',
-          arbitrum: 'ETH',
-        }
         const nativeToken = nativeSyms[activeChain] || 'ETH'
         
         // Extract actual amounts from error
@@ -724,15 +708,6 @@ export default function SendModal({ onClose }) {
                   className="max-btn"
                   onClick={function () {
                     // For native tokens, reserve gas by subtracting estimated gas cost
-                    const nativeSyms = {
-                      ethereum: 'ETH',
-                      bnb: 'BNB',
-                      polygon: 'MATIC',
-                      sepolia: 'ETH',
-                      baseSepolia: 'ETH',
-                      base: 'ETH',
-                      arbitrum: 'ETH',
-                    }
                     const isNative = token === nativeSyms[activeChain]
                     
                     if (isNative && gasInfo && gasInfo.ethCost) {
