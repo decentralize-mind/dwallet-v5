@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DWT Token - Tokenomics | dWallet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    
+    .logo {
+      font-size: 48px;
+      color: #6366f1;
+      margin-bottom: 10px;
+    }
+    
+    h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 18px;
+    }
+    
+    .section {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+    }
+    
+    h2 {
+      color: #6366f1;
+      font-size: 24px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+      padding-bottom: 10px;
+    }
+    
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .token-card {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .token-card .label {
+      font-size: 12px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    
+    .token-card .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #f8fafc;
+    }
+    
+    .allocation-item {
+      background: rgba(99, 102, 241, 0.05);
+      border-left: 4px solid #6366f1;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+    
+    .allocation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .allocation-name {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    
+    .allocation-percent {
+      background: rgba(99, 102, 241, 0.2);
+      color: #6366f1;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    
+    .allocation-details {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    
+    .address-list {
+      background: rgba(15, 23, 42, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    .address-item {
+      margin-bottom: 15px;
+    }
+    
+    .address-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .address-label {
+      color: #6366f1;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .address-value {
+      color: #94a3b8;
+      word-break: break-all;
+    }
+    
+    ul {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+    
+    li {
+      margin-bottom: 10px;
+      color: #cbd5e1;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(99, 102, 241, 0.2);
+      color: #64748b;
+    }
+    
+    .footer a {
+      color: #6366f1;
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    
+    @media (max-width: 768px) {
+      .token-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      h1 {
+        font-size: 28px;
+      }
+      
+      .section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">◈</div>
+      <h1>DWT Token</h1>
+      <p class="subtitle">dWallet Token - Tokenomics & Distribution</p>
+    </div>
+
+    <div class="section">
+      <h2>Token Overview</h2>
+      <div class="token-grid">
+        <div class="token-card">
+          <div class="label">Token Name</div>
+          <div class="value">dWallet Token</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Symbol</div>
+          <div class="value">DWT</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Standard</div>
+          <div class="value">ERC-20</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Total Supply</div>
+          <div class="value">75M</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Circulating</div>
+          <div class="value">67.5M</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Burned</div>
+          <div class="value">7.5M</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Decimals</div>
+          <div class="value">18</div>
+        </div>
+        <div class="token-card">
+          <div class="label">Burn Address</div>
+          <div class="value" style="font-size: 14px;">0x000...dEaD</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Token Allocation</h2>
+      
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Public Sale & Liquidity</div>
+          <div class="allocation-percent">40% (30,000,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> DEX liquidity pools, public token sale<br>
+          <strong>TGE Release:</strong> 15% at TGE<br>
+          <strong>Vesting:</strong> 25% released over 12 months (linear monthly)<br>
+          <strong>Status:</strong> Active liquidity on Uniswap and BaseSwap
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Ecosystem Development</div>
+          <div class="allocation-percent">25% (18,750,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> DeFi protocol development, partnerships, grants<br>
+          <strong>TGE Release:</strong> 10% at TGE<br>
+          <strong>Vesting:</strong> 90% released over 24 months (linear monthly)<br>
+          <strong>Cliff:</strong> 6 months
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Team & Advisors</div>
+          <div class="allocation-percent">15% (11,250,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> Core team compensation, advisor tokens<br>
+          <strong>TGE Release:</strong> 0% at TGE<br>
+          <strong>Vesting:</strong> 100% released over 36 months (linear monthly)<br>
+          <strong>Cliff:</strong> 12 months
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Staking Rewards</div>
+          <div class="allocation-percent">10% (7,500,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> Staking pool incentives, liquidity mining<br>
+          <strong>TGE Release:</strong> 5% at TGE<br>
+          <strong>Vesting:</strong> 95% released over 48 months (linear monthly emission)
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Reserve Fund</div>
+          <div class="allocation-percent">5% (3,750,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> Emergency reserves, future exchange listings<br>
+          <strong>TGE Release:</strong> 0% at TGE<br>
+          <strong>Vesting:</strong> Locked for 24 months, then 50% released over 12 months<br>
+          <strong>Cliff:</strong> 24 months
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Community & Marketing</div>
+          <div class="allocation-percent">5% (3,750,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> Affiliate rewards, airdrops, marketing campaigns<br>
+          <strong>TGE Release:</strong> 20% at TGE<br>
+          <strong>Vesting:</strong> 80% released over 18 months (linear monthly)
+        </div>
+      </div>
+
+      <div class="allocation-item">
+        <div class="allocation-header">
+          <div class="allocation-name">Burned at TGE</div>
+          <div class="allocation-percent">10% (7,500,000 DWT)</div>
+        </div>
+        <div class="allocation-details">
+          <strong>Purpose:</strong> Permanent supply reduction<br>
+          <strong>Status:</strong> Burned immediately at TGE<br>
+          <strong>Burn Address:</strong> 0x000000000000000000000000000000000000dEaD
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Burn Mechanism</h2>
+      <ul>
+        <li><strong>Initial Burn:</strong> 7,500,000 DWT (10% of total supply) burned at TGE</li>
+        <li><strong>Ongoing Burns:</strong> 20% of platform fees used for buyback-and-burn</li>
+        <li><strong>Burn Address:</strong> 0x000000000000000000000000000000000000dEaD</li>
+        <li><strong>Burn Frequency:</strong> Monthly</li>
+        <li><strong>Transparency:</strong> All burns recorded on-chain and verifiable on Etherscan</li>
+        <li><strong>Expected Annual Burn Rate:</strong> 2-5% of circulating supply</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Token Utility</h2>
+      <ul>
+        <li><strong>Fee Discounts:</strong> Tiered transaction fee reductions (0.15% - 0.05%)</li>
+        <li><strong>Staking Rewards:</strong> Passive income from staking pools</li>
+        <li><strong>Governance:</strong> Voting on protocol upgrades and parameters</li>
+        <li><strong>Premium Features:</strong> Access to advanced platform features</li>
+        <li><strong>Liquidity Mining:</strong> Rewards for providing DEX liquidity</li>
+        <li><strong>Affiliate Rewards:</strong> Referral program incentives</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Smart Contract Addresses</h2>
+      <div class="address-list">
+        <div class="address-item">
+          <div class="address-label">Ethereum Mainnet:</div>
+          <div class="address-value">0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa</div>
+        </div>
+        <div class="address-item">
+          <div class="address-label">Base Network:</div>
+          <div class="address-value">0x9ce235f8574bde67393884550F02135CE4fB8387</div>
+        </div>
+        <div class="address-item">
+          <div class="address-label">Sepolia Testnet:</div>
+          <div class="address-value">0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Deflationary Model</h2>
+      <p style="color: #cbd5e1; line-height: 1.8;">
+        DWT implements a deflationary token model through an ongoing buyback-and-burn mechanism. 
+        Twenty percent (20%) of all platform transaction fees are allocated to purchasing DWT tokens 
+        from open market liquidity pools and permanently burning them by sending to the null address. 
+        Burn events are conducted monthly and are fully transparent, with all transactions verifiable 
+        on Etherscan and BaseScan. The burn rate is expected to increase as platform usage grows, 
+        creating deflationary pressure on the total circulating supply.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p><strong>dWallet (Toklo)</strong> - Non-custodial Web3 Wallet & DeFi Platform</p>
+      <p style="margin-top: 10px;">
+        <a href="https://www.toklo.xyz" target="_blank">https://www.toklo.xyz</a>
+      </p>
+      <p style="margin-top: 10px; font-size: 14px;">
+        Last Updated: <span id="update-date"></span>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('update-date').textContent = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  </script>
+</body>
+</html>
