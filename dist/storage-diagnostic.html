@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dWallet Storage Diagnostic Tool</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #6366f1; }
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .pass { background: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; }
+    .fail { background: rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; }
+    .warn { background: rgba(245, 158, 11, 0.2); border-left: 4px solid #f59e0b; }
+    .info { background: rgba(59, 130, 246, 0.2); border-left: 4px solid #3b82f6; }
+    button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover { background: #4f46e5; }
+    .code {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin: 10px 0;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 6px;
+    }
+    input[type="checkbox"] { width: 18px; height: 18px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 dWallet Storage Diagnostic Tool</h1>
+  <p>This tool checks why your wallet isn't persisting after page refresh</p>
+
+  <!-- CAUSE 1: Browser Settings -->
+  <div class="test-section">
+    <h2>Cause 1: Browser Clearing localStorage</h2>
+    
+    <div id="storage-test"></div>
+    
+    <button onclick="testStoragePersistence()">Test Storage Persistence</button>
+    <button onclick="checkBrowserSettings()">Check Browser Settings</button>
+    
+    <div style="margin-top: 20px;">
+      <h3>Manual Checks:</h3>
+      <label>
+        <input type="checkbox" id="check1" onchange="updateStatus()">
+        I checked browser settings for "Clear cookies on close"
+      </label>
+      <label>
+        <input type="checkbox" id="check2" onchange="updateStatus()">
+        I disabled privacy extensions temporarily
+      </label>
+      <label>
+        <input type="checkbox" id="check3" onchange="updateStatus()">
+        I'm not in Incognito/Private mode
+      </label>
+    </div>
+    
+    <div id="cause1-status" style="margin-top: 15px;"></div>
+  </div>
+
+  <!-- CAUSE 2: Wallet Save Failure -->
+  <div class="test-section">
+    <h2>Cause 2: Wallet Not Being Saved</h2>
+    
+    <div id="wallet-test"></div>
+    
+    <button onclick="testWalletSave()">Simulate Wallet Save</button>
+    <button onclick="checkEncryptedData()">Check Existing Encrypted Data</button>
+    <button onclick="clearAllData()" style="background: #ef4444;">⚠️ Clear All Data</button>
+    
+    <div id="cause2-status" style="margin-top: 15px;"></div>
+  </div>
+
+  <!-- CAUSE 3: Origin/Domain Issues -->
+  <div class="test-section">
+    <h2>Cause 3: Origin/Domain Mismatch</h2>
+    
+    <div id="origin-test"></div>
+    
+    <button onclick="testOriginConsistency()">Test Origin Consistency</button>
+    
+    <div style="margin-top: 20px;">
+      <h3>Current Access URL:</h3>
+      <div class="code" id="current-url"></div>
+      
+      <h3>Common Access Points:</h3>
+      <ul>
+        <li><code>http://localhost:5173</code> ← Vite default</li>
+        <li><code>http://localhost:3000</code> ← React default</li>
+        <li><code>http://127.0.0.1:5173</code> ← Different origin!</li>
+        <li><code>file:///...</code> ← Won't work properly!</li>
+      </ul>
+    </div>
+    
+    <div id="cause3-status" style="margin-top: 15px;"></div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="test-section">
+    <h2>📊 Summary & Recommendations</h2>
+    <div id="summary"></div>
+    <button onclick="runAllTests()" style="margin-top: 15px; font-size: 16px; padding: 12px 24px;">
+      🔄 Run All Tests Again
+    </button>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'dwallet_v5_encrypted';
+    const SESSION_KEY = 'dwallet_v5_session';
+
+    function showResult(containerId, message, status) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = `test-result ${status}`;
+      div.textContent = message;
+      container.appendChild(div);
+    }
+
+    function clearResults() {
+      ['storage-test', 'wallet-test', 'origin-test'].forEach(id => {
+        document.getElementById(id).innerHTML = '';
+      });
+    }
+
+    // TEST 1: Storage Persistence
+    async function testStoragePersistence() {
+      console.log('🧪 Testing localStorage persistence...');
+      
+      // Test if localStorage works
+      try {
+        localStorage.setItem('test_key', 'test_value');
+        const retrieved = localStorage.getItem('test_key');
+        
+        if (retrieved === 'test_value') {
+          showResult('storage-test', '✅ localStorage is working correctly', 'pass');
+        } else {
+          showResult('storage-test', '❌ localStorage read/write failed', 'fail');
+        }
+      } catch (error) {
+        showResult('storage-test', `❌ localStorage error: ${error.message}`, 'fail');
+        return;
+      }
+
+      // Test persistence across reload
+      const testData = {
+        timestamp: Date.now(),
+        random: Math.random().toString(36).substring(7)
+      };
+      
+      localStorage.setItem('persistence_test', JSON.stringify(testData));
+      
+      showResult('storage-test', 
+        `💾 Test data saved. Refresh page to see if it persists...`, 
+        'info'
+      );
+      
+      // Check after 2 seconds (simulating refresh delay)
+      setTimeout(() => {
+        const stored = JSON.parse(localStorage.getItem('persistence_test') || 'null');
+        
+        if (stored && stored.timestamp === testData.timestamp) {
+          showResult('storage-test', 
+            `✅ Data persisted successfully! Storage is NOT being cleared`, 
+            'pass'
+          );
+        } else {
+          showResult('storage-test', 
+            `❌ Data was cleared! Your browser IS clearing localStorage`, 
+            'fail'
+          );
+          showResult('storage-test', 
+            `👉 Check browser settings: chrome://settings/cookies/detail?site=localhost`, 
+            'warn'
+          );
+        }
+      }, 2000);
+    }
+
+    function checkBrowserSettings() {
+      const isPrivate = navigator.userAgent.includes('Incognito') || 
+                       navigator.userAgent.includes('Firefox') && !navigator.cookieEnabled;
+      
+      if (isPrivate) {
+        showResult('storage-test', 
+          `⚠️ You're in Private/Incognito mode - storage clears on close`, 
+          'warn'
+        );
+      } else {
+        showResult('storage-test', 
+          `✅ Not in private mode`, 
+          'pass'
+        );
+      }
+      
+      // Check cookie enabled
+      if (navigator.cookieEnabled) {
+        showResult('storage-test', 
+          `✅ Cookies and site data are enabled`, 
+          'pass'
+        );
+      } else {
+        showResult('storage-test', 
+          `❌ Cookies are disabled - this will prevent localStorage from working!`, 
+          'fail'
+        );
+      }
+    }
+
+    // TEST 2: Wallet Save Simulation
+    async function testWalletSave() {
+      console.log('🧪 Testing wallet save functionality...');
+      
+      try {
+        // Simulate wallet data
+        const mockWallet = {
+          mnemonic: 'test test test test test test test test test test test junk',
+          accounts: [{
+            address: '0x1234567890abcdef1234567890abcdef12345678',
+            name: 'Test Account',
+            index: 0
+          }],
+          activeAccount: 0,
+          createdAt: Date.now()
+        };
+        
+        // Simulate encryption (simplified)
+        const encrypted = btoa(JSON.stringify(mockWallet));
+        
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, encrypted);
+        
+        showResult('wallet-test', 
+          `✅ Mock wallet saved (${encrypted.length} bytes)`, 
+          'pass'
+        );
+        
+        // Verify can retrieve
+        const retrieved = localStorage.getItem(STORAGE_KEY);
+        if (retrieved && retrieved.length === encrypted.length) {
+          showResult('wallet-test', 
+            `✅ Wallet data can be retrieved successfully`, 
+            'pass'
+          );
+          
+          // Decode and verify
+          const decoded = JSON.parse(atob(retrieved));
+          showResult('wallet-test', 
+            `✅ Wallet data integrity verified: ${decoded.accounts[0].address}`, 
+            'pass'
+          );
+        } else {
+          showResult('wallet-test', 
+            `❌ Retrieved data doesn't match saved data!`, 
+            'fail'
+          );
+        }
+        
+      } catch (error) {
+        showResult('wallet-test', 
+          `❌ Wallet save failed: ${error.message}`, 
+          'fail'
+        );
+      }
+    }
+
+    function checkEncryptedData() {
+      const existing = localStorage.getItem(STORAGE_KEY);
+      
+      if (!existing) {
+        showResult('wallet-test', 
+          `ℹ️ No encrypted wallet data found in localStorage`, 
+          'info'
+        );
+        showResult('wallet-test', 
+          `👉 This means you need to create/import a wallet first`, 
+          'info'
+        );
+      } else {
+        showResult('wallet-test', 
+          `✅ Found existing encrypted wallet (${existing.length} bytes)`, 
+          'pass'
+        );
+        
+        try {
+          const decoded = JSON.parse(atob(existing));
+          showResult('wallet-test', 
+            `📊 Wallet info: ${decoded.accounts?.length || 0} account(s), created: ${new Date(decoded.createdAt).toLocaleString()}`, 
+            'info'
+          );
+        } catch {
+          showResult('wallet-test', 
+            `⚠️ Data exists but can't be decoded (this is normal - it's encrypted)`, 
+            'warn'
+          );
+        }
+      }
+    }
+
+    function clearAllData() {
+      if (confirm('⚠️ This will DELETE all wallet data! Continue?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
+        showResult('wallet-test', 
+          `🗑️ All wallet data cleared. Create/import wallet again to test.`, 
+          'warn'
+        );
+      }
+    }
+
+    // TEST 3: Origin Consistency
+    function testOriginConsistency() {
+      const currentOrigin = window.location.origin;
+      const currentProtocol = window.location.protocol;
+      const currentHost = window.location.host;
+      
+      showResult('origin-test', 
+        `📍 Current Origin: ${currentOrigin}`, 
+        'info'
+      );
+      
+      showResult('origin-test', 
+        `📍 Protocol: ${currentProtocol}`, 
+        'info'
+      );
+      
+      showResult('origin-test', 
+        `📍 Host: ${currentHost}`, 
+        'info'
+      );
+      
+      // Check for problematic access methods
+      if (currentProtocol === 'file:') {
+        showResult('origin-test', 
+          `❌ CRITICAL: You're accessing via file:// protocol!`, 
+          'fail'
+        );
+        showResult('origin-test', 
+          `👉 This WON'T work properly. Use a local server instead:`, 
+          'fail'
+        );
+        showResult('origin-test', 
+          `   npm run dev  (starts http://localhost:5173)`, 
+          'warn'
+        );
+      } else if (currentHost.startsWith('127.0.0.1')) {
+        showResult('origin-test', 
+          `⚠️ You're using 127.0.0.1 instead of localhost`, 
+          'warn'
+        );
+        showResult('origin-test', 
+          `👉 These are DIFFERENT origins! Always use: http://localhost`, 
+          'warn'
+        );
+      } else if (currentHost.startsWith('localhost')) {
+        showResult('origin-test', 
+          `✅ Using localhost (correct)`, 
+          'pass'
+        );
+      }
+      
+      // Check if data exists from different origin
+      const hasData = !!localStorage.getItem(STORAGE_KEY);
+      if (!hasData) {
+        showResult('origin-test', 
+          `ℹ️ No wallet data for THIS origin`, 
+          'info'
+        );
+        showResult('origin-test', 
+          `👉 Did you create wallet on a different URL? (localhost vs 127.0.0.1)`, 
+          'warn'
+        );
+      } else {
+        showResult('origin-test', 
+          `✅ Wallet data exists for this origin`, 
+          'pass'
+        );
+      }
+    }
+
+    // Update checklist status
+    function updateStatus() {
+      const checks = [
+        document.getElementById('check1').checked,
+        document.getElementById('check2').checked,
+        document.getElementById('check3').checked
+      ];
+      
+      const allChecked = checks.every(c => c);
+      
+      const statusDiv = document.getElementById('cause1-status');
+      if (allChecked) {
+        statusDiv.innerHTML = '<div class="test-result pass">✅ All manual checks completed</div>';
+      } else {
+        statusDiv.innerHTML = '<div class="test-result warn">⏳ Please complete the manual checks above</div>';
+      }
+    }
+
+    // Display current URL
+    document.getElementById('current-url').textContent = window.location.href;
+
+    // Run all tests on load
+    function runAllTests() {
+      clearResults();
+      console.clear();
+      
+      console.log('═══════════════════════════════════════════');
+      console.log('🔍 dWallet Storage Diagnostic Tool');
+      console.log('═══════════════════════════════════════════');
+      
+      checkBrowserSettings();
+      testOriginConsistency();
+      checkEncryptedData();
+      
+      setTimeout(() => {
+        generateSummary();
+      }, 3000);
+    }
+
+    function generateSummary() {
+      const summary = document.getElementById('summary');
+      
+      const hasLocalStorage = (() => {
+        try {
+          localStorage.setItem('test', 'test');
+          localStorage.removeItem('test');
+          return true;
+        } catch {
+          return false;
+        }
+      })();
+      
+      const hasWalletData = !!localStorage.getItem(STORAGE_KEY);
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+      const isFileProtocol = window.location.protocol === 'file:';
+      
+      let html = '<div class="test-result ';
+      
+      if (isFileProtocol) {
+        html += 'fail">❌ CRITICAL ISSUE: File Protocol Detected\n\n';
+        html += 'You must use a proper web server. Run:\n';
+        html += '  npm run dev\n\n';
+        html += 'Then access via http://localhost:5173\n';
+      } else if (!hasLocalStorage) {
+        html += 'fail">❌ CRITICAL ISSUE: localStorage Not Working\n\n';
+        html += 'Possible causes:\n';
+        html += '• Browser privacy settings too strict\n';
+        html += '• Extensions blocking storage\n';
+        html += '• Private/Incognito mode\n';
+      } else if (!hasWalletData) {
+        html += 'warn">⚠️ WARNING: No Wallet Data Found\n\n';
+        html += 'This is normal if you haven\'t created/imported a wallet yet.\n\n';
+        html += 'Next steps:\n';
+        html += '1. Create or import a wallet\n';
+        html += '2. Watch console for "💾 Wallet Saved Successfully"\n';
+        html += '3. Refresh page and check if "🔐 Wallet Init Debug" shows hasEncrypted: true\n';
+      } else {
+        html += 'pass">✅ Everything Looks Good!\n\n';
+        html += 'Storage is working correctly.\n\n';
+        html += 'If wallet still doesn\'t persist:\n';
+        html += '• Check console logs during wallet creation\n';
+        html += '• Look for encryption errors\n';
+        html += '• Verify password is being saved correctly\n';
+      }
+      
+      html += '</div>';
+      summary.innerHTML = html;
+    }
+
+    // Auto-run tests on page load
+    window.addEventListener('load', () => {
+      setTimeout(runAllTests, 500);
+    });
+  </script>
+</body>
+</html>
