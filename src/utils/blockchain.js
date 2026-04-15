@@ -252,6 +252,8 @@ export async function fetchTxHistory(address, chainId = 'ethereum') {
 export async function fetchTokenTxHistory(address, chainId = 'ethereum') {
   const ENDPOINTS = {
     ethereum: `https://api.etherscan.io/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_ETHERSCAN_KEY || 'YourApiKeyToken'}`,
+    polygon: `https://api.polygonscan.com/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_POLYGONSCAN_KEY || 'YourApiKeyToken'}`,
+    bnb: `https://api.bscscan.com/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${import.meta.env.VITE_BSCSCAN_KEY || 'YourApiKeyToken'}`,
   }
   const url = ENDPOINTS[chainId]
   if (!url) return []
