@@ -36,6 +36,13 @@ export default function SettingsView({ onNavigate }) {
   const [copied, setCopied] = useState(false)
   const [notifPerm, setNotifPerm] = useState('default')
   
+  // Anti-phishing code state
+  const [phishingCode, setPhishingCode] = useState(
+    localStorage.getItem('dwallet_phishing_code') || ''
+  )
+  const [showPhishingSetup, setShowPhishingSetup] = useState(false)
+  const [customPhishingCode, setCustomPhishingCode] = useState('')
+  
   // Seed phrase security features
   const [seedCountdown, setSeedCountdown] = useState(30) // Auto-hide after 30 seconds
   const [revealedWords, setRevealedWords] = useState({}) // Track which words are revealed
@@ -176,6 +183,35 @@ export default function SettingsView({ onNavigate }) {
       if (seedTimerRef.current) clearTimeout(seedTimerRef.current)
     }
   }, [])
+  
+  // Anti-phishing code functions
+  const generatePhishingCode = () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+    localStorage.setItem('dwallet_phishing_code', code)
+    setPhishingCode(code)
+    setShowPhishingSetup(false)
+  }
+  
+  const saveCustomPhishingCode = () => {
+    if (customPhishingCode.trim().length < 4) {
+      alert('Code must be at least 4 characters')
+      return
+    }
+    if (customPhishingCode.trim().length > 20) {
+      alert('Code must be less than 20 characters')
+      return
+    }
+    const code = customPhishingCode.trim().toUpperCase()
+    localStorage.setItem('dwallet_phishing_code', code)
+    setPhishingCode(code)
+    setShowPhishingSetup(false)
+    setCustomPhishingCode('')
+  }
+  
+  const clearPhishingCode = () => {
+    localStorage.removeItem('dwallet_phishing_code')
+    setPhishingCode('')
+  }
 
   return (
     <div className="view-container">
@@ -373,6 +409,80 @@ export default function SettingsView({ onNavigate }) {
               >
                 Enable
               </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-group-title">Security</h3>
+        <div className="settings-list">
+          {/* Anti-Phishing Code */}
+          <div
+            className="settings-item"
+            style={{ flexDirection: 'column', gap: 12 }}
+          >
+            <div>
+              <p className="settings-label">Anti-Phishing Code</p>
+              <p className="settings-sub">
+                Unique code shown on every page to verify you're on the real site
+              </p>
+            </div>
+            {!phishingCode ? (
+              <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => setShowPhishingSetup(true)}
+                  style={{ flex: 1 }}
+                >
+                  Generate Random Code
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowPhishingSetup(true)}
+                  style={{ flex: 1 }}
+                >
+                  Custom Code
+                </button>
+              </div>
+            ) : (
+              <div style={{ width: '100%' }}>
+                <div
+                  style={{
+                    background: 'var(--bg3)',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    letterSpacing: '6px',
+                    color: 'var(--accent)',
+                    marginBottom: '12px',
+                    border: '2px solid var(--accent)',
+                  }}
+                >
+                  {phishingCode}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowPhishingSetup(true)
+                      setCustomPhishingCode('')
+                    }}
+                    style={{ flex: 1, fontSize: '12px' }}
+                  >
+                    Change Code
+                  </button>
+                  <button
+                    className="btn-danger"
+                    onClick={clearPhishingCode}
+                    style={{ flex: 1, fontSize: '12px', padding: '8px' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -692,6 +802,110 @@ export default function SettingsView({ onNavigate }) {
                   Reset
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anti-Phishing Code Setup Modal */}
+      {showPhishingSetup && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowPhishingSetup(false)
+            setCustomPhishingCode('')
+          }}
+        >
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Set Anti-Phishing Code</h2>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  setShowPhishingSetup(false)
+                  setCustomPhishingCode('')
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <div
+                style={{
+                  background: 'rgba(99,102,241,0.1)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}
+              >
+                <p style={{ fontSize: '13px', color: 'var(--text2)', margin: 0, lineHeight: '1.6' }}>
+                  💡 <strong>What is this?</strong> Your unique code will be shown on every page.
+                  If you don't see your code, you might be on a fake site!
+                </p>
+              </div>
+
+              {!phishingCode ? (
+                <>
+                  <button
+                    className="btn-primary full-width"
+                    onClick={generatePhishingCode}
+                    style={{ marginBottom: '12px' }}
+                  >
+                    🎲 Generate Random Code
+                  </button>
+                  
+                  <div style={{ textAlign: 'center', margin: '12px 0' }}>
+                    <span style={{ color: 'var(--text3)', fontSize: '12px' }}>— OR —</span>
+                  </div>
+                  
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px' }}>
+                      Enter your own code (4-20 characters):
+                    </p>
+                    <input
+                      type="text"
+                      className="field"
+                      placeholder="e.g., MYSAFE2024"
+                      value={customPhishingCode}
+                      onChange={e => setCustomPhishingCode(e.target.value)}
+                      maxLength={20}
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                    <button
+                      className="btn-primary full-width"
+                      onClick={saveCustomPhishingCode}
+                      disabled={customPhishingCode.trim().length < 4}
+                      style={{ marginTop: '12px' }}
+                    >
+                      Save Custom Code
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <p style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '12px' }}>
+                    Enter new code to replace: <strong>{phishingCode}</strong>
+                  </p>
+                  <input
+                    type="text"
+                    className="field"
+                    placeholder="NEW CODE"
+                    value={customPhishingCode}
+                    onChange={e => setCustomPhishingCode(e.target.value)}
+                    maxLength={20}
+                    style={{ textTransform: 'uppercase' }}
+                  />
+                  <button
+                    className="btn-primary full-width"
+                    onClick={saveCustomPhishingCode}
+                    disabled={customPhishingCode.trim().length < 4}
+                    style={{ marginTop: '12px' }}
+                  >
+                    Update Code
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

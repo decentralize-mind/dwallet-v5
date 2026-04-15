@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { isValidAddress } from '../utils/crypto'
 import { resolveENS } from '../utils/blockchain'
 import { getPrice } from '../utils/prices'
-import { getContacts } from '../utils/addressBook'
+import { getContacts, isWhitelisted, isNewAddress, getAddressWarningLevel } from '../utils/addressBook'
 import { DWT } from '../utils/dwt'
 
 const CHAIN_TOKENS = {
@@ -41,6 +41,12 @@ export default function SendModal({ onClose }) {
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
   const [showContacts, setShowContacts] = useState(false)
+  
+  // Enhanced security features
+  const [confirmCountdown, setConfirmCountdown] = useState(5)
+  const [addressVerified, setAddressVerified] = useState(false)
+  const [showFullAddress, setShowFullAddress] = useState(false)
+  const confirmTimerRef = useRef(null)
 
   const contacts = getContacts()
   const balance = chainBalances[token] || 0
@@ -49,6 +55,11 @@ export default function SendModal({ onClose }) {
   const finalAddr = resolvedAddr || recipient
   const isDWT = token === 'DWT'
   const isTestnet = activeChain === 'sepolia' || activeChain === 'baseSepolia'
+  
+  // Address security check
+  const addressWarningLevel = finalAddr ? getAddressWarningLevel(finalAddr) : 'unknown'
+  const isTrusted = isWhitelisted(finalAddr)
+  const isNew = isNewAddress(finalAddr)
   
   // Debug: Log actual balance values
   console.log('🔍 Balance Debug:', {
@@ -64,6 +75,34 @@ export default function SendModal({ onClose }) {
     setAmount('')
     setError('')
   }, [activeChain])
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearInterval(confirmTimerRef.current)
+    }
+  }, [])
+  
+  // Reset verification when step changes to confirm
+  useEffect(() => {
+    if (step === 'confirm') {
+      setAddressVerified(false)
+      setConfirmCountdown(5)
+      setShowFullAddress(false)
+      
+      // Start countdown timer
+      if (confirmTimerRef.current) clearInterval(confirmTimerRef.current)
+      confirmTimerRef.current = setInterval(() => {
+        setConfirmCountdown(prev => {
+          if (prev <= 1) {
+            if (confirmTimerRef.current) clearInterval(confirmTimerRef.current)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+  }, [step])
 
   useEffect(() => {
     if (!recipient || isValidAddress(recipient)) {
@@ -567,6 +606,40 @@ export default function SendModal({ onClose }) {
                   ✓ {ensDisplay.slice(0, 10)}...{ensDisplay.slice(-4)}
                 </p>
               )}
+              
+              {/* Address Trust Indicator */}
+              {finalAddr && isValidAddress(finalAddr) && (
+                <div
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    background: addressWarningLevel === 'safe' ? 'rgba(16,185,129,0.1)' :
+                               addressWarningLevel === 'new' ? 'rgba(245,158,11,0.1)' :
+                               'rgba(239,68,68,0.1)',
+                    border: `1px solid ${
+                      addressWarningLevel === 'safe' ? 'rgba(16,185,129,0.3)' :
+                      addressWarningLevel === 'new' ? 'rgba(245,158,11,0.3)' :
+                      'rgba(239,68,68,0.3)'
+                    }`,
+                    color: addressWarningLevel === 'safe' ? '#10b981' :
+                           addressWarningLevel === 'new' ? '#f59e0b' :
+                           '#ef4444'
+                  }}
+                >
+                  {addressWarningLevel === 'safe' && (
+                    <span>✓ Trusted Address (Whitelisted)</span>
+                  )}
+                  {addressWarningLevel === 'new' && (
+                    <span>⚠️ New Address (Added recently)</span>
+                  )}
+                  {addressWarningLevel === 'unknown' && (
+                    <span>⚠️ Unverified Address — Double-check before sending</span>
+                  )}
+                </div>
+              )}
               {showContacts && contacts.length > 0 && (
                 <div
                   style={{
@@ -700,20 +773,49 @@ export default function SendModal({ onClose }) {
 
         {step === 'confirm' && (
           <div className="modal-body">
+            {/* Security Warning Banner */}
+            <div
+              style={{
+                background: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.3)',
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '16px'
+              }}
+            >
+              <p style={{ fontSize: '12px', color: '#f59e0b', margin: 0, fontWeight: '600' }}>
+                ⚠️ Security Check: Verify all details before confirming
+              </p>
+            </div>
+
             <div className="confirm-card">
               <p className="confirm-label">Sending</p>
               <p className="confirm-amount">
                 {amount} {token}
               </p>
-              <p className="confirm-usd">{'≈ $' + usdValue}</p>
+              <p className="confirm-usd" style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--accent)' }}>
+                {'≈ $' + usdValue}
+              </p>
             </div>
+            
             <div className="confirm-detail">
               <div className="confirm-row">
                 <span>To</span>
-                <span className="mono">
-                  {finalAddr.slice(0, 10)}...{finalAddr.slice(-6)}
+                <span 
+                  className="mono" 
+                  onClick={() => setShowFullAddress(!showFullAddress)}
+                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  title="Click to show full address"
+                >
+                  {showFullAddress ? finalAddr : `${finalAddr.slice(0, 10)}...${finalAddr.slice(-6)}`}
                 </span>
               </div>
+              {ensDisplay && (
+                <div className="confirm-row">
+                  <span>ENS Name</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{ensDisplay}</span>
+                </div>
+              )}
               <div className="confirm-row">
                 <span>Network</span>
                 <span>{activeChain}</span>
@@ -725,15 +827,75 @@ export default function SendModal({ onClose }) {
                 </span>
               </div>
             </div>
-            <div className="confirm-warning">
-              ⚠️ Transactions cannot be reversed. Verify all details.
+
+            {/* Address Verification Checkbox */}
+            <div
+              style={{
+                background: 'var(--bg3)',
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '12px'
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: 'var(--text2)',
+                  lineHeight: '1.5'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={addressVerified}
+                  onChange={e => setAddressVerified(e.target.checked)}
+                  style={{
+                    marginTop: '2px',
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer',
+                    accentColor: 'var(--accent)'
+                  }}
+                />
+                <span>
+                  <strong>I have verified the recipient address</strong> and confirm this transaction is correct. I understand transactions cannot be reversed.
+                </span>
+              </label>
             </div>
+
+            {/* Countdown Timer */}
+            {confirmCountdown > 0 && (
+              <div
+                style={{
+                  background: confirmCountdown <= 2 ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)',
+                  border: `1px solid ${confirmCountdown <= 2 ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  marginBottom: '12px'
+                }}
+              >
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: confirmCountdown <= 2 ? '#10b981' : '#6366f1'
+                }}>
+                  ⏱️ Confirm button activates in {confirmCountdown} second{confirmCountdown !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+
             {error && <p className="error-msg">{error}</p>}
+            
             <div className="btn-row">
               <button
                 className="btn-secondary"
                 onClick={function () {
                   setStep('form')
+                  if (confirmTimerRef.current) clearInterval(confirmTimerRef.current)
                 }}
               >
                 Edit
@@ -741,9 +903,13 @@ export default function SendModal({ onClose }) {
               <button
                 className="btn-primary"
                 onClick={handleSend}
-                disabled={sending}
+                disabled={sending || confirmCountdown > 0 || !addressVerified}
+                style={{
+                  opacity: (confirmCountdown > 0 || !addressVerified) ? 0.5 : 1,
+                  cursor: (confirmCountdown > 0 || !addressVerified) ? 'not-allowed' : 'pointer'
+                }}
               >
-                {sending ? 'Sending...' : 'Confirm Send'}
+                {sending ? 'Sending...' : confirmCountdown > 0 ? `Wait ${confirmCountdown}s...` : 'Confirm Send'}
               </button>
             </div>
           </div>
