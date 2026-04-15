@@ -67,178 +67,128 @@ function DWTBanner({ chainBalances, activeChain }) {
 
   return (
     <div style={{
-      background: "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 50%, rgba(99,102,241,0.02) 100%)",
-      border: "1px solid rgba(99,102,241,0.3)",
-      borderRadius: "16px",
-      padding: "20px",
-      marginBottom: 20,
-      boxShadow: "0 4px 24px rgba(99,102,241,0.15)",
-      backdropFilter: "blur(8px)",
+      background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(99,102,241,0.04) 100%)",
+      border: "1px solid rgba(99,102,241,0.25)",
+      borderRadius: "12px",
+      padding: "16px",
+      marginBottom: 16,
+      boxShadow: "0 2px 12px rgba(99,102,241,0.1)",
     }}>
 
-      {/* Row 1: logo + name + price */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
+      {/* Header Row: Logo + Token Info + Price */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{
-            width:48,height:48,borderRadius:"12px",flexShrink:0,
+            width:40,height:40,borderRadius:"10px",flexShrink:0,
             background:"linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.1) 100%)",
-            border:"2px solid rgba(99,102,241,0.4)",
+            border:"1.5px solid rgba(99,102,241,0.35)",
             display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:24,color:"var(--accent)",fontWeight:900,
-            boxShadow: "0 2px 8px rgba(99,102,241,0.2)"
+            fontSize:20,color:"var(--accent)",fontWeight:900
           }}>◈</div>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <p style={{fontSize:18,fontWeight:900,margin:0,color:"var(--text)",letterSpacing:"-0.3px"}}>DWT</p>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <p style={{fontSize:16,fontWeight:800,margin:0,color:"var(--text)"}}>DWT</p>
               <span style={{
-                fontSize:10,padding:"3px 8px",borderRadius:"6px",fontWeight:700,
-                background:"rgba(99,102,241,0.15)",color:"var(--accent)",
-                border:"1px solid rgba(99,102,241,0.2)"
-              }}>dWallet Token</span>
+                fontSize:9,padding:"2px 6px",borderRadius:"4px",fontWeight:600,
+                background:"rgba(99,102,241,0.12)",color:"var(--accent)",
+                border:"1px solid rgba(99,102,241,0.18)"
+              }}>dWallet</span>
             </div>
-            <p style={{fontSize:11,color:"var(--text3)",margin:"3px 0 0",fontWeight:500}}>
-              {"Market Cap: " + formatMktCap(mktCap)}
+            <p style={{fontSize:10,color:"var(--text3)",margin:"2px 0 0",fontWeight:500}}>
+              Mkt Cap: {formatMktCap(mktCap)}
             </p>
           </div>
         </div>
 
-        {/* Price Display */}
         <div style={{textAlign:"right"}}>
-          <p style={{fontSize:24,fontWeight:900,margin:0,color:"var(--text)",letterSpacing:"-0.5px"}}>
-            {"$" + price.toFixed(2)}
+          <p style={{fontSize:20,fontWeight:800,margin:0,color:"var(--text)"}}>
+            ${price.toFixed(2)}
           </p>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4}}>
-            <span style={{
-              fontSize:12,fontWeight:800,color:"var(--green)",
-              background:"rgba(16,185,129,0.1)",padding:"2px 6px",borderRadius:"4px"
-            }}>
-              {"+" + change + "%"}
-            </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M7 17L17 7M17 7H7M17 7V17" stroke="var(--green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          <span style={{
+            fontSize:11,fontWeight:700,color:"var(--green)",
+            background:"rgba(16,185,129,0.1)",padding:"2px 6px",borderRadius:"4px"
+          }}>
+            +{change}%
+          </span>
         </div>
       </div>
 
-      {/* Chart Area */}
-      <div style={{
-        margin: "16px 0",
-        padding: "16px",
-        background: "rgba(0,0,0,0.2)",
-        borderRadius: "12px",
-        border: "1px solid rgba(99,102,241,0.15)"
-      }}>
-        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{overflow:"visible"}}>
-          <defs>
-            <linearGradient id="dwtGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4"/>
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
-            </linearGradient>
-          </defs>
-          <polyline
-            fill="url(#dwtGrad)"
-            stroke="#10b981"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={pts}
-            style={{filter: "drop-shadow(0 2px 4px rgba(16,185,129,0.3))"}}
-          />
-        </svg>
-      </div>
-
-      {/* Balance & Stats Grid */}
+      {/* Compact Stats Grid */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: hasDWT ? "1fr 1fr" : "1fr",
-        gap: 12,
-        marginBottom: 16
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10,
+        marginBottom: 12
       }}>
-        {hasDWT && (
-          <div style={{
-            padding:"14px",
-            background:"linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.02) 100%)",
-            border:"1px solid rgba(16,185,129,0.25)",
-            borderRadius:"12px"
-          }}>
-            <p style={{fontSize:11,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>Your Balance</p>
-            <p style={{fontSize:18,fontWeight:900,margin:"6px 0 0",color:"var(--text)",letterSpacing:"-0.3px"}}>
-              {formatDWT(dwtBal)}
-            </p>
-            <p style={{fontSize:12,color:"var(--green)",margin:"4px 0 0",fontWeight:700}}>
-              {"≈ $" + usdVal}
-            </p>
-          </div>
-        )}
-        
+        {/* Supply */}
         <div style={{
-          padding:"14px",
-          background:"rgba(99,102,241,0.08)",
-          border:"1px solid rgba(99,102,241,0.2)",
-          borderRadius:"12px"
+          padding:"10px",
+          background:"rgba(99,102,241,0.06)",
+          border:"1px solid rgba(99,102,241,0.15)",
+          borderRadius:"8px"
         }}>
-          <p style={{fontSize:11,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.5px"}}>Supply</p>
-          <p style={{fontSize:18,fontWeight:900,margin:"6px 0 0",color:"var(--text)",letterSpacing:"-0.3px"}}>
-            67.5M DWT
+          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Supply</p>
+          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--text)"}}>67.5M</p>
+          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:500}}>Circulating</p>
+        </div>
+
+        {/* Your Balance */}
+        <div style={{
+          padding:"10px",
+          background:"rgba(16,185,129,0.06)",
+          border:"1px solid rgba(16,185,129,0.15)",
+          borderRadius:"8px"
+        }}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Your Balance</p>
+          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--text)"}}>
+            {dwtBal > 0 ? formatDWT(dwtBal) : '0'}
           </p>
-          <p style={{fontSize:12,color:"var(--text3)",margin:"4px 0 0",fontWeight:600}}>
-            Circulating
+          <p style={{fontSize:9,color:"var(--green)",margin:0,fontWeight:600}}>
+            {dwtBal > 0 ? `≈ $${usdVal}` : 'No holdings'}
           </p>
+        </div>
+
+        {/* Fee Tier */}
+        <div style={{
+          padding:"10px",
+          background:"rgba(99,102,241,0.06)",
+          border:"1px solid rgba(99,102,241,0.15)",
+          borderRadius:"8px"
+        }}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>Fee Tier</p>
+          <p style={{fontSize:13,fontWeight:800,margin:"4px 0 2px",color:"var(--accent)"}}>{tier.label}</p>
+          <p style={{fontSize:9,color:"var(--text3)",margin:0,fontWeight:500}}>{tier.name}</p>
         </div>
       </div>
-      {/* Fee Tier Progress */}
+
+      {/* Fee Tiers Progress */}
       <div style={{
-        padding:"16px",
-        background:"rgba(0,0,0,0.25)",
-        borderRadius:"12px",
-        border:"1px solid rgba(99,102,241,0.15)",
-        marginBottom: 16
+        padding:"10px",
+        background:"rgba(0,0,0,0.2)",
+        borderRadius:"8px",
+        border:"1px solid rgba(99,102,241,0.12)",
+        marginBottom: 10
       }}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <div>
-            <p style={{fontSize:12,fontWeight:800,margin:0,color:"var(--text)"}}>
-              ⚡ {tier.name} Tier
-            </p>
-            <p style={{fontSize:11,color:"var(--text3)",margin:"3px 0 0"}}>
-              Current fee rate: <span style={{color:"var(--accent)",fontWeight:700}}>{tier.label}</span>
-            </p>
-          </div>
-          <div style={{textAlign:"right"}}>
-            <p style={{fontSize:11,fontWeight:700,color:"var(--text3)",margin:0}}>YOUR HOLDING</p>
-            <p style={{fontSize:14,fontWeight:900,color:"var(--accent)",margin:"2px 0 0"}}>
-              {dwtBal.toLocaleString()} DWT
-            </p>
-          </div>
-        </div>
-        
-        {/* Tier Indicators */}
-        <div style={{display:"flex",gap:8,alignItems:"stretch"}}>
+        <div style={{display:"flex",gap:6}}>
           {DWT_CONFIG.tiers.map(function(t, idx) {
             const unlocked = dwtBal >= t.hold;
             return (
               <div key={t.name} style={{
                 flex:1,
-                padding:"10px 8px",
+                padding:"6px 4px",
                 background: unlocked 
-                  ? "linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%)" 
-                  : "rgba(0,0,0,0.2)",
-                border: unlocked ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(99,102,241,0.1)",
-                borderRadius:"8px",
-                textAlign:"center",
-                transition: "all 0.3s ease"
+                  ? "rgba(16,185,129,0.1)" 
+                  : "rgba(0,0,0,0.15)",
+                border: unlocked ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(99,102,241,0.08)",
+                borderRadius:"6px",
+                textAlign:"center"
               }}>
-                <div style={{
-                  width:8,height:8,borderRadius:"50%",margin:"0 auto 6px",
-                  background: unlocked ? "#10b981" : "rgba(99,102,241,0.3)",
-                  boxShadow: unlocked ? "0 0 8px rgba(16,185,129,0.5)" : "none"
-                }}/>
                 <p style={{
-                  fontSize:10,fontWeight: unlocked ? 800 : 500,
+                  fontSize:10,fontWeight: unlocked ? 700 : 500,
                   color: unlocked ? "var(--green)" : "var(--text3)",
                   margin:0
                 }}>
-                  {(t.hold/1000).toFixed(0) + "K"}
+                  {(t.hold/1000).toFixed(0)}K
                 </p>
                 <p style={{
                   fontSize:9,fontWeight:600,
@@ -254,56 +204,37 @@ function DWTBanner({ chainBalances, activeChain }) {
       </div>
 
       {/* Action Buttons */}
-      <div style={{display:"flex",gap:8}}>
+      <div style={{display:"flex",gap:6}}>
         {explorer && (
           <a
             href={explorer}
             target="_blank"
             rel="noreferrer"
             style={{
-              flex:1,padding:"10px 16px",textAlign:"center",
-              background:"linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.1) 100%)",
-              border:"1px solid rgba(99,102,241,0.3)",
-              borderRadius:"10px",
-              fontSize:12,fontWeight:700,
-              color:"var(--accent)",textDecoration:"none",display:"block",
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 8px rgba(99,102,241,0.15)"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = "linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(99,102,241,0.15) 100%)";
-              e.target.style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = "linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.1) 100%)";
-              e.target.style.transform = "translateY(0)";
+              flex:1,padding:"8px 12px",textAlign:"center",
+              background:"rgba(99,102,241,0.12)",
+              border:"1px solid rgba(99,102,241,0.25)",
+              borderRadius:"8px",
+              fontSize:11,fontWeight:600,
+              color:"var(--accent)",textDecoration:"none",display:"block"
             }}
           >
-            View Explorer ↗
+            Explorer ↗
           </a>
         )}
         <button
           onClick={copyAddr}
           style={{
-            flex:1,padding:"10px 16px",textAlign:"center",
-            background:"rgba(255,255,255,0.05)",
-            border:"1px solid rgba(99,102,241,0.25)",
-            borderRadius:"10px",
-            fontSize:12,fontWeight:700,
+            flex:1,padding:"8px 12px",textAlign:"center",
+            background:"rgba(255,255,255,0.04)",
+            border:"1px solid rgba(99,102,241,0.2)",
+            borderRadius:"8px",
+            fontSize:11,fontWeight:600,
             color: copied ? "var(--green)" : "var(--text2)",
-            cursor:"pointer",fontFamily:"var(--font)",
-            transition: "all 0.2s ease"
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = "rgba(99,102,241,0.1)";
-            e.target.style.borderColor = "rgba(99,102,241,0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = "rgba(255,255,255,0.05)";
-            e.target.style.borderColor = "rgba(99,102,241,0.25)";
+            cursor:"pointer",fontFamily:"var(--font)"
           }}
         >
-          {copied ? "✓ Copied!" : dwtAddr ? dwtAddr.slice(0,6)+"..."+dwtAddr.slice(-6) : "Mainnet Soon"}
+          {copied ? "✓ Copied" : dwtAddr ? dwtAddr.slice(0,6)+"..."+dwtAddr.slice(-6) : "Mainnet Soon"}
         </button>
       </div>
     </div>
