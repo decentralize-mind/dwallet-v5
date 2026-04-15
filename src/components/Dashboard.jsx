@@ -75,33 +75,38 @@ function DWTBanner({ chainBalances, activeChain }) {
       boxShadow: "0 2px 12px rgba(99,102,241,0.1)",
     }}>
 
-      {/* Header Row: Logo + Token Info + Price */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+      {/* Header Row: Logo + Token Info + Price + Market Cap */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 14,
+        gap: 12
+      }}>
+        {/* Left: Logo + Token Name */}
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{
-            width:40,height:40,borderRadius:"10px",flexShrink:0,
+            width:36,height:36,borderRadius:"8px",flexShrink:0,
             background:"linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.1) 100%)",
             border:"1.5px solid rgba(99,102,241,0.35)",
             display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:20,color:"var(--accent)",fontWeight:900
+            fontSize:18,color:"var(--accent)",fontWeight:900
           }}>◈</div>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <p style={{fontSize:16,fontWeight:800,margin:0,color:"var(--text)"}}>DWT</p>
+              <p style={{fontSize:15,fontWeight:800,margin:0,color:"var(--text)"}}>DWT</p>
               <span style={{
-                fontSize:9,padding:"2px 6px",borderRadius:"4px",fontWeight:600,
+                fontSize:9,padding:"2px 5px",borderRadius:"4px",fontWeight:600,
                 background:"rgba(99,102,241,0.12)",color:"var(--accent)",
                 border:"1px solid rgba(99,102,241,0.18)"
               }}>dWallet</span>
             </div>
-            <p style={{fontSize:10,color:"var(--text3)",margin:"2px 0 0",fontWeight:500}}>
-              Mkt Cap: {formatMktCap(mktCap)}
-            </p>
           </div>
         </div>
 
-        <div style={{textAlign:"right"}}>
-          <p style={{fontSize:20,fontWeight:800,margin:0,color:"var(--text)"}}>
+        {/* Center: Price + Change */}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <p style={{fontSize:18,fontWeight:800,margin:0,color:"var(--text)"}}>
             ${price.toFixed(2)}
           </p>
           <span style={{
@@ -110,6 +115,16 @@ function DWTBanner({ chainBalances, activeChain }) {
           }}>
             +{change}%
           </span>
+        </div>
+
+        {/* Right: Market Cap */}
+        <div style={{textAlign:"right"}}>
+          <p style={{fontSize:9,color:"var(--text3)",margin:"0 0 2px 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>
+            Market Cap
+          </p>
+          <p style={{fontSize:13,fontWeight:700,margin:0,color:"var(--text)"}}>
+            {formatMktCap(mktCap)}
+          </p>
         </div>
       </div>
 
