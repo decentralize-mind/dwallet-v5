@@ -37,6 +37,14 @@ import {
   recordTransactionSubmission,
   recordTransactionViolation
 } from '../utils/rateLimiter'
+import { 
+  getUserSafeError,
+  getDetailedErrorLog,
+  handleAuthError,
+  handleBlockchainError,
+  safeExecute,
+  ERROR_CATEGORIES
+} from '../utils/errorHandling'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -433,7 +441,9 @@ export function WalletProvider({ children }) {
     }
     
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) throw new Error('No wallet found')
+    // Generic error message - don't reveal if wallet exists or not
+    if (!stored) throw new Error('Unable to unlock wallet. Please try again.')
+    
     try {
       const walletData = JSON.parse(await decryptData(stored, pwd))
       clearLoginRateLimit() // Reset on success
@@ -445,15 +455,19 @@ export function WalletProvider({ children }) {
       console.log('✅ Wallet unlocked successfully')
     } catch (err) {
       const result = recordFailedLoginAttempt()
-      console.warn('❌ Failed wallet unlock attempt')
+      
+      // Log detailed error internally (never shown to user)
+      const errorLog = getDetailedErrorLog(err, 'wallet_unlock')
+      console.warn('❌ Failed wallet unlock attempt:', errorLog)
       
       // Check if this attempt triggered a lockout
       const lockoutTime = getLoginLockoutTimeRemaining()
       if (lockoutTime) {
-        throw new Error(`Incorrect password. Account locked for ${lockoutTime.minutes} minute${lockoutTime.minutes !== 1 ? 's' : ''} due to too many failed attempts.`)
+        throw new Error(`Account locked for ${lockoutTime.minutes} minute${lockoutTime.minutes !== 1 ? 's' : ''}. Please try again later.`)
       }
       
-      throw new Error('Incorrect password')
+      // Generic error message - don't reveal if password was wrong or other issue
+      throw new Error('Unable to unlock wallet. Please check your credentials and try again.')
     }
   }
 
@@ -528,8 +542,7 @@ export function WalletProvider({ children }) {
     const fullWallet = await ensureKeys()
     const activeAcc = fullWallet.accounts[fullWallet.activeAccount]
     const chain = chainId || activeChain
-    const { sendNative, sendERC20 } = await import('../utils/blockchain')
-
+    
     const nativeSyms = {
       ethereum: 'ETH',
       bnb: 'BNB',
@@ -560,6 +573,8 @@ export function WalletProvider({ children }) {
       
       let tx
       if (import.meta.env.VITE_INFURA_KEY && import.meta.env.VITE_INFURA_KEY !== 'YOUR_INFURA_KEY') {
+        const { sendNative, sendERC20 } = await import('../utils/blockchain')
+        
         tx = isNative
           ? await sendNative(to, amount, activeAcc.privateKey, chain)
           : await sendERC20(
@@ -572,13 +587,16 @@ export function WalletProvider({ children }) {
             )
       } else {
         if (import.meta.env.DEV) {
+          // Development mode - mock transaction
           tx = {
             hash: '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
               .map(b => b.toString(16).padStart(2, '0'))
               .join(''),
           }
         } else {
-          throw new Error('Blockchain provider key missing. Please configure INFURA_KEY.')
+          // Production mode - provider not configured
+          console.error('❌ Blockchain provider not configured')
+          throw new Error('Unable to process transaction. Please try again later.')
         }
       }
 
@@ -604,7 +622,14 @@ export function WalletProvider({ children }) {
       tx.wait ? tx.wait().then(confirm) : setTimeout(confirm, 3000)
       return tx
     } catch (err) {
-      // Record rate limit violation on certain errors
+      // Log detailed error internally
+      const errorLog = getDetailedErrorLog(err, 'send_transaction')
+      console.error('❌ Transaction failed:', errorLog)
+      
+      // Handle blockchain-specific errors
+      const blockchainError = handleBlockchainError(err, chain)
+      
+      // Record rate limit violation if applicable
       if (err.message.includes('rate limit') || err.message.includes('too many requests')) {
         recordTransactionViolation()
       }
@@ -612,7 +637,9 @@ export function WalletProvider({ children }) {
       setTransactions(prev =>
         prev.map(t => (t.hash === pending.hash ? { ...t, status: 'failed' } : t)),
       )
-      throw err
+      
+      // Throw user-safe error message
+      throw new Error(blockchainError.error || 'Transaction failed. Please try again later.')
     }
   }
 
