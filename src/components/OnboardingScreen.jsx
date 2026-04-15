@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { WelcomeStep } from './onboarding/WelcomeStep'
 import { BackupSeedStep } from './onboarding/BackupSeedStep'
@@ -33,7 +33,18 @@ function pickVerifyIdxs(words) {
 }
 
 export default function OnboardingScreen() {
-  const { createWallet, confirmWallet, importWallet } = useWallet()
+  const { createWallet, confirmWallet, importWallet, wallet } = useWallet()
+
+  // Monitor if wallet state exists - if it does, we should not be showing onboarding
+  useEffect(() => {
+    if (wallet) {
+      console.log('⚠️ OnboardingScreen: Wallet already exists but OnboardingScreen is still mounted!')
+      console.log('Wallet:', {
+        accounts: wallet.accounts?.length,
+        address: wallet.accounts?.[wallet.activeAccount]?.address
+      })
+    }
+  }, [wallet])
 
   // flow
   const [mode, setMode] = useState(null)   // 'new' | 'import'
@@ -114,9 +125,13 @@ export default function OnboardingScreen() {
     setError('')
     setLoading(true)
     try {
+      console.log('🔐 handleCreate: Calling confirmWallet...')
       await confirmWallet(pendingData, password)
+      console.log('✅ handleCreate: confirmWallet completed, wallet should be set')
       setStep('complete')
+      console.log('📍 handleCreate: Step set to "complete"')
     } catch (e) {
+      console.error('❌ handleCreate error:', e)
       setError(e.message)
     } finally {
       setLoading(false)
@@ -127,9 +142,13 @@ export default function OnboardingScreen() {
     setError('')
     setLoading(true)
     try {
+      console.log('📥 handleImport: Calling importWallet...')
       await importWallet(importInput, password)
+      console.log('✅ handleImport: importWallet completed, wallet should be set')
       setStep('complete')
+      console.log('📍 handleImport: Step set to "complete"')
     } catch (e) {
+      console.error('❌ handleImport error:', e)
       setError(e.message)
     } finally {
       setLoading(false)

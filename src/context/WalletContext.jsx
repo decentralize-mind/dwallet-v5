@@ -28,86 +28,21 @@ import {
   getBiometricStatus
 } from '../utils/biometricAuth'
 import { logSecurityEvent, AUDIT_EVENTS } from '../utils/auditLog'
+import { 
+  checkLoginRateLimit,
+  recordFailedLoginAttempt,
+  clearLoginRateLimit,
+  getLoginLockoutTimeRemaining,
+  checkTransactionRateLimit,
+  recordTransactionSubmission,
+  recordTransactionViolation
+} from '../utils/rateLimiter'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
 const STORAGE_KEY = 'dwallet_v5_encrypted'
 const SESSION_KEY = 'dwallet_v5_session'
 const AUTO_LOCK_MS = 30 * 60 * 1000
-
-// ── Password Rate Limiting Configuration ──────────────────────────────
-const MAX_LOGIN_ATTEMPTS = 5
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000 // 15 minutes
-const RATE_LIMIT_KEY = 'dwallet_login_attempts'
-
-/**
- * Check if user is rate-limited due to too many failed attempts
- * @throws Error if locked out
- */
-function checkRateLimit() {
-  try {
-    const raw = localStorage.getItem(RATE_LIMIT_KEY)
-    const attempts = raw ? JSON.parse(raw) : { count: 0, lockedUntil: 0 }
-    
-    if (Date.now() < attempts.lockedUntil) {
-      const remaining = Math.ceil((attempts.lockedUntil - Date.now()) / 60000)
-      throw new Error(`Too many failed attempts. Please try again in ${remaining} minute${remaining !== 1 ? 's' : ''}.`)
-    }
-    
-    return attempts
-  } catch (err) {
-    if (err.message.includes('Too many failed attempts')) {
-      throw err
-    }
-    return { count: 0, lockedUntil: 0 }
-  }
-}
-
-/**
- * Record a failed login attempt
- */
-function recordFailedAttempt() {
-  try {
-    const attempts = checkRateLimit()
-    attempts.count += 1
-    
-    if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-      attempts.lockedUntil = Date.now() + LOCKOUT_DURATION_MS
-      attempts.count = 0
-      console.warn('🔒 Account locked due to too many failed attempts')
-    }
-    
-    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(attempts))
-  } catch (err) {
-    // Rate limit check failed, don't block the attempt
-    console.error('Rate limit error:', err)
-  }
-}
-
-/**
- * Clear failed attempts after successful login
- */
-function clearFailedAttempts() {
-  localStorage.removeItem(RATE_LIMIT_KEY)
-}
-
-/**
- * Get remaining lockout time (for UI display)
- * @returns {number|null} Minutes remaining, or null if not locked
- */
-function getLockoutTimeRemaining() {
-  try {
-    const raw = localStorage.getItem(RATE_LIMIT_KEY)
-    if (!raw) return null
-    
-    const attempts = JSON.parse(raw)
-    if (Date.now() >= attempts.lockedUntil) return null
-    
-    return Math.ceil((attempts.lockedUntil - Date.now()) / 60000)
-  } catch {
-    return null
-  }
-}
 
 const TOKEN_CONTRACTS = {
   ethereum: {
@@ -444,38 +379,64 @@ export function WalletProvider({ children }) {
       activeAccount: 0,
       createdAt: Date.now(),
     }
+    
+    // Save encrypted wallet to localStorage
+    const encrypted = await encryptData(JSON.stringify(data), pwd)
+    localStorage.setItem(STORAGE_KEY, encrypted)
+    
+    console.log('💾 Imported Wallet Saved:', {
+      storageKey: STORAGE_KEY,
+      encryptedLength: encrypted.length,
+      address: data.accounts[0]?.address,
+      canRetrieve: !!localStorage.getItem(STORAGE_KEY)
+    })
+    
     setPassword(pwd)
     setWallet(data)
     setIsLocked(false)
     saveSession(data)
     resetInactivityTimer()
+    
+    // Log wallet import
+    logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
+      address: data.accounts[0]?.address,
+      imported: true
+    })
   }
 
   const verifyPassword = async pwd => {
-    // Check rate limit
-    checkRateLimit()
+    // Check rate limit with exponential backoff
+    const rateLimit = checkLoginRateLimit()
+    if (!rateLimit.allowed) {
+      const waitTime = rateLimit.waitMinutes || Math.ceil((rateLimit.waitMs || 0) / 60000)
+      throw new Error(`Too many failed attempts. Please wait ${waitTime} minute${waitTime !== 1 ? 's' : ''} before trying again.`)
+    }
     
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
     try {
       const data = JSON.parse(await decryptData(stored, pwd))
-      clearFailedAttempts() // Reset on success
+      clearLoginRateLimit() // Reset on success
       return data.mnemonic || null
     } catch {
-      recordFailedAttempt()
+      recordFailedLoginAttempt()
       return null
     }
   }
 
   const unlockWallet = async pwd => {
-    // Check rate limit before attempting
-    checkRateLimit()
+    // Check rate limit with exponential backoff
+    const rateLimit = checkLoginRateLimit()
+    if (!rateLimit.allowed) {
+      const waitTime = rateLimit.waitMinutes || Math.ceil((rateLimit.waitMs || 0) / 60000)
+      throw new Error(`Account locked. Please wait ${waitTime} minute${waitTime !== 1 ? 's' : ''} before trying again.`)
+    }
     
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) throw new Error('No wallet found')
     try {
       const walletData = JSON.parse(await decryptData(stored, pwd))
-      clearFailedAttempts() // Reset on success
+      clearLoginRateLimit() // Reset on success
       setPassword(pwd)
       setWallet(walletData)
       setIsLocked(false)
@@ -483,13 +444,13 @@ export function WalletProvider({ children }) {
       resetInactivityTimer()
       console.log('✅ Wallet unlocked successfully')
     } catch (err) {
-      recordFailedAttempt()
+      const result = recordFailedLoginAttempt()
       console.warn('❌ Failed wallet unlock attempt')
       
       // Check if this attempt triggered a lockout
-      const remaining = getLockoutTimeRemaining()
-      if (remaining) {
-        throw new Error(`Incorrect password. Account locked for ${remaining} minute${remaining !== 1 ? 's' : ''} due to too many failed attempts.`)
+      const lockoutTime = getLoginLockoutTimeRemaining()
+      if (lockoutTime) {
+        throw new Error(`Incorrect password. Account locked for ${lockoutTime.minutes} minute${lockoutTime.minutes !== 1 ? 's' : ''} due to too many failed attempts.`)
       }
       
       throw new Error('Incorrect password')
@@ -557,6 +518,13 @@ export function WalletProvider({ children }) {
   const setActiveChain = chain => setActiveChainRaw(chain)
 
   const sendTransaction = async (to, amount, token, chainId) => {
+    // Check transaction rate limit
+    const txRateLimit = checkTransactionRateLimit()
+    if (!txRateLimit.allowed) {
+      const waitTime = txRateLimit.cooldownSeconds || 60
+      throw new Error(`Transaction rate limit exceeded. Please wait ${waitTime} seconds before trying again.`)
+    }
+    
     const fullWallet = await ensureKeys()
     const activeAcc = fullWallet.accounts[fullWallet.activeAccount]
     const chain = chainId || activeChain
@@ -587,6 +555,9 @@ export function WalletProvider({ children }) {
     setTransactions(prev => [pending, ...prev])
 
     try {
+      // Record the transaction submission
+      recordTransactionSubmission()
+      
       let tx
       if (import.meta.env.VITE_INFURA_KEY && import.meta.env.VITE_INFURA_KEY !== 'YOUR_INFURA_KEY') {
         tx = isNative
@@ -633,6 +604,11 @@ export function WalletProvider({ children }) {
       tx.wait ? tx.wait().then(confirm) : setTimeout(confirm, 3000)
       return tx
     } catch (err) {
+      // Record rate limit violation on certain errors
+      if (err.message.includes('rate limit') || err.message.includes('too many requests')) {
+        recordTransactionViolation()
+      }
+      
       setTransactions(prev =>
         prev.map(t => (t.hash === pending.hash ? { ...t, status: 'failed' } : t)),
       )
@@ -726,7 +702,7 @@ export function WalletProvider({ children }) {
         refreshBalances: addr => refreshBalances(addr, activeChain),
         ensureKeys,
         // Security utilities
-        getLockoutTimeRemaining,
+        getLoginLockoutTimeRemaining,
         // Biometric authentication
         biometricSupported,
         setupBiometric,

@@ -1,4 +1,24 @@
+import { useEffect } from 'react'
+import { useWallet } from '../../hooks/useWallet'
+
 export function CompleteStep({ flow }) {
+  const { wallet } = useWallet()
+
+  // Monitor wallet state to ensure it's properly set
+  useEffect(() => {
+    console.log('CompleteStep mounted, wallet state:', wallet ? 'SET' : 'NOT SET')
+    console.log('Wallet details:', {
+      hasWallet: !!wallet,
+      accounts: wallet?.accounts?.length,
+      activeAccount: wallet?.activeAccount,
+      hasAddress: !!wallet?.accounts?.[wallet?.activeAccount]?.address
+    })
+    
+    if (!wallet) {
+      console.error('⚠️ WARNING: CompleteStep shown but wallet is not set!')
+    }
+  }, [wallet])
+
   return (
     <div
       className="step-content"
