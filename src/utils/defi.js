@@ -15,6 +15,7 @@ import {
   ERC20_ABI,
   MAINNET_TOKENS,
 } from '../data/defi.js'
+import { sanitizeError } from './secureKeyManagement.js'
 
 // ── Provider helper ───────────────────────────────────────────────────────────
 export function getProvider() {
@@ -140,46 +141,51 @@ export async function executeSwap({
     10n ** 12n
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800)
 
-  // If not ETH, approve router first
-  if (tokenIn !== 'ETH') {
-    const token = new ethers.Contract(tokenInAddr, ERC20_ABI, signer)
-    const allowance = await token.allowance(
-      await signer.getAddress(),
-      UNISWAP_V3.swapRouter02,
-    )
-    if (allowance < amountInParsed) {
-      const approveTx = await token.approve(
+  try {
+    // If not ETH, approve router first
+    if (tokenIn !== 'ETH') {
+      const token = new ethers.Contract(tokenInAddr, ERC20_ABI, signer)
+      const allowance = await token.allowance(
+        await signer.getAddress(),
         UNISWAP_V3.swapRouter02,
-        ethers.MaxUint256,
       )
-      await approveTx.wait()
+      if (allowance < amountInParsed) {
+        const approveTx = await token.approve(
+          UNISWAP_V3.swapRouter02,
+          ethers.MaxUint256,
+        )
+        await approveTx.wait()
+      }
     }
-  }
 
-  const router = new ethers.Contract(
-    UNISWAP_V3.swapRouter02,
-    UNISWAP_ROUTER_ABI,
-    signer,
-  )
-  const tx = await router.exactInputSingle(
-    {
-      tokenIn: tokenInAddr,
-      tokenOut: tokenOutAddr,
-      fee: feeTier,
-      recipient: await signer.getAddress(),
-      amountIn: amountInParsed,
-      amountOutMinimum: minOut,
-      sqrtPriceLimitX96: 0n,
-    },
-    {
-      value: tokenIn === 'ETH' ? amountInParsed : 0n,
-    },
-  )
-  console.log(
-    'Swap deadline (calculated but currently omitted by protocol):',
-    deadline.toString(),
-  )
-  return tx
+    const router = new ethers.Contract(
+      UNISWAP_V3.swapRouter02,
+      UNISWAP_ROUTER_ABI,
+      signer,
+    )
+    const tx = await router.exactInputSingle(
+      {
+        tokenIn: tokenInAddr,
+        tokenOut: tokenOutAddr,
+        fee: feeTier,
+        recipient: await signer.getAddress(),
+        amountIn: amountInParsed,
+        amountOutMinimum: minOut,
+        sqrtPriceLimitX96: 0n,
+      },
+      {
+        value: tokenIn === 'ETH' ? amountInParsed : 0n,
+      },
+    )
+    console.log(
+      'Swap deadline (calculated but currently omitted by protocol):',
+      deadline.toString(),
+    )
+    return tx
+  } catch (error) {
+    // Security: Sanitize error to prevent private key leakage
+    throw new Error(sanitizeError(error))
+  }
 }
 
 // ── Lido Staking ──────────────────────────────────────────────────────────────
@@ -188,13 +194,17 @@ export async function executeSwap({
  * Stake ETH via Lido — submit ETH, receive stETH 1:1.
  */
 export async function stakeWithLido({ amountETH, privateKey }) {
-  const signer = getSigner(privateKey)
-  const lido = new ethers.Contract(LIDO.stETH, LIDO_ABI, signer)
-  const value = parseUnits(amountETH, 18)
-  const tx = await lido.submit('0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5', {
-    value,
-  })
-  return tx
+  try {
+    const signer = getSigner(privateKey)
+    const lido = new ethers.Contract(LIDO.stETH, LIDO_ABI, signer)
+    const value = parseUnits(amountETH, 18)
+    const tx = await lido.submit('0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5', {
+      value,
+    })
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
+  }
 }
 
 /**
@@ -212,15 +222,19 @@ export async function getLidoBalance(address) {
  * Stake ETH via Rocket Pool — deposit, receive rETH.
  */
 export async function stakeWithRocketPool({ amountETH, privateKey }) {
-  const signer = getSigner(privateKey)
-  const rp = new ethers.Contract(
-    ROCKET_POOL.depositPool,
-    ROCKET_POOL_ABI,
-    signer,
-  )
-  const value = parseUnits(amountETH, 18)
-  const tx = await rp.deposit({ value })
-  return tx
+  try {
+    const signer = getSigner(privateKey)
+    const rp = new ethers.Contract(
+      ROCKET_POOL.depositPool,
+      ROCKET_POOL_ABI,
+      signer,
+    )
+    const value = parseUnits(amountETH, 18)
+    const tx = await rp.deposit({ value })
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
+  }
 }
 
 // ── Aave V3 Lending / Borrowing ───────────────────────────────────────────────
@@ -230,75 +244,91 @@ export async function stakeWithRocketPool({ amountETH, privateKey }) {
  * Approve aToken contract, then call pool.supply().
  */
 export async function aaveSupply({ asset, amount, privateKey }) {
-  const signer = getSigner(privateKey)
-  const address = await signer.getAddress()
-  const token = MAINNET_TOKENS[asset]
-  if (!token) throw new Error('Unknown asset')
+  try {
+    const signer = getSigner(privateKey)
+    const address = await signer.getAddress()
+    const token = MAINNET_TOKENS[asset]
+    if (!token) throw new Error('Unknown asset')
 
-  const amountParsed = parseUnits(amount, token.decimals)
+    const amountParsed = parseUnits(amount, token.decimals)
 
-  // Approve Aave pool to spend tokens
-  const erc20 = new ethers.Contract(token.address, ERC20_ABI, signer)
-  const allowance = await erc20.allowance(address, AAVE_V3.pool)
-  if (allowance < amountParsed) {
-    const approveTx = await erc20.approve(AAVE_V3.pool, ethers.MaxUint256)
-    await approveTx.wait()
+    // Approve Aave pool to spend tokens
+    const erc20 = new ethers.Contract(token.address, ERC20_ABI, signer)
+    const allowance = await erc20.allowance(address, AAVE_V3.pool)
+    if (allowance < amountParsed) {
+      const approveTx = await erc20.approve(AAVE_V3.pool, ethers.MaxUint256)
+      await approveTx.wait()
+    }
+
+    const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
+    const tx = await pool.supply(token.address, amountParsed, address, 0)
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
   }
-
-  const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
-  const tx = await pool.supply(token.address, amountParsed, address, 0)
-  return tx
 }
 
 /**
  * Withdraw a supplied asset from Aave.
  */
 export async function aaveWithdraw({ asset, amount, privateKey }) {
-  const signer = getSigner(privateKey)
-  const address = await signer.getAddress()
-  const token = MAINNET_TOKENS[asset]
-  const amountParsed =
-    amount === 'max' ? ethers.MaxUint256 : parseUnits(amount, token.decimals)
+  try {
+    const signer = getSigner(privateKey)
+    const address = await signer.getAddress()
+    const token = MAINNET_TOKENS[asset]
+    const amountParsed =
+      amount === 'max' ? ethers.MaxUint256 : parseUnits(amount, token.decimals)
 
-  const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
-  const tx = await pool.withdraw(token.address, amountParsed, address)
-  return tx
+    const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
+    const tx = await pool.withdraw(token.address, amountParsed, address)
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
+  }
 }
 
 /**
  * Borrow an asset from Aave (variable rate = mode 2).
  */
 export async function aaveBorrow({ asset, amount, privateKey }) {
-  const signer = getSigner(privateKey)
-  const address = await signer.getAddress()
-  const token = MAINNET_TOKENS[asset]
-  const amountParsed = parseUnits(amount, token.decimals)
+  try {
+    const signer = getSigner(privateKey)
+    const address = await signer.getAddress()
+    const token = MAINNET_TOKENS[asset]
+    const amountParsed = parseUnits(amount, token.decimals)
 
-  const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
-  const tx = await pool.borrow(token.address, amountParsed, 2, 0, address)
-  return tx
+    const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
+    const tx = await pool.borrow(token.address, amountParsed, 2, 0, address)
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
+  }
 }
 
 /**
  * Repay a borrowed asset.
  */
 export async function aaveRepay({ asset, amount, privateKey }) {
-  const signer = getSigner(privateKey)
-  const address = await signer.getAddress()
-  const token = MAINNET_TOKENS[asset]
-  const amountParsed =
-    amount === 'max' ? ethers.MaxUint256 : parseUnits(amount, token.decimals)
+  try {
+    const signer = getSigner(privateKey)
+    const address = await signer.getAddress()
+    const token = MAINNET_TOKENS[asset]
+    const amountParsed =
+      amount === 'max' ? ethers.MaxUint256 : parseUnits(amount, token.decimals)
 
-  // Approve repay amount
-  const erc20 = new ethers.Contract(token.address, ERC20_ABI, signer)
-  const allowance = await erc20.allowance(address, AAVE_V3.pool)
-  if (allowance < amountParsed) {
-    await (await erc20.approve(AAVE_V3.pool, ethers.MaxUint256)).wait()
+    // Approve repay amount
+    const erc20 = new ethers.Contract(token.address, ERC20_ABI, signer)
+    const allowance = await erc20.allowance(address, AAVE_V3.pool)
+    if (allowance < amountParsed) {
+      await (await erc20.approve(AAVE_V3.pool, ethers.MaxUint256)).wait()
+    }
+
+    const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
+    const tx = await pool.repay(token.address, amountParsed, 2, address)
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
   }
-
-  const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
-  const tx = await pool.repay(token.address, amountParsed, 2, address)
-  return tx
 }
 
 /**
@@ -381,17 +411,21 @@ export async function getLPPositions(address) {
  * Collect accumulated fees from a Uniswap v3 LP position.
  */
 export async function collectLPFees({ tokenId, privateKey }) {
-  const signer = getSigner(privateKey)
-  const nftManager = new ethers.Contract(
-    UNISWAP_V3_NFT_MANAGER.address,
-    NFT_MANAGER_ABI,
-    signer,
-  )
-  const tx = await nftManager.collect({
-    tokenId,
-    recipient: await signer.getAddress(),
-    amount0Max: BigInt('340282366920938463463374607431768211455'),
-    amount1Max: BigInt('340282366920938463463374607431768211455'),
-  })
-  return tx
+  try {
+    const signer = getSigner(privateKey)
+    const nftManager = new ethers.Contract(
+      UNISWAP_V3_NFT_MANAGER.address,
+      NFT_MANAGER_ABI,
+      signer,
+    )
+    const tx = await nftManager.collect({
+      tokenId,
+      recipient: await signer.getAddress(),
+      amount0Max: BigInt('340282366920938463463374607431768211455'),
+      amount1Max: BigInt('340282366920938463463374607431768211455'),
+    })
+    return tx
+  } catch (error) {
+    throw new Error(sanitizeError(error))
+  }
 }

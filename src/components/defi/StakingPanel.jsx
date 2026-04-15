@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import {
   stakeWithLido,
@@ -6,6 +6,14 @@ import {
   getLidoBalance,
 } from '../../utils/defi'
 import { LIDO, ROCKET_POOL } from '../../data/defi'
+import { 
+  validateStakingParams, 
+  DeFiRateLimiter, 
+  CircuitBreaker,
+  verifyBalanceBeforeTransaction
+} from '../../utils/defiSecurity'
+import { getProvider } from '../../utils/defi'
+import { sanitizeError } from '../../utils/secureKeyManagement'
 
 const PROTOCOLS = [
   {
@@ -43,7 +51,11 @@ export default function StakingPanel() {
   const [error, setError] = useState('')
   const [staking, setStaking] = useState(false)
   const [lidoBal, setLidoBal] = useState('0')
-
+  
+  // Security: Initialize rate limiter and circuit breaker
+  const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
+  const circuitBreaker = useRef(new CircuitBreaker({ failureThreshold: 3, recoveryTimeout: 60000 }))
+  
   const protocol = PROTOCOLS.find(p => p.id === selected)
   const ethBalance = chainBalances['ETH'] || 0
   const rewardEst = amount
@@ -61,10 +73,57 @@ export default function StakingPanel() {
 
   const handleStake = async () => {
     if (!wallet) return
-    setStaking(true)
+    
     setError('')
+    
     try {
+      // Security: Validate staking parameters
+      const validation = validateStakingParams({
+        protocol: selected,
+        amount,
+        minStake: protocol.minStake
+      })
+      
+      if (!validation.valid) {
+        setError(validation.error)
+        return
+      }
+      
+      // Security: Check rate limiter
+      const rateCheck = rateLimiter.current.canExecute()
+      if (!rateCheck.allowed) {
+        setError(rateCheck.error)
+        return
+      }
+      
+      // Security: Check circuit breaker
+      const circuitCheck = circuitBreaker.current.canExecute()
+      if (!circuitCheck.allowed) {
+        setError(circuitCheck.error)
+        return
+      }
+      
       const pk = wallet.accounts[wallet.activeAccount].privateKey
+      
+      // Security: Re-verify balance before execution
+      if (import.meta.env.VITE_INFURA_KEY) {
+        const provider = getProvider()
+        const address = wallet.accounts[wallet.activeAccount].address
+        
+        const balanceCheck = await verifyBalanceBeforeTransaction(
+          provider,
+          address,
+          'ETH',
+          parseFloat(amount)
+        )
+        
+        if (!balanceCheck.verified) {
+          setError(balanceCheck.error)
+          return
+        }
+      }
+      
+      setStaking(true)
       let tx
       if (import.meta.env.VITE_INFURA_KEY) {
         tx =
@@ -80,9 +139,19 @@ export default function StakingPanel() {
               .join(''),
         )
       }
+      
+      // Security: Record successful execution
+      rateLimiter.current.recordExecution()
+      circuitBreaker.current.recordSuccess()
+      
       setStep('success')
     } catch (e) {
-      setError(e.message)
+      // Security: Record failure in circuit breaker
+      circuitBreaker.current.recordFailure()
+      
+      // Security: Sanitize error message
+      const safeError = sanitizeError(e)
+      setError(safeError)
     } finally {
       setStaking(false)
     }

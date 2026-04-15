@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import { getLPPositions, collectLPFees } from '../../utils/defi'
 import { SAMPLE_LP_POOLS } from '../../data/defi'
+import { 
+  DeFiRateLimiter, 
+  CircuitBreaker
+} from '../../utils/defiSecurity'
+import { sanitizeError } from '../../utils/secureKeyManagement'
 
 export default function YieldPanel() {
   const { wallet } = useWallet()
@@ -16,6 +21,10 @@ export default function YieldPanel() {
   const [txHash, setTxHash] = useState('')
   const [collecting, setCollecting] = useState(null)
   const [error, setError] = useState('')
+  
+  // Security: Initialize rate limiter and circuit breaker
+  const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
+  const circuitBreaker = useRef(new CircuitBreaker({ failureThreshold: 3, recoveryTimeout: 60000 }))
 
   useEffect(() => {
     if (!wallet || view !== 'positions') return
@@ -28,8 +37,27 @@ export default function YieldPanel() {
 
   const handleCollect = async tokenId => {
     if (!wallet) return
+    
+    setError('')
     setCollecting(tokenId)
+    
     try {
+      // Security: Check rate limiter
+      const rateCheck = rateLimiter.current.canExecute()
+      if (!rateCheck.allowed) {
+        setError(rateCheck.error)
+        setCollecting(null)
+        return
+      }
+      
+      // Security: Check circuit breaker
+      const circuitCheck = circuitBreaker.current.canExecute()
+      if (!circuitCheck.allowed) {
+        setError(circuitCheck.error)
+        setCollecting(null)
+        return
+      }
+      
       const pk = wallet.accounts[wallet.activeAccount].privateKey
       if (import.meta.env.VITE_INFURA_KEY) {
         await collectLPFees({ tokenId, privateKey: pk })
@@ -41,20 +69,54 @@ export default function YieldPanel() {
             : p,
         ),
       )
+      
+      // Security: Record successful execution
+      rateLimiter.current.recordExecution()
+      circuitBreaker.current.recordSuccess()
     } catch (e) {
-      setError(e.message)
+      // Security: Record failure in circuit breaker
+      circuitBreaker.current.recordFailure()
+      
+      // Security: Sanitize error message
+      const safeError = sanitizeError(e)
+      setError(safeError)
     } finally {
       setCollecting(null)
     }
   }
 
   const handleAddLiquidity = () => {
+    // Security: Basic validation before mock transaction
+    if (!selectedPool) {
+      setError('No pool selected')
+      return
+    }
+    
+    const amt0 = parseFloat(token0Amt || 0)
+    const amt1 = parseFloat(token1Amt || 0)
+    
+    if (amt0 <= 0 || amt1 <= 0) {
+      setError('Invalid token amounts')
+      return
+    }
+    
+    // Security: Check rate limiter
+    const rateCheck = rateLimiter.current.canExecute()
+    if (!rateCheck.allowed) {
+      setError(rateCheck.error)
+      return
+    }
+    
     setTxHash(
       '0x' +
         Array.from(crypto.getRandomValues(new Uint8Array(32)))
           .map(b => b.toString(16).padStart(2, '0'))
           .join(''),
     )
+    
+    // Security: Record execution
+    rateLimiter.current.recordExecution()
+    
     setAddStep('success')
   }
 

@@ -1,8 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import { getSwapQuote, executeSwap } from '../../utils/defi'
 import { FEE_TIERS, MAINNET_TOKENS } from '../../data/defi'
 import { TOKEN_PRICES } from '../../data/chains'
+import { 
+  validateSwapParams, 
+  DeFiRateLimiter, 
+  CircuitBreaker,
+  verifyBalanceBeforeTransaction,
+  simulateTransaction,
+  validateGasEstimation
+} from '../../utils/defiSecurity'
+import { getProvider } from '../../utils/defi'
+import { sanitizeError } from '../../utils/secureKeyManagement'
 
 const SWAP_TOKENS = ['ETH', 'WBTC', 'USDC', 'USDT', 'DAI', 'UNI', 'LINK']
 
@@ -20,6 +30,10 @@ export default function SwapPanel() {
   const [error, setError] = useState('')
   const [priceImpact, setPriceImpact] = useState(null)
   const [isMock, setIsMock] = useState(false)
+  
+  // Security: Initialize rate limiter and circuit breaker
+  const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
+  const circuitBreaker = useRef(new CircuitBreaker({ failureThreshold: 3, recoveryTimeout: 60000 }))
 
   const inPrice = TOKEN_PRICES[tokenIn] || 1
   const outPrice = TOKEN_PRICES[tokenOut] || 1
@@ -66,9 +80,59 @@ export default function SwapPanel() {
 
   const handleSwap = async () => {
     if (!wallet) return
-    const pk = wallet.accounts[wallet.activeAccount].privateKey
+    
     setError('')
+    
     try {
+      // Security: Validate all swap parameters
+      const validation = validateSwapParams({
+        tokenIn,
+        tokenOut,
+        amountIn,
+        amountOutMin: amountOut,
+        feeTier,
+        slippage
+      })
+      
+      if (!validation.valid) {
+        setError(validation.error)
+        return
+      }
+      
+      // Security: Check rate limiter
+      const rateCheck = rateLimiter.current.canExecute()
+      if (!rateCheck.allowed) {
+        setError(rateCheck.error)
+        return
+      }
+      
+      // Security: Check circuit breaker
+      const circuitCheck = circuitBreaker.current.canExecute()
+      if (!circuitCheck.allowed) {
+        setError(circuitCheck.error)
+        return
+      }
+      
+      const pk = wallet.accounts[wallet.activeAccount].privateKey
+      
+      // Security: Re-verify balance before execution
+      if (import.meta.env.VITE_INFURA_KEY && !isMock) {
+        const provider = getProvider()
+        const address = wallet.accounts[wallet.activeAccount].address
+        
+        const balanceCheck = await verifyBalanceBeforeTransaction(
+          provider,
+          address,
+          tokenIn,
+          parseFloat(amountIn)
+        )
+        
+        if (!balanceCheck.verified) {
+          setError(balanceCheck.error)
+          return
+        }
+      }
+      
       if (import.meta.env.VITE_INFURA_KEY && !isMock) {
         const tx = await executeSwap({
           tokenIn,
@@ -79,6 +143,24 @@ export default function SwapPanel() {
           privateKey: pk,
           slippage,
         })
+        
+        // Security: Simulate transaction before broadcasting
+        if (tx.data) {
+          const provider = getProvider()
+          const simulation = await simulateTransaction(provider, {
+            from: wallet.accounts[wallet.activeAccount].address,
+            to: tx.to,
+            data: tx.data,
+            value: tx.value || 0
+          })
+          
+          if (!simulation.simulated) {
+            setError('Transaction simulation failed: ' + simulation.error)
+            circuitBreaker.current.recordFailure()
+            return
+          }
+        }
+        
         setTxHash(tx.hash)
       } else {
         setTxHash(
@@ -88,9 +170,19 @@ export default function SwapPanel() {
               .join(''),
         )
       }
+      
+      // Security: Record successful execution
+      rateLimiter.current.recordExecution()
+      circuitBreaker.current.recordSuccess()
+      
       setStep('success')
     } catch (e) {
-      setError(e.message)
+      // Security: Record failure in circuit breaker
+      circuitBreaker.current.recordFailure()
+      
+      // Security: Sanitize error message
+      const safeError = sanitizeError(e)
+      setError(safeError)
     }
   }
 

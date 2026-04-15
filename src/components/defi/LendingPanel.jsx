@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import {
   aaveSupply,
@@ -9,6 +9,14 @@ import {
 } from '../../utils/defi'
 import { AAVE_ASSETS } from '../../data/defi'
 import { TOKEN_PRICES } from '../../data/chains'
+import { 
+  validateLendingParams, 
+  DeFiRateLimiter, 
+  CircuitBreaker,
+  verifyBalanceBeforeTransaction
+} from '../../utils/defiSecurity'
+import { getProvider } from '../../utils/defi'
+import { sanitizeError } from '../../utils/secureKeyManagement'
 
 const MODES = ['Supply', 'Borrow']
 
@@ -23,6 +31,10 @@ export default function LendingPanel() {
   const [loading, setLoading] = useState(false)
   const [accountData, setAccountData] = useState(null)
   const [action, setAction] = useState('supply') // supply | withdraw | borrow | repay
+  
+  // Security: Initialize rate limiter and circuit breaker
+  const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
+  const circuitBreaker = useRef(new CircuitBreaker({ failureThreshold: 3, recoveryTimeout: 60000 }))
 
   const balance = chainBalances[asset.symbol] || 0
   const usdValue = (
@@ -45,10 +57,61 @@ export default function LendingPanel() {
 
   const handleAction = async () => {
     if (!wallet) return
+    
     setLoading(true)
     setError('')
+    
     try {
+      // Security: Validate lending parameters
+      const validation = validateLendingParams({
+        action,
+        asset: asset.symbol,
+        amount
+      })
+      
+      if (!validation.valid) {
+        setError(validation.error)
+        setLoading(false)
+        return
+      }
+      
+      // Security: Check rate limiter
+      const rateCheck = rateLimiter.current.canExecute()
+      if (!rateCheck.allowed) {
+        setError(rateCheck.error)
+        setLoading(false)
+        return
+      }
+      
+      // Security: Check circuit breaker
+      const circuitCheck = circuitBreaker.current.canExecute()
+      if (!circuitCheck.allowed) {
+        setError(circuitCheck.error)
+        setLoading(false)
+        return
+      }
+      
       const pk = wallet.accounts[wallet.activeAccount].privateKey
+      
+      // Security: Re-verify balance before execution
+      if (import.meta.env.VITE_INFURA_KEY && (action === 'supply' || action === 'repay')) {
+        const provider = getProvider()
+        const address = wallet.accounts[wallet.activeAccount].address
+        
+        const balanceCheck = await verifyBalanceBeforeTransaction(
+          provider,
+          address,
+          asset.symbol,
+          parseFloat(amount)
+        )
+        
+        if (!balanceCheck.verified) {
+          setError(balanceCheck.error)
+          setLoading(false)
+          return
+        }
+      }
+      
       let tx
       if (import.meta.env.VITE_INFURA_KEY) {
         if (action === 'supply')
@@ -72,9 +135,19 @@ export default function LendingPanel() {
               .join(''),
         )
       }
+      
+      // Security: Record successful execution
+      rateLimiter.current.recordExecution()
+      circuitBreaker.current.recordSuccess()
+      
       setStep('success')
     } catch (e) {
-      setError(e.message)
+      // Security: Record failure in circuit breaker
+      circuitBreaker.current.recordFailure()
+      
+      // Security: Sanitize error message
+      const safeError = sanitizeError(e)
+      setError(safeError)
     } finally {
       setLoading(false)
     }
