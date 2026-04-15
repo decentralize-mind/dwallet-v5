@@ -1,5 +1,9 @@
 // Live token prices via CoinGecko free API (no key required)
 import { validatePriceData, validatePriceHistory, sanitizeNumber } from './dataValidation'
+import { 
+  withGracefulDegradation,
+  serviceHealth
+} from './errorHandling'
 
 const COINGECKO_IDS = {
   ETH: 'ethereum',
@@ -47,41 +51,70 @@ const CACHE_TTL = 60_000 // 1 minute
 
 export async function fetchPrices(symbols = Object.keys(COINGECKO_IDS)) {
   const now = Date.now()
-  if (now - lastFetch < CACHE_TTL) return priceCache
+  if (now - lastFetch < CACHE_TTL) {
+    console.log('📦 Using cached prices')
+    return priceCache
+  }
 
   const ids = symbols
     .map(s => COINGECKO_IDS[s])
     .filter(Boolean)
     .join(',')
 
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
-      { signal: AbortSignal.timeout(5000) },
-    )
-    if (!res.ok) throw new Error('CoinGecko API returned status: ' + res.status)
+  // Try to fetch with graceful degradation
+  const result = await withGracefulDegradation(
+    // Primary: Fetch from CoinGecko
+    async () => {
+      const startTime = Date.now()
+      
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+        { signal: AbortSignal.timeout(5000) },
+      )
+      
+      if (!res.ok) {
+        throw new Error(`CoinGecko API returned status: ${res.status}`)
+      }
+      
+      const rawData = await res.json()
+      const validatedData = validatePriceData(rawData, COINGECKO_IDS)
+      
+      if (Object.keys(validatedData).length === 0) {
+        throw new Error('Invalid price data structure')
+      }
+      
+      const responseTime = Date.now() - startTime
+      serviceHealth.recordSuccess('coingecko_price', responseTime)
+      console.log(`✅ Price data validated: ${Object.keys(validatedData).length} tokens (${responseTime}ms)`)
+      
+      return validatedData
+    },
     
-    const rawData = await res.json()
+    // Fallback: Use cached prices
+    async () => {
+      serviceHealth.recordFailure('coingecko_price')
+      console.warn('⚠️ Price fetch failed, using cached prices')
+      return null // Signal to use existing cache
+    },
     
-    // Validate and sanitize price data
-    const validatedData = validatePriceData(rawData, COINGECKO_IDS)
-    
-    if (Object.keys(validatedData).length === 0) {
-      console.warn('⚠️ Price data validation returned empty')
-      throw new Error('Invalid price data structure')
+    {
+      context: 'price_fetch',
+      maxRetries: 2,
+      timeout: 5000
     }
-    
-    console.log(`✅ Price data validated: ${Object.keys(validatedData).length} tokens`)
-    
-    const updated = { ...priceCache, ...validatedData }
+  )
+  
+  // Update cache if successful
+  if (result.success && result.data) {
+    const updated = { ...priceCache, ...result.data }
     priceCache = updated
     lastFetch = now
     return priceCache
-  } catch (error) {
-    console.error('❌ Price fetch error:', error.message)
-    // Return cached/fallback silently
-    return priceCache
   }
+  
+  // Use existing cache
+  console.log('📦 Using existing cached prices')
+  return priceCache
 }
 
 export function getPrice(symbol) {
@@ -118,32 +151,53 @@ export async function fetchPriceHistory(symbol, days = 7) {
     return []
   }
   
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${validDays}`,
-      { signal: AbortSignal.timeout(5000) },
-    )
-    if (!res.ok) throw new Error('CoinGecko API returned status: ' + res.status)
+  // Try to fetch with graceful degradation
+  const result = await withGracefulDegradation(
+    // Primary: Fetch from CoinGecko
+    async () => {
+      const startTime = Date.now()
+      
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${validDays}`,
+        { signal: AbortSignal.timeout(5000) },
+      )
+      
+      if (!res.ok) {
+        throw new Error(`CoinGecko API returned status: ${res.status}`)
+      }
+      
+      const rawData = await res.json()
+      
+      if (!rawData || !rawData.prices || !Array.isArray(rawData.prices)) {
+        throw new Error('Invalid price history structure')
+      }
+      
+      const validatedHistory = validatePriceHistory(rawData.prices)
+      
+      if (validatedHistory.length === 0) {
+        throw new Error('No valid price history data')
+      }
+      
+      const responseTime = Date.now() - startTime
+      serviceHealth.recordSuccess('coingecko_history', responseTime)
+      console.log(`✅ Price history validated: ${validatedHistory.length} points for ${symbol} (${responseTime}ms)`)
+      
+      return validatedHistory
+    },
     
-    const rawData = await res.json()
-    
-    // Validate price history data
-    if (!rawData || !rawData.prices || !Array.isArray(rawData.prices)) {
-      console.warn('⚠️ Price history data structure invalid')
+    // Fallback: Return empty array
+    async () => {
+      serviceHealth.recordFailure('coingecko_history')
+      console.warn(`⚠️ Price history fetch failed for ${symbol}`)
       return []
+    },
+    
+    {
+      context: `price_history_${symbol}`,
+      maxRetries: 2,
+      timeout: 5000
     }
-    
-    const validatedHistory = validatePriceHistory(rawData.prices)
-    
-    if (validatedHistory.length === 0) {
-      console.warn('⚠️ Price history validation returned empty')
-      return []
-    }
-    
-    console.log(`✅ Price history validated: ${validatedHistory.length} points for ${symbol}`)
-    return validatedHistory
-  } catch (error) {
-    console.error('❌ Price history fetch error:', error.message)
-    return []
-  }
+  )
+  
+  return result.success ? result.data : []
 }

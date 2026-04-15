@@ -1,4 +1,9 @@
 import { validateMarketData, sanitizeString, sanitizeNumber } from './dataValidation'
+import { 
+  withGracefulDegradation,
+  getDetailedErrorLog,
+  serviceHealth
+} from './errorHandling'
 
 const MARKET_COINS = [
   { symbol: 'BTC', id: 'bitcoin', name: 'Bitcoin', icon: '₿' },
@@ -46,31 +51,76 @@ const CACHE_TTL = 60000
 
 export async function fetchMarketData() {
   const now = Date.now()
-  if (marketCache && now - lastFetch < CACHE_TTL) return marketCache
+  if (marketCache && now - lastFetch < CACHE_TTL) {
+    console.log('📦 Returning cached market data')
+    return marketCache
+  }
+  
   const ids = MARKET_COINS.map(c => c.id).join(',')
-  try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' +
-        ids +
-        '&order=market_cap_desc&per_page=20&sparkline=false&price_change_percentage=24h',
-      { signal: AbortSignal.timeout(8000) },
-    )
-    if (!res.ok) throw new Error('API returned status: ' + res.status)
+  
+  // Try to fetch with graceful degradation
+  const result = await withGracefulDegradation(
+    // Primary: Fetch from CoinGecko
+    async () => {
+      const startTime = Date.now()
+      
+      const res = await fetch(
+        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' +
+          ids +
+          '&order=market_cap_desc&per_page=20&sparkline=false&price_change_percentage=24h',
+        { signal: AbortSignal.timeout(8000) },
+      )
+      
+      if (!res.ok) {
+        throw new Error(`API returned status: ${res.status}`)
+      }
+      
+      const rawData = await res.json()
+      const validatedData = validateMarketData(rawData)
+      
+      if (!Array.isArray(validatedData) || validatedData.length === 0) {
+        throw new Error('Invalid market data structure')
+      }
+      
+      const responseTime = Date.now() - startTime
+      serviceHealth.recordSuccess('coingecko_market', responseTime)
+      console.log(`✅ Market data validated: ${validatedData.length} coins (${responseTime}ms)`)
+      
+      return validatedData
+    },
     
-    const rawData = await res.json()
+    // Fallback: Use cached or static data
+    async () => {
+      serviceHealth.recordFailure('coingecko_market')
+      console.warn('⚠️ Using fallback market data')
+      
+      if (marketCache) {
+        console.log('📦 Returning stale cached market data')
+        return null // Signal to use existing cache
+      }
+      
+      // Static fallback data
+      return MARKET_COINS.map(coin => ({
+        ...coin,
+        price: FALLBACK[coin.symbol]?.price ?? 0,
+        change24h: FALLBACK[coin.symbol]?.change ?? 0,
+        marketCap: 0,
+        volume24h: 0,
+        rank: 99,
+      }))
+    },
     
-    // Validate and sanitize API response
-    const validatedData = validateMarketData(rawData)
-    
-    if (!Array.isArray(validatedData) || validatedData.length === 0) {
-      console.warn('⚠️ Market data validation returned empty, using fallback')
-      throw new Error('Invalid market data structure')
+    {
+      context: 'market_data_fetch',
+      maxRetries: 2,
+      timeout: 8000
     }
-    
-    console.log(`✅ Market data validated: ${validatedData.length} coins`)
-    
-    const result = MARKET_COINS.map(coin => {
-      const live = validatedData.find(d => d.id === coin.id || d.symbol === coin.symbol.toUpperCase())
+  )
+  
+  // Process result
+  if (result.success && result.data) {
+    const processedData = MARKET_COINS.map(coin => {
+      const live = result.data.find(d => d.id === coin.id || d.symbol === coin.symbol.toUpperCase())
       const fb = FALLBACK[coin.symbol] || { price: 0, change: 0 }
       
       return {
@@ -84,27 +134,27 @@ export async function fetchMarketData() {
       }
     })
     
-    marketCache = result
+    marketCache = processedData
     lastFetch = now
-    return result
-  } catch (error) {
-    console.error('❌ Market data fetch error:', error.message)
-    
-    if (marketCache) {
-      console.log('📦 Returning cached market data')
-      return marketCache
-    }
-    
-    console.log('🔄 Using fallback market data')
-    return MARKET_COINS.map(coin => ({
-      ...coin,
-      price: FALLBACK[coin.symbol]?.price ?? 0,
-      change24h: FALLBACK[coin.symbol]?.change ?? 0,
-      marketCap: 0,
-      volume24h: 0,
-      rank: 99,
-    }))
+    return processedData
   }
+  
+  // Use existing cache if available
+  if (marketCache) {
+    console.log('📦 Using existing cached market data')
+    return marketCache
+  }
+  
+  // Final fallback
+  console.log('🔄 Using static fallback market data')
+  return MARKET_COINS.map(coin => ({
+    ...coin,
+    price: FALLBACK[coin.symbol]?.price ?? 0,
+    change24h: FALLBACK[coin.symbol]?.change ?? 0,
+    marketCap: 0,
+    volume24h: 0,
+    rank: 99,
+  }))
 }
 
 export function formatPrice(p) {
