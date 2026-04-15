@@ -45,6 +45,16 @@ import {
   safeExecute,
   ERROR_CATEGORIES
 } from '../utils/errorHandling'
+import { 
+  saveSecureSession,
+  loadSecureSession,
+  clearSecureSession,
+  validateSessionIntegrity,
+  storeCSRFToken,
+  getCSRFToken,
+  initializeSecureSession,
+  logSessionSecurityEvent
+} from '../utils/sessionSecurity'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -95,38 +105,49 @@ function saveSession(walletData) {
     })),
     savedAt: Date.now(),
   }
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  
+  // Use secure session storage with integrity protection
+  saveSecureSession(SESSION_KEY, session)
 }
 
 function loadSession() {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-    const session = JSON.parse(raw)
+    // Use secure session loading with integrity verification
+    const session = loadSecureSession(SESSION_KEY)
+    
+    if (!session) return null
+    
+    // Check auto-lock timeout
     if (Date.now() - session.savedAt > AUTO_LOCK_MS) {
-      sessionStorage.removeItem(SESSION_KEY)
+      clearSecureSession(SESSION_KEY)
+      logSessionSecurityEvent('session_expired', {
+        reason: 'auto_lock_timeout'
+      })
       return null
     }
+    
     return session
-  } catch {
+  } catch (error) {
+    console.error('❌ Session load failed:', error)
     return null
   }
 }
 
 function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY)
+  clearSecureSession(SESSION_KEY)
+  logSessionSecurityEvent('session_cleared')
 }
 
 function touchSession() {
-  const raw = sessionStorage.getItem(SESSION_KEY)
-  if (raw) {
-    try {
-      const session = JSON.parse(raw)
+  try {
+    const session = loadSecureSession(SESSION_KEY)
+    if (session) {
       session.savedAt = Date.now()
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    } catch (e) {
-      // Session refresh failed, likely non-critical
+      saveSecureSession(SESSION_KEY, session)
     }
+  } catch (error) {
+    // Session refresh failed, likely non-critical
+    console.warn('⚠️ Session touch failed:', error)
   }
 }
 
@@ -193,6 +214,9 @@ export function WalletProvider({ children }) {
       localStorageKeys: Object.keys(localStorage),
       encryptedDataLength: localStorage.getItem(STORAGE_KEY)?.length || 0
     })
+
+    // Initialize secure session management (CSRF protection)
+    initializeSecureSession()
 
     // Check biometric support
     setBiometricSupported(isBiometricSupported())
@@ -362,6 +386,12 @@ export function WalletProvider({ children }) {
     saveSession(walletData)
     resetInactivityTimer()
     
+    // Regenerate CSRF token after authentication (prevent session fixation)
+    storeCSRFToken()
+    logSessionSecurityEvent('wallet_confirmed', {
+      address: walletData.accounts[0]?.address
+    })
+    
     // Log wallet creation
     logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
       address: walletData.accounts[0]?.address
@@ -404,6 +434,12 @@ export function WalletProvider({ children }) {
     setIsLocked(false)
     saveSession(data)
     resetInactivityTimer()
+    
+    // Regenerate CSRF token after authentication (prevent session fixation)
+    storeCSRFToken()
+    logSessionSecurityEvent('wallet_imported', {
+      address: data.accounts[0]?.address
+    })
     
     // Log wallet import
     logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
@@ -452,6 +488,13 @@ export function WalletProvider({ children }) {
       setIsLocked(false)
       saveSession(walletData)
       resetInactivityTimer()
+      
+      // Regenerate CSRF token after authentication (prevent session fixation)
+      storeCSRFToken()
+      logSessionSecurityEvent('wallet_unlocked', {
+        address: walletData.accounts[0]?.address
+      })
+      
       console.log('✅ Wallet unlocked successfully')
     } catch (err) {
       const result = recordFailedLoginAttempt()
