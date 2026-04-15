@@ -27,6 +27,7 @@ import {
   isBiometricEnabled,
   getBiometricStatus
 } from '../utils/biometricAuth'
+import { logSecurityEvent, AUDIT_EVENTS } from '../utils/auditLog'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -417,6 +418,11 @@ export function WalletProvider({ children }) {
     setIsLocked(false)
     saveSession(walletData)
     resetInactivityTimer()
+    
+    // Log wallet creation
+    logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
+      address: walletData.accounts[0]?.address
+    })
   }
 
   const importWallet = async (mnemonic, pwd) => {
