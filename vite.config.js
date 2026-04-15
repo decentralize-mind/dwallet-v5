@@ -10,6 +10,11 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
+      external: [
+        '@ledgerhq/hw-transport-webusb',
+        '@ledgerhq/hw-app-eth',
+        '@walletconnect/ethereum-provider',
+      ],
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
