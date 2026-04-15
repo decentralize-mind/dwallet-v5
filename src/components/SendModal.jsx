@@ -44,7 +44,7 @@ export default function SendModal({ onClose }) {
   const [showContacts, setShowContacts] = useState(false)
   
   // Enhanced security features
-  const [confirmCountdown, setConfirmCountdown] = useState(5)
+  const [confirmCountdown, setConfirmCountdown] = useState(2)
   const [addressVerified, setAddressVerified] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
   const [showSimulation, setShowSimulation] = useState(false)
@@ -89,7 +89,7 @@ export default function SendModal({ onClose }) {
   useEffect(() => {
     if (step === 'confirm') {
       setAddressVerified(false)
-      setConfirmCountdown(5)
+      setConfirmCountdown(2)
       setShowFullAddress(false)
       
       // Start countdown timer
@@ -786,13 +786,16 @@ export default function SendModal({ onClose }) {
               style={{
                 background: 'rgba(245,158,11,0.1)',
                 border: '1px solid rgba(245,158,11,0.3)',
-                padding: '12px',
-                borderRadius: '8px',
+                padding: '14px',
+                borderRadius: '10px',
                 marginBottom: '16px'
               }}
             >
-              <p style={{ fontSize: '12px', color: '#f59e0b', margin: 0, fontWeight: '600' }}>
-                ⚠️ Security Check: Verify all details before confirming
+              <p style={{ fontSize: '13px', color: '#f59e0b', margin: '0 0 6px 0', fontWeight: '700' }}>
+                ⚠️ Security Check Required
+              </p>
+              <p style={{ fontSize: '12px', color: '#f59e0b', margin: 0, opacity: 0.9, lineHeight: '1.5' }}>
+                Please verify the recipient address and wait for the timer to complete before sending.
               </p>
             </div>
 
@@ -839,21 +842,24 @@ export default function SendModal({ onClose }) {
             {/* Address Verification Checkbox */}
             <div
               style={{
-                background: 'var(--bg3)',
-                padding: '12px',
-                borderRadius: '8px',
-                marginBottom: '12px'
+                background: addressVerified ? 'rgba(16,185,129,0.08)' : 'var(--bg3)',
+                border: `1px solid ${addressVerified ? 'rgba(16,185,129,0.3)' : 'transparent'}`,
+                padding: '14px',
+                borderRadius: '10px',
+                marginBottom: '12px',
+                transition: 'all 0.2s ease'
               }}
             >
               <label
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '10px',
+                  gap: '12px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  color: 'var(--text2)',
-                  lineHeight: '1.5'
+                  color: addressVerified ? 'var(--text)' : 'var(--text2)',
+                  lineHeight: '1.6',
+                  fontWeight: addressVerified ? '500' : '400'
                 }}
               >
                 <input
@@ -861,25 +867,59 @@ export default function SendModal({ onClose }) {
                   checked={addressVerified}
                   onChange={e => setAddressVerified(e.target.checked)}
                   style={{
-                    marginTop: '2px',
-                    width: '16px',
-                    height: '16px',
+                    marginTop: '3px',
+                    width: '18px',
+                    height: '18px',
                     cursor: 'pointer',
-                    accentColor: 'var(--accent)'
+                    accentColor: 'var(--accent)',
+                    flexShrink: 0
                   }}
                 />
                 <span>
-                  <strong>I have verified the recipient address</strong> and confirm this transaction is correct. I understand transactions cannot be reversed.
+                  <strong style={{ color: addressVerified ? 'var(--green)' : 'inherit' }}>✓ I have verified the recipient address</strong>
+                  <br />
+                  <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                    I confirm this transaction is correct and understand it cannot be reversed.
+                  </span>
                 </span>
               </label>
             </div>
 
             {/* Countdown Timer */}
-            {confirmCountdown > 0 && (
+            {confirmCountdown > 0 ? (
               <div
                 style={{
-                  background: confirmCountdown <= 2 ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)',
-                  border: `1px solid ${confirmCountdown <= 2 ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(99,102,241,0.05) 100%)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  textAlign: 'center',
+                  marginBottom: '12px',
+                  boxShadow: '0 2px 8px rgba(99,102,241,0.1)'
+                }}
+              >
+                <div style={{
+                  fontSize: '28px',
+                  fontWeight: '900',
+                  color: 'var(--accent)',
+                  lineHeight: '1',
+                  marginBottom: '6px'
+                }}>
+                  {confirmCountdown}
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: 'var(--text2)'
+                }}>
+                  ⏱️ Please wait before confirming
+                </span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.2)',
                   padding: '10px',
                   borderRadius: '8px',
                   textAlign: 'center',
@@ -889,9 +929,9 @@ export default function SendModal({ onClose }) {
                 <span style={{
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: confirmCountdown <= 2 ? '#10b981' : '#6366f1'
+                  color: 'var(--green)'
                 }}>
-                  ⏱️ Confirm button activates in {confirmCountdown} second{confirmCountdown !== 1 ? 's' : ''}
+                  ✓ Ready to send! Check the box above and click "Confirm Send"
                 </span>
               </div>
             )}
@@ -913,11 +953,14 @@ export default function SendModal({ onClose }) {
                 onClick={handleSend}
                 disabled={sending || confirmCountdown > 0 || !addressVerified}
                 style={{
-                  opacity: (confirmCountdown > 0 || !addressVerified) ? 0.5 : 1,
-                  cursor: (confirmCountdown > 0 || !addressVerified) ? 'not-allowed' : 'pointer'
+                  opacity: (confirmCountdown > 0 || !addressVerified) ? 0.4 : 1,
+                  cursor: (confirmCountdown > 0 || !addressVerified) ? 'not-allowed' : 'pointer',
+                  transform: (confirmCountdown === 0 && addressVerified) ? 'scale(1)' : 'scale(0.98)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: (confirmCountdown === 0 && addressVerified) ? '0 4px 12px rgba(99,102,241,0.3)' : 'none'
                 }}
               >
-                {sending ? 'Sending...' : confirmCountdown > 0 ? `Wait ${confirmCountdown}s...` : 'Confirm Send'}
+                {sending ? '⏳ Sending...' : confirmCountdown > 0 ? `⏱️ Wait ${confirmCountdown}s...` : !addressVerified ? '☑️ Verify address first' : '🚀 Confirm Send'}
               </button>
             </div>
           </div>
