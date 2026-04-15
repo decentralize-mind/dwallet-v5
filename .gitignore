@@ -65,3 +65,5 @@ ultime-protection.md
 # Vercel
 .vercel/
 .qoder
+.vercel
+.env*.local
