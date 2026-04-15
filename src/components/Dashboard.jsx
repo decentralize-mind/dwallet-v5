@@ -4,6 +4,7 @@ import { DEFAULT_TOKENS } from "../data/chains";
 import { DWT as DWT_CONFIG, getDWTTier, formatDWT } from "../utils/dwt";
 import { fetchPriceHistory, getPrice } from "../utils/prices";
 import { fetchMarketData, formatPrice, formatMarketCap } from "../utils/market";
+import { sanitizeSearchInput, validateBalanceData, sanitizeNumber } from "../utils/dataValidation";
 import PortfolioChart from "./PortfolioChart";
 
 const TOKEN_ICONS = {
@@ -27,15 +28,17 @@ function Sparkline({ data }) {
 
 // ── DWT Banner component ─────────────────────────────────────────────────────
 function DWTBanner({ chainBalances, activeChain }) {
-  const dwtBal   = parseFloat(chainBalances?.DWT ?? 0);
-  const hasDWT   = dwtBal > 0;
-  const tier     = getDWTTier(dwtBal);
-  const explorer = DWT_CONFIG.explorerUrl(activeChain) || DWT_CONFIG.explorerUrl("sepolia");
-  const dwtAddr  = DWT_CONFIG.addresses[activeChain] || DWT_CONFIG.addresses.sepolia;
-  const price    = 3.50;
-  const mktCap   = 4_500_000_000;
-  const change   = 12.4;
-  const usdVal   = (dwtBal * price).toFixed(2);
+  // Validate chainBalances
+  const validatedBalances = validateBalanceData(chainBalances)
+  const dwtBal   = sanitizeNumber(validatedBalances?.DWT ?? 0, { min: 0, max: 1e18, decimals: 18 })
+  const hasDWT   = dwtBal > 0
+  const tier     = getDWTTier(dwtBal)
+  const explorer = DWT_CONFIG.explorerUrl(activeChain) || DWT_CONFIG.explorerUrl("sepolia")
+  const dwtAddr  = DWT_CONFIG.addresses[activeChain] || DWT_CONFIG.addresses.sepolia
+  const price    = 3.50
+  const mktCap   = 4_500_000_000
+  const change   = 12.4
+  const usdVal   = (dwtBal * price).toFixed(2)
 
   const [copied, setCopied] = React.useState(false);
   const copyAddr = () => {
@@ -325,38 +328,78 @@ function generateDWTSparkline() {
 const DWT_SPARKLINE = generateDWTSparkline();
 
 export default function Dashboard({ onSend, onReceive, onSwap }) {
-  const { chainBalances, totalUSDValue, activeChain, transactions, prices, loadingBal, notification, currentAddress } = useWallet();
-  const tokens = useMemo(() => DEFAULT_TOKENS[activeChain] || [], [activeChain]);
-  const [sparklines, setSparklines] = useState({});
-  const recentTxs = transactions.slice(0, 5);
+  const { chainBalances, totalUSDValue, activeChain, transactions, prices, loadingBal, notification, currentAddress } = useWallet()
+  
+  // Validate balances
+  const validatedBalances = validateBalanceData(chainBalances)
+  const tokens = useMemo(() => DEFAULT_TOKENS[activeChain] || [], [activeChain])
+  const [sparklines, setSparklines] = useState({})
+  const recentTxs = transactions.slice(0, 5)
 
 
-  const [marketData,setMarketData]=useState([]);
-  const [marketTab,setMarketTab]=useState("top");
-  const [selectedCoin,setSelectedCoin]=useState(null);
-  const [marketFilter,setMarketFilter]=useState("");
-  const [loadingMkt,setLoadingMkt]=useState(true);
+  const [marketData,setMarketData]=useState([])
+  const [marketTab,setMarketTab]=useState("top")
+  const [selectedCoin,setSelectedCoin]=useState(null)
+  const [marketFilter,setMarketFilter]=useState("")
+  const [loadingMkt,setLoadingMkt]=useState(true)
 
   useEffect(()=>{
-    fetchMarketData().then(d=>{setMarketData(d);setLoadingMkt(false);});
-    const t=setInterval(()=>fetchMarketData().then(setMarketData),60000);
-    return()=>clearInterval(t);
-  },[]);
+    fetchMarketData().then(d=>{
+      console.log('✅ Market data loaded:', d.length, 'coins')
+      setMarketData(d)
+      setLoadingMkt(false)
+    }).catch(err => {
+      console.error('❌ Failed to load market data:', err.message)
+      setLoadingMkt(false)
+    })
+    const t=setInterval(()=>{
+      fetchMarketData().then(d => {
+        console.log('🔄 Market data refreshed:', d.length, 'coins')
+        setMarketData(d)
+      }).catch(err => {
+        console.error('❌ Market data refresh error:', err.message)
+      })
+    },60000)
+    return()=>clearInterval(t)
+  },[])
   // Fetch sparklines for visible tokens
   useEffect(() => {
     tokens.forEach(async token => {
-      if (sparklines[token]) return;
-      const hist = await fetchPriceHistory(token, 7);
-      if (hist.length > 0) setSparklines(prev => ({ ...prev, [token]: hist }));
-    });
-  }, [tokens, sparklines]);
+      if (sparklines[token]) return
+      
+      // Validate token symbol
+      if (typeof token !== 'string' || token.length === 0) {
+        console.warn('⚠️ Invalid token symbol:', token)
+        return
+      }
+      
+      const hist = await fetchPriceHistory(token, 7)
+      if (hist.length > 0) {
+        console.log(`✅ Price history loaded for ${token}: ${hist.length} points`)
+        setSparklines(prev => ({ ...prev, [token]: hist }))
+      } else {
+        console.warn(`⚠️ No price history for ${token}`)
+      }
+    })
+  }, [tokens, sparklines])
 
   const pctChange = (token) => {
-    const hist = sparklines[token];
-    if (!hist || hist.length < 2) return null;
-    const first = hist[0].price, last = hist[hist.length - 1].price;
-    return ((last - first) / first * 100).toFixed(2);
-  };
+    const hist = sparklines[token]
+    if (!hist || hist.length < 2) return null
+    
+    const first = hist[0].price
+    const last = hist[hist.length - 1].price
+    
+    // Validate prices
+    if (typeof first !== 'number' || typeof last !== 'number' || first <= 0) {
+      return null
+    }
+    
+    const change = ((last - first) / first * 100)
+    
+    // Sanitize result
+    return sanitizeNumber(change, { min: -100, max: 10000, decimals: 2 })
+  }
 
   return (
     <div className="dashboard">
@@ -444,9 +487,9 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
           {/* ── DWT always shown under assets ── */}
           {(() => {
             try {
-              const dwtBal = parseFloat(chainBalances?.DWT ?? 0);
-              const dwtPx  = 3.50;
-              const dwtUSD = (dwtBal * dwtPx).toFixed(2);
+              const dwtBal = sanitizeNumber(validatedBalances?.DWT ?? 0, { min: 0, max: 1e18, decimals: 18 })
+              const dwtPx  = 3.50
+              const dwtUSD = (dwtBal * dwtPx).toFixed(2)
               console.log('✅ DWT RENDERING:', { 
                 balance: dwtBal, 
                 price: dwtPx, 
@@ -516,11 +559,11 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
           })()}
 
           {tokens.filter(token => token !== 'DWT').map(token => {
-            const balance = chainBalances[token] || 0;
-            const price = prices[token] ?? getPrice(token);
-            const usdValue = balance * price;
-            const change = pctChange(token);
-            const icon = TOKEN_ICONS[token] || token[0];
+            const balance = sanitizeNumber(validatedBalances[token] || 0, { min: 0, max: 1e18, decimals: 18 })
+            const price = sanitizeNumber(prices[token] ?? getPrice(token), { min: 0, max: 1e15, decimals: 8 })
+            const usdValue = balance * price
+            const change = pctChange(token)
+            const icon = TOKEN_ICONS[token] || token[0]
             return (
               <div key={token} className="token-row">
                 <div className="token-icon-wrap">{icon}</div>
@@ -554,7 +597,11 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
             style={{flex:1,maxWidth:150,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,padding:"5px 12px",fontSize:12,color:"var(--text)",fontFamily:"var(--font)",outline:"none"}}
             placeholder="Search BTC, SOL..."
             value={marketFilter}
-            onChange={e=>setMarketFilter(e.target.value)}
+            onChange={e => {
+              // Sanitize search input
+              const sanitized = sanitizeSearchInput(e.target.value, 50)
+              setMarketFilter(sanitized)
+            }}
           />
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:8}}>
@@ -578,11 +625,20 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
               );
             }
             return marketData
-              .filter(c => !marketFilter || c.symbol.toLowerCase().includes(marketFilter.toLowerCase()) || c.name.toLowerCase().includes(marketFilter.toLowerCase()))
+              .filter(coin => {
+                if (!marketFilter) return true
+                
+                // Sanitized search - already validated in onChange
+                const filter = marketFilter.toLowerCase()
+                return (
+                  coin.symbol?.toLowerCase().includes(filter) ||
+                  coin.name?.toLowerCase().includes(filter)
+                )
+              })
               .sort((a, b) => {
-                if (marketTab === 'gainers') return b.change24h - a.change24h;
-                if (marketTab === 'losers') return a.change24h - b.change24h;
-                return a.rank - b.rank;
+                if (marketTab === 'gainers') return (b.change24h || 0) - (a.change24h || 0)
+                if (marketTab === 'losers') return (a.change24h || 0) - (b.change24h || 0)
+                return (a.rank || 999) - (b.rank || 999)
               })
               .slice(0, 10)
               .map(coin => {

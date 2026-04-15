@@ -1,4 +1,6 @@
 // Live token prices via CoinGecko free API (no key required)
+import { validatePriceData, validatePriceHistory, sanitizeNumber } from './dataValidation'
+
 const COINGECKO_IDS = {
   ETH: 'ethereum',
   WETH: 'weth',
@@ -57,39 +59,91 @@ export async function fetchPrices(symbols = Object.keys(COINGECKO_IDS)) {
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
       { signal: AbortSignal.timeout(5000) },
     )
-    if (!res.ok) throw new Error('CoinGecko API error')
-    const data = await res.json()
-
-    const updated = { ...priceCache }
-    for (const [symbol, geckoId] of Object.entries(COINGECKO_IDS)) {
-      if (data[geckoId]?.usd) updated[symbol] = data[geckoId].usd
+    if (!res.ok) throw new Error('CoinGecko API returned status: ' + res.status)
+    
+    const rawData = await res.json()
+    
+    // Validate and sanitize price data
+    const validatedData = validatePriceData(rawData, COINGECKO_IDS)
+    
+    if (Object.keys(validatedData).length === 0) {
+      console.warn('⚠️ Price data validation returned empty')
+      throw new Error('Invalid price data structure')
     }
+    
+    console.log(`✅ Price data validated: ${Object.keys(validatedData).length} tokens`)
+    
+    const updated = { ...priceCache, ...validatedData }
     priceCache = updated
     lastFetch = now
     return priceCache
-  } catch {
+  } catch (error) {
+    console.error('❌ Price fetch error:', error.message)
     // Return cached/fallback silently
     return priceCache
   }
 }
 
 export function getPrice(symbol) {
-  return priceCache[symbol] ?? FALLBACK_PRICES[symbol] ?? 1
+  // Validate symbol
+  if (typeof symbol !== 'string' || symbol.length === 0 || symbol.length > 20) {
+    console.warn('⚠️ Invalid price symbol:', symbol)
+    return 1
+  }
+  
+  const price = priceCache[symbol] ?? FALLBACK_PRICES[symbol] ?? 1
+  
+  // Ensure price is a valid number
+  return sanitizeNumber(price, { min: 0, max: 1e15, decimals: 8 })
 }
 
 // Fetch 7-day chart data for a token
 export async function fetchPriceHistory(symbol, days = 7) {
+  // Validate symbol
+  if (typeof symbol !== 'string' || symbol.length === 0 || symbol.length > 20) {
+    console.warn('⚠️ Invalid price history symbol:', symbol)
+    return []
+  }
+  
+  // Validate days parameter
+  const validDays = sanitizeNumber(days, { min: 1, max: 365, decimals: 0 })
+  if (validDays < 1) {
+    console.warn('⚠️ Invalid days parameter:', days)
+    return []
+  }
+  
   const geckoId = COINGECKO_IDS[symbol]
-  if (!geckoId) return []
+  if (!geckoId) {
+    console.warn('⚠️ Unknown CoinGecko ID for symbol:', symbol)
+    return []
+  }
+  
   try {
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${days}`,
+      `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${validDays}`,
       { signal: AbortSignal.timeout(5000) },
     )
-    if (!res.ok) throw new Error()
-    const data = await res.json()
-    return data.prices.map(([ts, price]) => ({ ts, price }))
-  } catch {
+    if (!res.ok) throw new Error('CoinGecko API returned status: ' + res.status)
+    
+    const rawData = await res.json()
+    
+    // Validate price history data
+    if (!rawData || !rawData.prices || !Array.isArray(rawData.prices)) {
+      console.warn('⚠️ Price history data structure invalid')
+      return []
+    }
+    
+    const validatedHistory = validatePriceHistory(rawData.prices)
+    
+    if (validatedHistory.length === 0) {
+      console.warn('⚠️ Price history validation returned empty')
+      return []
+    }
+    
+    console.log(`✅ Price history validated: ${validatedHistory.length} points for ${symbol}`)
+    return validatedHistory
+  } catch (error) {
+    console.error('❌ Price history fetch error:', error.message)
     return []
   }
 }

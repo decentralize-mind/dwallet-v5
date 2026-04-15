@@ -1,3 +1,5 @@
+import { validateMarketData, sanitizeString, sanitizeNumber } from './dataValidation'
+
 const MARKET_COINS = [
   { symbol: 'BTC', id: 'bitcoin', name: 'Bitcoin', icon: '₿' },
   { symbol: 'ETH', id: 'ethereum', name: 'Ethereum', icon: '⟠' },
@@ -53,25 +55,47 @@ export async function fetchMarketData() {
         '&order=market_cap_desc&per_page=20&sparkline=false&price_change_percentage=24h',
       { signal: AbortSignal.timeout(8000) },
     )
-    if (!res.ok) throw new Error('api error')
-    const data = await res.json()
+    if (!res.ok) throw new Error('API returned status: ' + res.status)
+    
+    const rawData = await res.json()
+    
+    // Validate and sanitize API response
+    const validatedData = validateMarketData(rawData)
+    
+    if (!Array.isArray(validatedData) || validatedData.length === 0) {
+      console.warn('⚠️ Market data validation returned empty, using fallback')
+      throw new Error('Invalid market data structure')
+    }
+    
+    console.log(`✅ Market data validated: ${validatedData.length} coins`)
+    
     const result = MARKET_COINS.map(coin => {
-      const live = data.find(d => d.id === coin.id)
+      const live = validatedData.find(d => d.id === coin.id || d.symbol === coin.symbol.toUpperCase())
       const fb = FALLBACK[coin.symbol] || { price: 0, change: 0 }
+      
       return {
         ...coin,
-        price: live?.current_price ?? fb.price,
-        change24h: live?.price_change_percentage_24h ?? fb.change,
-        marketCap: live?.market_cap ?? 0,
-        volume24h: live?.total_volume ?? 0,
-        rank: live?.market_cap_rank ?? 99,
+        price: live?.price ?? fb.price,
+        change24h: live?.change24h ?? fb.change,
+        marketCap: live?.marketCap ?? 0,
+        volume24h: live?.volume24h ?? 0,
+        rank: live?.rank ?? 99,
+        icon: live?.icon || coin.icon,
       }
     })
+    
     marketCache = result
     lastFetch = now
     return result
-  } catch {
-    if (marketCache) return marketCache
+  } catch (error) {
+    console.error('❌ Market data fetch error:', error.message)
+    
+    if (marketCache) {
+      console.log('📦 Returning cached market data')
+      return marketCache
+    }
+    
+    console.log('🔄 Using fallback market data')
     return MARKET_COINS.map(coin => ({
       ...coin,
       price: FALLBACK[coin.symbol]?.price ?? 0,
