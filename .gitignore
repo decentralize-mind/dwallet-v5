@@ -33,7 +33,8 @@ Thumbs.db
 *.zip
 *.rar
 *.docx
-*.md
+# Allow important documentation files (ignore only draft/temporary docs)
+# *.md  # REMOVED - too broad, now using specific exclusions below
 
 # Private Documentation & Drafts
 deploy-to-base-network-config.md

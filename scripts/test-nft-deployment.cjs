@@ -46,14 +46,12 @@ async function main() {
   const tierNames = ['Bronze', 'Silver', 'Gold', 'Platinum']
   
   for (let i = 0; i < 4; i++) {
-    const tier = await nftMembership.getTierConfig(i)
+    const tier = await nftMembership.tierConfigs(i)
     console.log(`\n${tierNames[i]} (Tier ${i}):`)
     console.log(`   ETH Price: ${ethers.formatEther(tier.ethPrice)} ETH`)
     console.log(`   DWT Price: ${ethers.formatEther(tier.dwtPrice)} DWT`)
-    console.log(`   DWT Required: ${ethers.formatEther(tier.dwtHoldingRequirement)} DWT`)
     console.log(`   Max Supply: ${tier.maxSupply}`)
-    console.log(`   Minted: ${tier.mintedCount}`)
-    console.log(`   Enabled: ${tier.enabled}`)
+    console.log(`   Soulbound: ${tier.soulbound}`)
   }
 
   // Test 3: Mint Bronze pass with ETH
@@ -61,7 +59,9 @@ async function main() {
   console.log('Test 3: Mint Bronze Pass with ETH')
   console.log('='.repeat(60))
 
-  const bronzePrice = await nftMembership.getTierPrice(0)
+  // Get tier price
+  const tierConfig = await nftMembership.tierConfigs(0)
+  const bronzePrice = tierConfig.ethPrice
   console.log(`Bronze Price: ${ethers.formatEther(bronzePrice)} ETH`)
 
   // Check test user balance
@@ -78,9 +78,9 @@ async function main() {
     console.log('✅ Sent 1 ETH to test user')
   }
 
-  // Approve and mint
+  // Mint with ETH
   console.log('\nMinting Bronze pass...')
-  const mintTx = await nftMembership.connect(testUser).mintPass(0, false, {
+  const mintTx = await nftMembership.connect(testUser).mintWithETH(0, {
     value: bronzePrice
   })
   const mintReceipt = await mintTx.wait()
