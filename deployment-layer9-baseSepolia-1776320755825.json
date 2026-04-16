@@ -1,0 +1,15 @@
+{
+  "network": "baseSepolia",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-16T06:25:55.825Z",
+  "contracts": {
+    "security": "0x813b537A21bF5AC6967E870db47Ec2770651B11F",
+    "lockEngine": "0x059327A069Ba66A74ecF21fde8c1c0D2915e0DB3",
+    "access": "0xD2211242548115134607638E19ADb3271B31506b",
+    "lending": "0xcbBc5E87BDdbD6A1346FD635efDB23C0cB944794",
+    "nft": "0x74297Fa47E6103148D3A4119d7B00C6a94B927D7",
+    "swapRouter": "0x2a4b239C15f54218a30116c630a32d9305859a43",
+    "feeRouter": "0x6552d7c4628e9e71c2E3cBEaB9f17CF67Bee1D89",
+    "stablecoin": "0x83852A1C0A6C13fa8aCD950e51A2A594A7D7Ec29"
+  }
+}

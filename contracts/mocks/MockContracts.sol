@@ -119,3 +119,83 @@ contract MockLayer7Security {
     function kycLevel(address account) external pure returns (uint256) { return 1; }
     function requiredKYCLevel() external pure returns (uint256) { return 0; }
 }
+
+contract MockFeeRouter {
+    uint256 public feeBps = 30; // 0.30%
+    mapping(address => uint256) public totalFeesCollected;
+    
+    function setFeeBps(uint256 _feeBps) external {
+        feeBps = _feeBps;
+    }
+    
+    function collectFee(address token, address payer, uint256 amount) external returns (uint256) {
+        uint256 fee = (amount * feeBps) / 10000;
+        totalFeesCollected[token] += fee;
+        MockERC20(token).transferFrom(payer, address(this), fee);
+        return fee;
+    }
+    
+    function calculateFee(address user, uint256 amount) external view returns (uint256, uint256) {
+        uint256 fee = (amount * feeBps) / 10000;
+        return (fee, 0);
+    }
+}
+
+contract MockPriceOracle {
+    mapping(bytes32 => uint256) public prices;
+    mapping(bytes32 => bool) public priceValid;
+    
+    function setPrice(address token0, address token1, uint256 price) external {
+        bytes32 key = keccak256(abi.encodePacked(token0, token1));
+        prices[key] = price;
+        priceValid[key] = true;
+    }
+    
+    function getPrice(address token0, address token1) external view returns (uint256, bool) {
+        bytes32 key = keccak256(abi.encodePacked(token0, token1));
+        return (prices[key], priceValid[key]);
+    }
+}
+
+contract MockLiquidityPool {
+    mapping(bytes32 => uint256) public reserves;
+    
+    function addLiquidity(address tokenA, address tokenB, uint256 reserveA, uint256 reserveB) external {
+        bytes32 key = keccak256(abi.encodePacked(tokenA, tokenB));
+        reserves[key] = (reserveA << 128) | reserveB;
+    }
+    
+    function getReserves(address tokenA, address tokenB) external view returns (uint256 reserveA, uint256 reserveB) {
+        bytes32 key = keccak256(abi.encodePacked(tokenA, tokenB));
+        uint256 data = reserves[key];
+        reserveA = data >> 128;
+        reserveB = data & ((1 << 128) - 1);
+    }
+    
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address to
+    ) external returns (uint256 amountOut) {
+        // Simple AMM: amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)
+        bytes32 key = keccak256(abi.encodePacked(tokenIn, tokenOut));
+        uint256 data = reserves[key];
+        uint256 reserveIn = data >> 128;
+        uint256 reserveOut = data & ((1 << 128) - 1);
+        
+        require(reserveIn > 0 && reserveOut > 0, "MockPool: no liquidity");
+        
+        // Calculate output using constant product formula
+        amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
+        require(amountOut >= amountOutMin, "MockPool: slippage exceeded");
+        
+        // Transfer tokens
+        MockERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        MockERC20(tokenOut).transfer(to, amountOut);
+        
+        // Update reserves
+        reserves[key] = ((reserveIn + amountIn) << 128) | (reserveOut - amountOut);
+    }
+}
