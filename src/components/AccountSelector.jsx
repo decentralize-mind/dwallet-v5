@@ -4,6 +4,7 @@ import PasswordPrompt from './PasswordPrompt'
 import WalletCreationModal from './WalletCreationModal'
 import WalletImportModal from './WalletImportModal'
 import WalletExportModal from './WalletExportModal'
+import HardwareWalletModal from './HardwareWalletModal'
 
 const AVATAR_COLORS = [
   '#6366f1',
@@ -41,6 +42,7 @@ export default function AccountSelector({ onClose }) {
   const [pendingRenameName, setPendingRenameName] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
   const [pendingExportIndex, setPendingExportIndex] = useState(null)
+  const [showHardwareWallet, setShowHardwareWallet] = useState(false)
 
   const handleSwitch = i => {
     if (i === activeIndex) return
@@ -761,6 +763,20 @@ export default function AccountSelector({ onClose }) {
                         Active
                       </span>
                     )}
+                    {w.isHardwareWallet && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          padding: '1px 6px',
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          background: 'rgba(59,130,246,0.1)',
+                          color: '#3b82f6',
+                        }}
+                      >
+                        🔐 Hardware
+                      </span>
+                    )}
                     {!isActive && wallets.length > 1 && (
                       <button
                         onClick={e => {
@@ -1115,6 +1131,25 @@ export default function AccountSelector({ onClose }) {
                 Import Existing Wallet
               </button>
               <button
+                onClick={() => {
+                  setShowAddWallet(false)
+                  setShowHardwareWallet(true)
+                }}
+                style={{
+                  padding: '16px',
+                  background: 'var(--bg3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  color: 'var(--text)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                }}
+              >
+                🔐 Connect Hardware Wallet
+              </button>
+              <button
                 onClick={() => setShowAddWallet(false)}
                 style={{
                   padding: '12px',
@@ -1213,6 +1248,17 @@ export default function AccountSelector({ onClose }) {
             setShowExportModal(false)
             setPendingExportIndex(null)
           }}
+        />
+      )}
+
+      {/* Hardware Wallet Modal */}
+      {showHardwareWallet && (
+        <HardwareWalletModal
+          onSuccess={() => {
+            setShowHardwareWallet(false)
+            onClose()
+          }}
+          onCancel={() => setShowHardwareWallet(false)}
         />
       )}
     </div>

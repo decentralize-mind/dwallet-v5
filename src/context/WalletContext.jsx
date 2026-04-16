@@ -607,6 +607,13 @@ export function WalletProvider({ children }) {
   const addAccount = async () => {
     const fullWallet = await ensureKeys()
     if (!fullWallet || !password) return
+    
+    // Check if this is a hardware wallet
+    if (fullWallet.isHardwareWallet) {
+      notify('Hardware wallets do not support adding accounts through seed derivation', 'error')
+      return
+    }
+    
     const seed = mnemonicToSeedSync(fullWallet.mnemonic)
     const index = fullWallet.accounts.length
     const derived = deriveWalletFromSeed(seed, index)
