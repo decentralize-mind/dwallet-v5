@@ -13,6 +13,7 @@ export default defineConfig({
       external: [
         '@ledgerhq/hw-transport-webusb',
         '@ledgerhq/hw-app-eth',
+        '@walletconnect/ethereum-provider',
       ],
       output: {
         manualChunks: {
