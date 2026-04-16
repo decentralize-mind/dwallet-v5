@@ -12,6 +12,81 @@
 
 import { sanitizeNumber, isValidEthAddress } from './dataValidation.js'
 import { MAINNET_TOKENS, AAVE_ASSETS, SWAP_TOKENS } from '../data/defi.js'
+import { TOKEN_PRICES } from '../data/chains.js'
+
+// ─────────────────────────────────────────────────────────────────────
+//  TRANSACTION VALUE LIMITS
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Maximum transaction values (in USD)
+ */
+export const TRANSACTION_LIMITS = {
+  WARNING_THRESHOLD: 10000,    // $10,000 - Show warning
+  CRITICAL_THRESHOLD: 50000,   // $50,000 - Require explicit confirmation
+  MAX_SINGLE_TX: 100000,       // $100,000 - Maximum allowed
+  MAX_ETH_SINGLE: 50,          // 50 ETH maximum per transaction
+  MAX_TOKEN_SINGLE: 1000000    // 1M tokens maximum per transaction
+}
+
+/**
+ * Calculate USD value of a transaction
+ */
+export function calculateTransactionValue(tokenSymbol, amount) {
+  const price = TOKEN_PRICES[tokenSymbol] || 0
+  return parseFloat(amount) * price
+}
+
+/**
+ * Validate transaction value against limits
+ */
+export function validateTransactionValue(tokenSymbol, amount) {
+  const usdValue = calculateTransactionValue(tokenSymbol, amount)
+  const numAmount = parseFloat(amount)
+  
+  // Check maximum ETH limit
+  if (tokenSymbol === 'ETH' && numAmount > TRANSACTION_LIMITS.MAX_ETH_SINGLE) {
+    return {
+      valid: false,
+      error: `Transaction exceeds maximum ETH limit (${TRANSACTION_LIMITS.MAX_ETH_SINGLE} ETH)`,
+      level: 'critical'
+    }
+  }
+  
+  // Check maximum token limit
+  if (numAmount > TRANSACTION_LIMITS.MAX_TOKEN_SINGLE) {
+    return {
+      valid: false,
+      error: `Transaction exceeds maximum token limit (${TRANSACTION_LIMITS.MAX_TOKEN_SINGLE.toLocaleString()} tokens)`,
+      level: 'critical'
+    }
+  }
+  
+  // Check maximum USD value
+  if (usdValue > TRANSACTION_LIMITS.MAX_SINGLE_TX) {
+    return {
+      valid: false,
+      error: `Transaction value ($${usdValue.toLocaleString()}) exceeds maximum limit ($${TRANSACTION_LIMITS.MAX_SINGLE_TX.toLocaleString()})`,
+      level: 'critical'
+    }
+  }
+  
+  // Check warning threshold
+  if (usdValue >= TRANSACTION_LIMITS.WARNING_THRESHOLD) {
+    return {
+      valid: true,
+      warning: `Large transaction: $${usdValue.toLocaleString()}`,
+      level: usdValue >= TRANSACTION_LIMITS.CRITICAL_THRESHOLD ? 'critical' : 'warning',
+      usdValue
+    }
+  }
+  
+  return {
+    valid: true,
+    level: 'normal',
+    usdValue
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────
 //  TOKEN & ADDRESS VALIDATION
@@ -228,6 +303,86 @@ export function validateStakingParams(params) {
     params: {
       protocol,
       amount: validatedAmount
+    }
+  }
+}
+
+/**
+ * Validate liquidity pool (LP) parameters
+ */
+export function validateLPParams(params) {
+  const { token0, token1, amount0, amount1, fee, tickLower, tickUpper } = params
+  
+  // Validate tokens
+  const token0Validation = validateTokenSymbol(token0, ['ETH', 'WBTC', 'USDC', 'USDT', 'DAI', 'UNI', 'LINK'])
+  if (!token0Validation.valid) {
+    return { valid: false, error: token0Validation.error }
+  }
+  
+  const token1Validation = validateTokenSymbol(token1, ['ETH', 'WBTC', 'USDC', 'USDT', 'DAI', 'UNI', 'LINK'])
+  if (!token1Validation.valid) {
+    return { valid: false, error: token1Validation.error }
+  }
+  
+  // Cannot add liquidity for same token
+  if (token0.toUpperCase() === token1.toUpperCase()) {
+    return { valid: false, error: 'Cannot add liquidity for same token pair' }
+  }
+  
+  // Validate amounts
+  const validatedAmount0 = sanitizeNumber(amount0, {
+    min: 0.00000001,
+    max: 1e15,
+    decimals: 18,
+    required: true
+  })
+  
+  if (!validatedAmount0 || validatedAmount0 <= 0) {
+    return { valid: false, error: 'Invalid token0 amount' }
+  }
+  
+  const validatedAmount1 = sanitizeNumber(amount1, {
+    min: 0.00000001,
+    max: 1e15,
+    decimals: 18,
+    required: true
+  })
+  
+  if (!validatedAmount1 || validatedAmount1 <= 0) {
+    return { valid: false, error: 'Invalid token1 amount' }
+  }
+  
+  // Validate fee tier
+  const validFeeTiers = [100, 500, 3000, 10000]
+  if (fee && !validFeeTiers.includes(Number(fee))) {
+    return { valid: false, error: 'Invalid fee tier' }
+  }
+  
+  // Validate tick range (if provided)
+  if (tickLower !== undefined && tickUpper !== undefined) {
+    const lower = Number(tickLower)
+    const upper = Number(tickUpper)
+    
+    if (lower >= upper) {
+      return { valid: false, error: 'Tick lower must be less than tick upper' }
+    }
+    
+    // Uniswap v3 tick bounds
+    if (lower < -887272 || upper > 887272) {
+      return { valid: false, error: 'Tick out of valid range (-887272 to 887272)' }
+    }
+  }
+  
+  return {
+    valid: true,
+    params: {
+      token0: token0Validation.symbol,
+      token1: token1Validation.symbol,
+      amount0: validatedAmount0,
+      amount1: validatedAmount1,
+      fee: fee ? Number(fee) : 3000,
+      tickLower,
+      tickUpper
     }
   }
 }

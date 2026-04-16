@@ -10,7 +10,9 @@ import {
   validateStakingParams, 
   DeFiRateLimiter, 
   CircuitBreaker,
-  verifyBalanceBeforeTransaction
+  verifyBalanceBeforeTransaction,
+  validateGasEstimation,
+  validateTransactionValue
 } from '../../utils/defiSecurity'
 import { getProvider } from '../../utils/defi'
 import { sanitizeError } from '../../utils/secureKeyManagement'
@@ -51,6 +53,8 @@ export default function StakingPanel() {
   const [error, setError] = useState('')
   const [staking, setStaking] = useState(false)
   const [lidoBal, setLidoBal] = useState('0')
+  const [gasEstimate, setGasEstimate] = useState(null)
+  const [txValueWarning, setTxValueWarning] = useState(null)
   
   // Security: Initialize rate limiter and circuit breaker
   const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
@@ -75,6 +79,8 @@ export default function StakingPanel() {
     if (!wallet) return
     
     setError('')
+    setGasEstimate(null)
+    setTxValueWarning(null)
     
     try {
       // Security: Validate staking parameters
@@ -87,6 +93,23 @@ export default function StakingPanel() {
       if (!validation.valid) {
         setError(validation.error)
         return
+      }
+      
+      // Security: Check transaction value limits
+      const valueCheck = validateTransactionValue('ETH', amount)
+      
+      if (!valueCheck.valid) {
+        setError(valueCheck.error)
+        return
+      }
+      
+      // Set warning if large transaction
+      if (valueCheck.level === 'warning' || valueCheck.level === 'critical') {
+        setTxValueWarning({
+          level: valueCheck.level,
+          message: valueCheck.warning,
+          usdValue: valueCheck.usdValue
+        })
       }
       
       // Security: Check rate limiter
@@ -121,6 +144,21 @@ export default function StakingPanel() {
           setError(balanceCheck.error)
           return
         }
+        
+        // Security: Validate gas estimation
+        const gasValidation = await validateGasEstimation(provider, {
+          from: address,
+          to: selected === 'lido' ? LIDO.stETH : ROCKET_POOL.depositPool,
+          data: '0x00000000', // Placeholder
+          value: parseFloat(amount)
+        }, chainBalances['ETH'] || 0)
+        
+        if (!gasValidation.valid) {
+          setError(gasValidation.error)
+          return
+        }
+        
+        setGasEstimate(gasValidation)
       }
       
       setStaking(true)
@@ -251,6 +289,28 @@ export default function StakingPanel() {
                 <span>APY</span>
                 <span className="positive">{protocol.apy}%</span>
               </div>
+              
+              {/* Security: Gas estimate */}
+              {gasEstimate && (
+                <div className="stake-reward-row">
+                  <span>Estimated gas</span>
+                  <span className="warn">
+                    ~{gasEstimate.estimatedCostEth} ETH
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Security: Transaction value warning */}
+          {txValueWarning && (
+            <div className={`stake-tx-warning ${txValueWarning.level}`}>
+              ⚠️ {txValueWarning.message}
+              {txValueWarning.level === 'critical' && (
+                <div className="warning-subtext">
+                  This is a large transaction. Please verify all details carefully.
+                </div>
+              )}
             </div>
           )}
 

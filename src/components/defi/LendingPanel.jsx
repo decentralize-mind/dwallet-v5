@@ -13,7 +13,9 @@ import {
   validateLendingParams, 
   DeFiRateLimiter, 
   CircuitBreaker,
-  verifyBalanceBeforeTransaction
+  verifyBalanceBeforeTransaction,
+  validateGasEstimation,
+  validateTransactionValue
 } from '../../utils/defiSecurity'
 import { getProvider } from '../../utils/defi'
 import { sanitizeError } from '../../utils/secureKeyManagement'
@@ -31,6 +33,8 @@ export default function LendingPanel() {
   const [loading, setLoading] = useState(false)
   const [accountData, setAccountData] = useState(null)
   const [action, setAction] = useState('supply') // supply | withdraw | borrow | repay
+  const [gasEstimate, setGasEstimate] = useState(null)
+  const [txValueWarning, setTxValueWarning] = useState(null)
   
   // Security: Initialize rate limiter and circuit breaker
   const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
@@ -60,6 +64,8 @@ export default function LendingPanel() {
     
     setLoading(true)
     setError('')
+    setGasEstimate(null)
+    setTxValueWarning(null)
     
     try {
       // Security: Validate lending parameters
@@ -73,6 +79,26 @@ export default function LendingPanel() {
         setError(validation.error)
         setLoading(false)
         return
+      }
+      
+      // Security: Check transaction value limits (for supply/repay only)
+      if (action === 'supply' || action === 'repay') {
+        const valueCheck = validateTransactionValue(asset.symbol, amount)
+        
+        if (!valueCheck.valid) {
+          setError(valueCheck.error)
+          setLoading(false)
+          return
+        }
+        
+        // Set warning if large transaction
+        if (valueCheck.level === 'warning' || valueCheck.level === 'critical') {
+          setTxValueWarning({
+            level: valueCheck.level,
+            message: valueCheck.warning,
+            usdValue: valueCheck.usdValue
+          })
+        }
       }
       
       // Security: Check rate limiter
@@ -110,6 +136,21 @@ export default function LendingPanel() {
           setLoading(false)
           return
         }
+        
+        // Security: Validate gas estimation
+        const gasValidation = await validateGasEstimation(provider, {
+          from: address,
+          to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2', // Aave Pool
+          data: '0x00000000' // Placeholder
+        }, chainBalances['ETH'] || 0)
+        
+        if (!gasValidation.valid) {
+          setError(gasValidation.error)
+          setLoading(false)
+          return
+        }
+        
+        setGasEstimate(gasValidation)
       }
       
       let tx
@@ -319,6 +360,28 @@ export default function LendingPanel() {
                       parseFloat(accountData.healthFactor) - 0.3,
                     ).toFixed(2)}
                   </span>
+                </div>
+              )}
+              
+              {/* Security: Gas estimate */}
+              {gasEstimate && (
+                <div className="aave-apy-row">
+                  <span>Estimated gas</span>
+                  <span className="warn">
+                    ~{gasEstimate.estimatedCostEth} ETH
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Security: Transaction value warning */}
+          {txValueWarning && (
+            <div className={`aave-tx-warning ${txValueWarning.level}`}>
+              ⚠️ {txValueWarning.message}
+              {txValueWarning.level === 'critical' && (
+                <div className="warning-subtext">
+                  This is a large transaction. Please verify all details carefully.
                 </div>
               )}
             </div>

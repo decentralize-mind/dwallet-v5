@@ -9,7 +9,8 @@ import {
   CircuitBreaker,
   verifyBalanceBeforeTransaction,
   simulateTransaction,
-  validateGasEstimation
+  validateGasEstimation,
+  validateTransactionValue
 } from '../../utils/defiSecurity'
 import { getProvider } from '../../utils/defi'
 import { sanitizeError } from '../../utils/secureKeyManagement'
@@ -30,6 +31,8 @@ export default function SwapPanel() {
   const [error, setError] = useState('')
   const [priceImpact, setPriceImpact] = useState(null)
   const [isMock, setIsMock] = useState(false)
+  const [gasEstimate, setGasEstimate] = useState(null)
+  const [txValueWarning, setTxValueWarning] = useState(null)
   
   // Security: Initialize rate limiter and circuit breaker
   const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
@@ -82,6 +85,8 @@ export default function SwapPanel() {
     if (!wallet) return
     
     setError('')
+    setGasEstimate(null)
+    setTxValueWarning(null)
     
     try {
       // Security: Validate all swap parameters
@@ -97,6 +102,23 @@ export default function SwapPanel() {
       if (!validation.valid) {
         setError(validation.error)
         return
+      }
+      
+      // Security: Check transaction value limits
+      const valueCheck = validateTransactionValue(tokenIn, amountIn)
+      
+      if (!valueCheck.valid) {
+        setError(valueCheck.error)
+        return
+      }
+      
+      // Set warning if large transaction
+      if (valueCheck.level === 'warning' || valueCheck.level === 'critical') {
+        setTxValueWarning({
+          level: valueCheck.level,
+          message: valueCheck.warning,
+          usdValue: valueCheck.usdValue
+        })
       }
       
       // Security: Check rate limiter
@@ -161,6 +183,21 @@ export default function SwapPanel() {
           }
         }
         
+        // Security: Validate gas estimation
+        const provider = getProvider()
+        const gasValidation = await validateGasEstimation(provider, {
+          from: wallet.accounts[wallet.activeAccount].address,
+          to: tx.to,
+          data: tx.data,
+          value: tx.value || 0
+        }, chainBalances[tokenIn] || 0)
+        
+        if (!gasValidation.valid) {
+          setError(gasValidation.error)
+          return
+        }
+        
+        setGasEstimate(gasValidation)
         setTxHash(tx.hash)
       } else {
         setTxHash(
@@ -328,6 +365,24 @@ export default function SwapPanel() {
                   {tokenOut}
                 </span>
               </div>
+              
+              {/* Security: Transaction value warning */}
+              {txValueWarning && (
+                <div className={`swap-detail-row swap-tx-warning ${txValueWarning.level}`}>
+                  <span>⚠️ Warning</span>
+                  <span>{txValueWarning.message}</span>
+                </div>
+              )}
+              
+              {/* Security: Gas estimate */}
+              {gasEstimate && (
+                <div className="swap-detail-row">
+                  <span>Estimated gas</span>
+                  <span className="warn">
+                    ~{gasEstimate.estimatedCostEth} ETH
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

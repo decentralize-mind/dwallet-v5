@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '../../hooks/useWallet'
-import { getLPPositions, collectLPFees } from '../../utils/defi'
-import { SAMPLE_LP_POOLS } from '../../data/defi'
+import { getLPPositions, collectLPFees, getProvider } from '../../utils/defi'
+import { SAMPLE_LP_POOLS, MAINNET_TOKENS } from '../../data/defi'
+import { TOKEN_PRICES } from '../../data/chains'
 import { 
   DeFiRateLimiter, 
-  CircuitBreaker
+  CircuitBreaker,
+  validateLPParams,
+  verifyBalanceBeforeTransaction,
+  simulateTransaction,
+  validateGasEstimation,
+  validateTransactionValue,
+  calculateTransactionValue
 } from '../../utils/defiSecurity'
 import { sanitizeError } from '../../utils/secureKeyManagement'
 
@@ -21,6 +28,8 @@ export default function YieldPanel() {
   const [txHash, setTxHash] = useState('')
   const [collecting, setCollecting] = useState(null)
   const [error, setError] = useState('')
+  const [gasEstimate, setGasEstimate] = useState(null)
+  const [txValueWarning, setTxValueWarning] = useState(null)
   
   // Security: Initialize rate limiter and circuit breaker
   const rateLimiter = useRef(new DeFiRateLimiter({ cooldown: 5000, maxAttempts: 3 }))
@@ -40,6 +49,7 @@ export default function YieldPanel() {
     
     setError('')
     setCollecting(tokenId)
+    setGasEstimate(null)
     
     try {
       // Security: Check rate limiter
@@ -59,6 +69,28 @@ export default function YieldPanel() {
       }
       
       const pk = wallet.accounts[wallet.activeAccount].privateKey
+      const address = wallet.accounts[wallet.activeAccount].address
+      
+      // Security: Validate gas estimation before execution
+      if (import.meta.env.VITE_INFURA_KEY) {
+        const provider = getProvider()
+        
+        // Estimate gas for collect operation
+        const gasValidation = await validateGasEstimation(provider, {
+          from: address,
+          to: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // NFT Manager
+          data: '0x00000000' // Placeholder - actual data would be generated
+        }, 0.1) // Assume 0.1 ETH balance for gas check
+        
+        if (!gasValidation.valid) {
+          setError(gasValidation.error)
+          setCollecting(null)
+          return
+        }
+        
+        setGasEstimate(gasValidation)
+      }
+      
       if (import.meta.env.VITE_INFURA_KEY) {
         await collectLPFees({ tokenId, privateKey: pk })
       }
@@ -85,19 +117,52 @@ export default function YieldPanel() {
     }
   }
 
-  const handleAddLiquidity = () => {
+  const handleAddLiquidity = async () => {
     // Security: Basic validation before mock transaction
     if (!selectedPool) {
       setError('No pool selected')
       return
     }
     
+    setError('')
+    setGasEstimate(null)
+    setTxValueWarning(null)
+    
+    // Security: Validate LP parameters
+    const validation = validateLPParams({
+      token0: selectedPool.token0,
+      token1: selectedPool.token1,
+      amount0: token0Amt,
+      amount1: token1Amt,
+      fee: selectedPool.fee
+    })
+    
+    if (!validation.valid) {
+      setError(validation.error)
+      return
+    }
+    
     const amt0 = parseFloat(token0Amt || 0)
     const amt1 = parseFloat(token1Amt || 0)
     
-    if (amt0 <= 0 || amt1 <= 0) {
-      setError('Invalid token amounts')
+    // Security: Check transaction value limits
+    const valueCheck0 = validateTransactionValue(selectedPool.token0, amt0)
+    const valueCheck1 = validateTransactionValue(selectedPool.token1, amt1)
+    
+    if (!valueCheck0.valid || !valueCheck1.valid) {
+      setError(valueCheck0.error || valueCheck1.error)
       return
+    }
+    
+    // Set warning if large transaction
+    if (valueCheck0.level === 'warning' || valueCheck0.level === 'critical' ||
+        valueCheck1.level === 'warning' || valueCheck1.level === 'critical') {
+      const totalUSD = (valueCheck0.usdValue || 0) + (valueCheck1.usdValue || 0)
+      setTxValueWarning({
+        level: valueCheck0.level === 'critical' || valueCheck1.level === 'critical' ? 'critical' : 'warning',
+        message: `Large transaction: ~$${totalUSD.toLocaleString()}`,
+        usdValue: totalUSD
+      })
     }
     
     // Security: Check rate limiter
@@ -105,6 +170,57 @@ export default function YieldPanel() {
     if (!rateCheck.allowed) {
       setError(rateCheck.error)
       return
+    }
+    
+    // Security: Verify balances before execution
+    if (import.meta.env.VITE_INFURA_KEY && wallet) {
+      const provider = getProvider()
+      const address = wallet.accounts[wallet.activeAccount].address
+      
+      try {
+        // Verify token0 balance
+        const balanceCheck0 = await verifyBalanceBeforeTransaction(
+          provider,
+          address,
+          selectedPool.token0,
+          amt0
+        )
+        
+        if (!balanceCheck0.verified) {
+          setError(`Insufficient ${selectedPool.token0}: ${balanceCheck0.error}`)
+          return
+        }
+        
+        // Verify token1 balance
+        const balanceCheck1 = await verifyBalanceBeforeTransaction(
+          provider,
+          address,
+          selectedPool.token1,
+          amt1
+        )
+        
+        if (!balanceCheck1.verified) {
+          setError(`Insufficient ${selectedPool.token1}: ${balanceCheck1.error}`)
+          return
+        }
+        
+        // Security: Validate gas estimation
+        const gasValidation = await validateGasEstimation(provider, {
+          from: address,
+          to: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // NFT Manager
+          data: '0x00000000' // Placeholder
+        }, 0.1)
+        
+        if (!gasValidation.valid) {
+          setError(gasValidation.error)
+          return
+        }
+        
+        setGasEstimate(gasValidation)
+      } catch (err) {
+        setError('Failed to verify balances: ' + sanitizeError(err))
+        return
+      }
     }
     
     setTxHash(
@@ -116,6 +232,7 @@ export default function YieldPanel() {
     
     // Security: Record execution
     rateLimiter.current.recordExecution()
+    circuitBreaker.current.recordSuccess()
     
     setAddStep('success')
   }
@@ -315,6 +432,28 @@ export default function YieldPanel() {
                     <span>Pool share</span>
                     <span>~0.000{Math.floor(Math.random() * 9 + 1)}%</span>
                   </div>
+                  
+                  {/* Security: Gas estimate display */}
+                  {gasEstimate && (
+                    <div className="yield-proj-row">
+                      <span>Estimated gas cost</span>
+                      <span className="warn">
+                        ~{gasEstimate.estimatedCostEth} ETH
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Security: Transaction value warning */}
+              {txValueWarning && (
+                <div className={`yield-tx-warning ${txValueWarning.level}`}>
+                  ⚠️ {txValueWarning.message}
+                  {txValueWarning.level === 'critical' && (
+                    <div className="warning-subtext">
+                      This is a large transaction. Please verify all details carefully.
+                    </div>
+                  )}
                 </div>
               )}
 
