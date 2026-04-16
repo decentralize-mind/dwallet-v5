@@ -210,6 +210,9 @@ export const AAVE_ASSETS = [
   },
 ]
 
+// Swap tokens list (for UI dropdowns)
+export const SWAP_TOKENS = Object.values(MAINNET_TOKENS)
+
 // Sample LP pools (from Uniswap v3 subgraph in production)
 export const SAMPLE_LP_POOLS = [
   {

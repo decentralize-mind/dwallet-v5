@@ -13,13 +13,13 @@ export default defineConfig({
       external: [
         '@ledgerhq/hw-transport-webusb',
         '@ledgerhq/hw-app-eth',
-        '@walletconnect/ethereum-provider',
       ],
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
           'vendor-ethers': ['ethers'],
           'vendor-scure': ['@scure/bip39', '@scure/bip32', '@noble/hashes'],
+          'vendor-walletconnect': ['@walletconnect/web3wallet', '@walletconnect/core', '@walletconnect/utils'],
         },
       },
     },

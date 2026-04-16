@@ -43,6 +43,8 @@
     "@openzeppelin/contracts-upgradeable": "5.0.2",
     "@scure/bip32": "^1.5.0",
     "@scure/bip39": "^1.4.0",
+    "@walletconnect/utils": "^2.23.9",
+    "@walletconnect/web3wallet": "^1.16.1",
     "ethers": "^6.13.4",
     "ioredis": "^5.10.1",
     "react": "^18.3.1",

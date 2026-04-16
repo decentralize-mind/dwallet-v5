@@ -40,17 +40,20 @@ export function WalletConnectProvider({ children }) {
   // ── Event listeners ───────────────────────────────────────────────────────
   const attachListeners = useCallback(wc => {
     // A dApp wants to connect
-    wc.on('session_proposal', proposal => {
+    wc.on('session_proposal', async proposal => {
+      console.log('Session proposal received:', proposal)
       setPendingProposal(proposal)
     })
 
     // A dApp sent a request (sign, send tx, etc.)
-    wc.on('session_request', request => {
+    wc.on('session_request', async request => {
+      console.log('Session request received:', request)
       setPendingRequest(request)
     })
 
     // A dApp disconnected
     wc.on('session_delete', ({ topic }) => {
+      console.log('Session deleted:', topic)
       setSessions(prev => {
         const next = { ...prev }
         delete next[topic]
