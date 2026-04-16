@@ -1,6 +1,28 @@
-export function WelcomeStep({ onSelectCreate, onSelectImport }) {
+export function WelcomeStep({ onSelectCreate, onSelectImport, onBack }) {
   return (
     <div className="step-content">
+      {onBack && (
+        <button 
+          className="back-to-home-btn"
+          onClick={onBack}
+          style={{
+            position: 'absolute',
+            top: 20,
+            left: 20,
+            background: 'none',
+            border: 'none',
+            color: '#6366f1',
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          ← Back to Home
+        </button>
+      )}
       <div style={{ textAlign: 'center', marginBottom: 6 }}>
         <div
           style={{

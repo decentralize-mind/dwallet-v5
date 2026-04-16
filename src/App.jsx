@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { WalletProvider } from './context/WalletContext'
 import { useWallet } from './hooks/useWallet'
 import { WalletConnectProvider } from './context/WalletConnectContext'
@@ -6,12 +7,14 @@ import {
   SessionRequestModal,
 } from './components/WalletConnectModal'
 import OnboardingScreen from './components/OnboardingScreen'
+import LandingPage from './components/LandingPage'
 import LockScreen from './components/LockScreen'
 import MainWallet from './components/MainWallet'
 import './index.css'
 
 function AppContent() {
   const { wallet, sessionReady, isLocked } = useWallet()
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Wait until session check is done to avoid flashing unlock screen
   if (!sessionReady) {
@@ -27,9 +30,19 @@ function AppContent() {
     return <LockScreen />
   }
 
+  // Show onboarding if user clicked "Create Wallet" or "Import Wallet"
+  if (showOnboarding && !wallet) {
+    return <OnboardingScreen onBack={() => setShowOnboarding(false)} />
+  }
+
+  // Show landing page if no wallet exists
+  if (!wallet) {
+    return <LandingPage onGetStarted={() => setShowOnboarding(true)} />
+  }
+
   return (
     <>
-      {wallet ? <MainWallet /> : <OnboardingScreen />}
+      <MainWallet />
       <SessionProposalModal />
       <SessionRequestModal />
     </>

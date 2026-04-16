@@ -32,7 +32,7 @@ function pickVerifyIdxs(words) {
   return idxs.sort((a, b) => a - b)
 }
 
-export default function OnboardingScreen() {
+export default function OnboardingScreen({ onBack }) {
   const { createWallet, confirmWallet, importWallet, wallet } = useWallet()
 
   // Monitor if wallet state exists - if it does, we should not be showing onboarding
@@ -166,6 +166,7 @@ export default function OnboardingScreen() {
           <WelcomeStep
             onSelectCreate={handleSelectCreate}
             onSelectImport={handleSelectImport}
+            onBack={onBack}
           />
         )}
 
