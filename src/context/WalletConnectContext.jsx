@@ -42,8 +42,11 @@ export function WalletConnectProvider({ children }) {
   const attachListeners = useCallback(wc => {
     // A dApp wants to connect
     wc.on('session_proposal', async proposal => {
-      console.log('Session proposal received:', proposal)
+      console.log('✅ Session proposal received!', proposal)
+      console.log('Proposal ID:', proposal.id)
+      console.log('Proposer metadata:', proposal.params.proposer.metadata)
       setPendingProposal(proposal)
+      setConnecting(false) // Proposal arrived, stop showing "connecting" state
     })
 
     // A dApp sent a request (sign, send tx, etc.)
@@ -60,6 +63,11 @@ export function WalletConnectProvider({ children }) {
         delete next[topic]
         return next
       })
+    })
+    
+    // Add pairing event listener for debugging
+    wc.core.pairing.core.eventClient.on('pairing_created', (event) => {
+      console.log('Pairing created:', event)
     })
   }, [])
 
@@ -100,15 +108,19 @@ export function WalletConnectProvider({ children }) {
     if (!wcReady) throw new Error('WalletConnect not ready')
     setConnecting(true)
     try {
+      console.log('Pairing with URI:', uri.substring(0, 50) + '...')
       await pairWithDapp(uri.trim())
+      console.log('Pairing successful, waiting for session_proposal event...')
       setPairingUri('')
+      // Don't set connecting to false here - wait for the proposal to arrive
     } catch (err) {
+      console.error('Pairing failed:', err)
       throw new Error('Invalid WalletConnect URI: ' + err.message, {
         cause: err,
       })
-    } finally {
-      setConnecting(false)
     }
+    // Note: setConnecting(false) is NOT called here
+    // It will be set to false when the proposal arrives or on error
   }
 
   // ── Approve session proposal ──────────────────────────────────────────────

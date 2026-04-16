@@ -41,9 +41,11 @@ export function WalletConnectModal({ onClose }) {
   useEffect(() => {
     if (step !== 'connecting') return
     
+    console.log('Polling for pendingProposal... (step:', step, 'pendingProposal:', pendingProposal ? 'YES' : 'NO', ')')
+    
     const interval = setInterval(() => {
       if (pendingProposal) {
-        console.log('Polling detected pendingProposal!')
+        console.log('✅ Polling detected pendingProposal!')
         const { proposer } = pendingProposal.params
         const dappMetadata = proposer.metadata || {}
         
@@ -62,9 +64,9 @@ export function WalletConnectModal({ onClose }) {
     const timeout = setTimeout(() => {
       clearInterval(interval)
       if (step === 'connecting') {
-        console.warn('Connection timeout after 60 seconds')
+        console.warn('❌ Connection timeout after 60 seconds')
         setStep('input')
-        setError('Connection timed out. Please try again.')
+        setError('Connection timed out. Please try again. Make sure your WalletConnect Project ID is configured correctly.')
       }
     }, 60000)
     
@@ -228,6 +230,14 @@ export function WalletConnectModal({ onClose }) {
               <div className="wc-spinner" />
               <p className="wc-loading-text">Connecting to dApp...</p>
               <p className="wc-loading-sub">Waiting for session proposal</p>
+              <p className="wc-loading-sub" style={{ fontSize: '11px', marginTop: '12px', color: 'var(--text2)' }}>
+                💡 If this takes too long, check:
+              </p>
+              <ul style={{ fontSize: '11px', color: 'var(--text2)', textAlign: 'left', margin: '8px 0 0 20px' }}>
+                <li>VITE_WALLETCONNECT_PROJECT_ID is set in .env</li>
+                <li>Your phone and computer have internet access</li>
+                <li>MetaMask completed the connection on your phone</li>
+              </ul>
             </div>
           )}
 
