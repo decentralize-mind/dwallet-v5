@@ -5,25 +5,29 @@ import {
   serviceHealth
 } from './errorHandling'
 
+// CoinMarketCap API configuration
+const CMC_API_KEY = import.meta.env.VITE_CMC_API_KEY || '4d9b36ecced349f0a9e412daa69504d9'
+const CMC_BASE_URL = 'https://pro-api.coinmarketcap.com/v1'
+
 const MARKET_COINS = [
-  { symbol: 'BTC', id: 'bitcoin', name: 'Bitcoin', icon: '₿' },
-  { symbol: 'ETH', id: 'ethereum', name: 'Ethereum', icon: '⟠' },
-  { symbol: 'SOL', id: 'solana', name: 'Solana', icon: '◎' },
-  { symbol: 'BNB', id: 'binancecoin', name: 'BNB', icon: '⬡' },
-  { symbol: 'XRP', id: 'ripple', name: 'XRP', icon: '✕' },
-  { symbol: 'ADA', id: 'cardano', name: 'Cardano', icon: '₳' },
-  { symbol: 'AVAX', id: 'avalanche-2', name: 'Avalanche', icon: '▲' },
-  { symbol: 'DOT', id: 'polkadot', name: 'Polkadot', icon: '●' },
-  { symbol: 'MATIC', id: 'matic-network', name: 'Polygon', icon: '◈' },
-  { symbol: 'LINK', id: 'chainlink', name: 'Chainlink', icon: '⬡' },
-  { symbol: 'DOGE', id: 'dogecoin', name: 'Dogecoin', icon: 'Ð' },
-  { symbol: 'ATOM', id: 'cosmos', name: 'Cosmos', icon: '⚛' },
-  { symbol: 'NEAR', id: 'near', name: 'NEAR', icon: 'Ⓝ' },
-  { symbol: 'ARB', id: 'arbitrum', name: 'Arbitrum', icon: '◌' },
-  { symbol: 'OP', id: 'optimism', name: 'Optimism', icon: '○' },
-  { symbol: 'AAVE', id: 'aave', name: 'Aave', icon: '👻' },
-  { symbol: 'UNI', id: 'uniswap', name: 'Uniswap', icon: '🦄' },
-  { symbol: 'USDC', id: 'usd-coin', name: 'USD Coin', icon: '$' },
+  { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
+  { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
+  { symbol: 'SOL', name: 'Solana', icon: '◎' },
+  { symbol: 'BNB', name: 'BNB', icon: '⬡' },
+  { symbol: 'XRP', name: 'XRP', icon: '✕' },
+  { symbol: 'ADA', name: 'Cardano', icon: '₳' },
+  { symbol: 'AVAX', name: 'Avalanche', icon: '▲' },
+  { symbol: 'DOT', name: 'Polkadot', icon: '●' },
+  { symbol: 'MATIC', name: 'Polygon', icon: '◈' },
+  { symbol: 'LINK', name: 'Chainlink', icon: '⬡' },
+  { symbol: 'DOGE', name: 'Dogecoin', icon: 'Ð' },
+  { symbol: 'ATOM', name: 'Cosmos', icon: '⚛' },
+  { symbol: 'NEAR', name: 'NEAR', icon: 'Ⓝ' },
+  { symbol: 'ARB', name: 'Arbitrum', icon: '◌' },
+  { symbol: 'OP', name: 'Optimism', icon: '○' },
+  { symbol: 'AAVE', name: 'Aave', icon: '👻' },
+  { symbol: 'UNI', name: 'Uniswap', icon: '🦄' },
+  { symbol: 'USDC', name: 'USD Coin', icon: '$' },
 ]
 const FALLBACK = {
   BTC: { price: 67000, change: 2.1 },
@@ -56,34 +60,61 @@ export async function fetchMarketData() {
     return marketCache
   }
   
-  const ids = MARKET_COINS.map(c => c.id).join(',')
+  const symbols = MARKET_COINS.map(c => c.symbol).join(',')
   
   // Try to fetch with graceful degradation
   const result = await withGracefulDegradation(
-    // Primary: Fetch from CoinGecko
+    // Primary: Fetch from CoinMarketCap
     async () => {
       const startTime = Date.now()
       
       const res = await fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' +
-          ids +
-          '&order=market_cap_desc&per_page=20&sparkline=false&price_change_percentage=24h',
-        { signal: AbortSignal.timeout(8000) },
+        `${CMC_BASE_URL}/cryptocurrency/quotes/latest?symbol=${symbols}&convert=USD`,
+        {
+          headers: {
+            'X-CMC_PRO_API_KEY': CMC_API_KEY,
+          },
+          signal: AbortSignal.timeout(8000),
+        },
       )
       
       if (!res.ok) {
-        throw new Error(`API returned status: ${res.status}`)
+        throw new Error(`CoinMarketCap API returned status: ${res.status}`)
       }
       
       const rawData = await res.json()
-      const validatedData = validateMarketData(rawData)
+      
+      // Check API response structure
+      if (rawData.status?.error_code !== 0) {
+        throw new Error(`CoinMarketCap API error: ${rawData.status?.error_message || 'Unknown error'}`)
+      }
+      
+      // Transform CoinMarketCap response to our format
+      const validatedData = []
+      if (rawData.data) {
+        Object.entries(rawData.data).forEach(([symbol, data]) => {
+          const coinInfo = MARKET_COINS.find(c => c.symbol === symbol)
+          if (coinInfo && data.quote?.USD) {
+            validatedData.push({
+              symbol: symbol,
+              name: coinInfo.name,
+              icon: coinInfo.icon,
+              price: sanitizeNumber(data.quote.USD.price, { min: 0, max: 1e15, decimals: 8 }),
+              change24h: sanitizeNumber(data.quote.USD.percent_change_24h, { min: -100, max: 10000, decimals: 2 }),
+              marketCap: sanitizeNumber(data.quote.USD.market_cap, { min: 0, max: 1e15, decimals: 0 }),
+              volume24h: sanitizeNumber(data.quote.USD.volume_24h, { min: 0, max: 1e15, decimals: 0 }),
+              rank: data.cmc_rank || 99,
+            })
+          }
+        })
+      }
       
       if (!Array.isArray(validatedData) || validatedData.length === 0) {
         throw new Error('Invalid market data structure')
       }
       
       const responseTime = Date.now() - startTime
-      serviceHealth.recordSuccess('coingecko_market', responseTime)
+      serviceHealth.recordSuccess('cmc_market', responseTime)
       console.log(`✅ Market data validated: ${validatedData.length} coins (${responseTime}ms)`)
       
       return validatedData
@@ -91,7 +122,7 @@ export async function fetchMarketData() {
     
     // Fallback: Use cached or static data
     async () => {
-      serviceHealth.recordFailure('coingecko_market')
+      serviceHealth.recordFailure('cmc_market')
       console.warn('⚠️ Using fallback market data')
       
       if (marketCache) {
@@ -119,24 +150,9 @@ export async function fetchMarketData() {
   
   // Process result
   if (result.success && result.data) {
-    const processedData = MARKET_COINS.map(coin => {
-      const live = result.data.find(d => d.id === coin.id || d.symbol === coin.symbol.toUpperCase())
-      const fb = FALLBACK[coin.symbol] || { price: 0, change: 0 }
-      
-      return {
-        ...coin,
-        price: live?.price ?? fb.price,
-        change24h: live?.change24h ?? fb.change,
-        marketCap: live?.marketCap ?? 0,
-        volume24h: live?.volume24h ?? 0,
-        rank: live?.rank ?? 99,
-        icon: live?.icon || coin.icon,
-      }
-    })
-    
-    marketCache = processedData
+    marketCache = result.data
     lastFetch = now
-    return processedData
+    return result.data
   }
   
   // Use existing cache if available

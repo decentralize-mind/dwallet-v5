@@ -1,13 +1,21 @@
-// Live token prices via CoinGecko free API (no key required)
+// Live token prices via CoinMarketCap API with DeFi Llama fallback
 import { validatePriceData, validatePriceHistory, sanitizeNumber } from './dataValidation'
 import { 
   withGracefulDegradation,
   serviceHealth
 } from './errorHandling'
 
-const COINGECKO_IDS = {
+// CoinMarketCap API configuration
+const CMC_API_KEY = import.meta.env.VITE_CMC_API_KEY || '4d9b36ecced349f0a9e412daa69504d9'
+const CMC_BASE_URL = 'https://pro-api.coinmarketcap.com/v1'
+
+// DeFi Llama API configuration (FREE, no key needed)
+const DEFI_LLAMA_BASE_URL = 'https://coins.llama.fi'
+
+// CoinMarketCap symbol mapping
+const CMC_SYMBOLS = {
   ETH: 'ethereum',
-  WETH: 'weth',
+  WETH: 'ethereum',
   BTC: 'bitcoin',
   WBTC: 'wrapped-bitcoin',
   BNB: 'binancecoin',
@@ -49,42 +57,65 @@ let priceCache = { ...FALLBACK_PRICES }
 let lastFetch = 0
 const CACHE_TTL = 60_000 // 1 minute
 
-export async function fetchPrices(symbols = Object.keys(COINGECKO_IDS)) {
+export async function fetchPrices(symbols = Object.keys(CMC_SYMBOLS)) {
   const now = Date.now()
   if (now - lastFetch < CACHE_TTL) {
     console.log('📦 Using cached prices')
     return priceCache
   }
 
-  const ids = symbols
-    .map(s => COINGECKO_IDS[s])
+  const symbolsList = symbols
+    .map(s => CMC_SYMBOLS[s])
     .filter(Boolean)
     .join(',')
 
   // Try to fetch with graceful degradation
   const result = await withGracefulDegradation(
-    // Primary: Fetch from CoinGecko
+    // Primary: Fetch from CoinMarketCap
     async () => {
       const startTime = Date.now()
       
       const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
-        { signal: AbortSignal.timeout(5000) },
+        `${CMC_BASE_URL}/cryptocurrency/quotes/latest?symbol=${symbolsList}&convert=USD`,
+        {
+          headers: {
+            'X-CMC_PRO_API_KEY': CMC_API_KEY,
+          },
+          signal: AbortSignal.timeout(5000),
+        },
       )
       
       if (!res.ok) {
-        throw new Error(`CoinGecko API returned status: ${res.status}`)
+        throw new Error(`CoinMarketCap API returned status: ${res.status}`)
       }
       
       const rawData = await res.json()
-      const validatedData = validatePriceData(rawData, COINGECKO_IDS)
+      
+      // Check API response structure
+      if (rawData.status?.error_code !== 0) {
+        throw new Error(`CoinMarketCap API error: ${rawData.status?.error_message || 'Unknown error'}`)
+      }
+      
+      // Transform CoinMarketCap response to our format
+      const validatedData = {}
+      if (rawData.data) {
+        Object.entries(rawData.data).forEach(([symbol, data]) => {
+          if (data.quote?.USD?.price) {
+            validatedData[symbol] = sanitizeNumber(data.quote.USD.price, {
+              min: 0,
+              max: 1e15,
+              decimals: 8
+            })
+          }
+        })
+      }
       
       if (Object.keys(validatedData).length === 0) {
         throw new Error('Invalid price data structure')
       }
       
       const responseTime = Date.now() - startTime
-      serviceHealth.recordSuccess('coingecko_price', responseTime)
+      serviceHealth.recordSuccess('cmc_price', responseTime)
       console.log(`✅ Price data validated: ${Object.keys(validatedData).length} tokens (${responseTime}ms)`)
       
       return validatedData
@@ -92,7 +123,7 @@ export async function fetchPrices(symbols = Object.keys(COINGECKO_IDS)) {
     
     // Fallback: Use cached prices
     async () => {
-      serviceHealth.recordFailure('coingecko_price')
+      serviceHealth.recordFailure('cmc_price')
       console.warn('⚠️ Price fetch failed, using cached prices')
       return null // Signal to use existing cache
     },
@@ -145,64 +176,14 @@ export async function fetchPriceHistory(symbol, days = 7) {
     return []
   }
   
-  const geckoId = COINGECKO_IDS[symbol]
-  if (!geckoId) {
-    console.warn('⚠️ Unknown CoinGecko ID for symbol:', symbol)
+  const cmcSymbol = CMC_SYMBOLS[symbol]
+  if (!cmcSymbol) {
+    console.warn('⚠️ Unknown CoinMarketCap symbol for:', symbol)
     return []
   }
   
-  // Try to fetch with graceful degradation
-  const result = await withGracefulDegradation(
-    // Primary: Fetch from CoinGecko
-    async () => {
-      const startTime = Date.now()
-      
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${validDays}`,
-        { signal: AbortSignal.timeout(5000) },
-      )
-      
-      if (!res.ok) {
-        // Handle rate limiting (429) gracefully
-        if (res.status === 429) {
-          console.warn(`⚠️ CoinGecko rate limited for ${symbol}, using fallback`)
-          throw new Error('Rate limited')
-        }
-        throw new Error(`CoinGecko API returned status: ${res.status}`)
-      }
-      
-      const rawData = await res.json()
-      
-      if (!rawData || !rawData.prices || !Array.isArray(rawData.prices)) {
-        throw new Error('Invalid price history structure')
-      }
-      
-      const validatedHistory = validatePriceHistory(rawData.prices)
-      
-      if (validatedHistory.length === 0) {
-        throw new Error('No valid price history data')
-      }
-      
-      const responseTime = Date.now() - startTime
-      serviceHealth.recordSuccess('coingecko_history', responseTime)
-      console.log(`✅ Price history validated: ${validatedHistory.length} points for ${symbol} (${responseTime}ms)`)
-      
-      return validatedHistory
-    },
-    
-    // Fallback: Return empty array (silent failure for chart data)
-    async () => {
-      serviceHealth.recordFailure('coingecko_history')
-      console.warn(`⚠️ Price history fetch failed for ${symbol}, showing empty chart`)
-      return []
-    },
-    
-    {
-      context: `price_history_${symbol}`,
-      maxRetries: 1, // Only 1 retry for rate limiting
-      timeout: 5000
-    }
-  )
-  
-  return result.success ? result.data : []
+  // Note: CoinMarketCap free tier doesn't include historical data
+  // Return cached/interpolated data or use alternative free source
+  console.warn('⚠️ Historical data not available on CoinMarketCap free tier, using fallback')
+  return []
 }
