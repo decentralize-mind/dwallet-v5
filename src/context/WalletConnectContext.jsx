@@ -36,6 +36,7 @@ export function WalletConnectProvider({ children }) {
   const [pendingRequest, setPendingRequest] = useState(null) // session_request awaiting approval
   const [pairingUri, setPairingUri] = useState('')
   const [connecting, setConnecting] = useState(false)
+  const [sessionMetadata, setSessionMetadata] = useState({}) // topic → metadata for network switching
 
   // ── Event listeners ───────────────────────────────────────────────────────
   const attachListeners = useCallback(wc => {
@@ -77,6 +78,16 @@ export function WalletConnectProvider({ children }) {
         setSessions(wc.getActiveSessions())
         setWcReady(true)
         attachListeners(wc)
+        
+        // Load persisted session metadata
+        const persistedMetadata = localStorage.getItem('wc_session_metadata')
+        if (persistedMetadata) {
+          try {
+            setSessionMetadata(JSON.parse(persistedMetadata))
+          } catch (err) {
+            console.error('Failed to load session metadata:', err)
+          }
+        }
       })
       .catch(err => {
         console.error('WalletConnect init failed:', err)
@@ -108,6 +119,18 @@ export function WalletConnectProvider({ children }) {
 
     const session = await approveSession(pendingProposal, accounts)
     setSessions(prev => ({ ...prev, [session.topic]: session }))
+    
+    // Persist session metadata
+    const metadata = {
+      chainId,
+      network: activeChain,
+      address: currentAddress,
+      approvedAt: Date.now(),
+    }
+    const newMetadata = { ...sessionMetadata, [session.topic]: metadata }
+    setSessionMetadata(newMetadata)
+    localStorage.setItem('wc_session_metadata', JSON.stringify(newMetadata))
+    
     setPendingProposal(null)
     return session
   }
@@ -206,6 +229,48 @@ export function WalletConnectProvider({ children }) {
       delete next[topic]
       return next
     })
+    
+    // Remove persisted metadata
+    const newMetadata = { ...sessionMetadata }
+    delete newMetadata[topic]
+    setSessionMetadata(newMetadata)
+    localStorage.setItem('wc_session_metadata', JSON.stringify(newMetadata))
+  }
+  
+  // ── Switch network for a session ──────────────────────────────────────────
+  const handleSwitchNetwork = async (topic, newChain) => {
+    const chainId = CHAIN_IDS[newChain]
+    if (!chainId) throw new Error(`Unsupported chain: ${newChain}`)
+    
+    // Update session metadata
+    const metadata = sessionMetadata[topic] || {}
+    const newMetadata = {
+      ...sessionMetadata,
+      [topic]: {
+        ...metadata,
+        chainId,
+        network: newChain,
+        switchedAt: Date.now(),
+      },
+    }
+    setSessionMetadata(newMetadata)
+    localStorage.setItem('wc_session_metadata', JSON.stringify(newMetadata))
+    
+    // Emit chain changed event to dApp
+    try {
+      const web3wallet = (await import('../utils/walletconnect')).getWeb3Wallet()
+      if (web3wallet) {
+        await web3wallet.emitSessionEvent({
+          topic,
+          event: {
+            name: 'chainChanged',
+            data: chainId,
+          },
+        })
+      }
+    } catch (err) {
+      console.error('Failed to emit chain changed event:', err)
+    }
   }
 
   return (
@@ -214,6 +279,7 @@ export function WalletConnectProvider({ children }) {
         wcReady,
         wcError,
         sessions,
+        sessionMetadata,
         pendingProposal,
         pendingRequest,
         pairingUri,
@@ -225,6 +291,7 @@ export function WalletConnectProvider({ children }) {
         approveRequest: handleApproveRequest,
         rejectRequest: handleRejectRequest,
         disconnect: handleDisconnect,
+        switchNetwork: handleSwitchNetwork,
         hasProjectId: !!projectId,
       }}
     >

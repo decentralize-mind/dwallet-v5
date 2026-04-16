@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { useWalletConnect } from '../context/WalletConnectContext'
+import { decodeTransaction, getRiskColor, getRiskIcon, getTransactionSummary } from '../utils/transactionPreview'
+import { QRCodeScanner, QRCodeDisplay } from './QRCodeScanner'
 
 export function WalletConnectModal({ onClose }) {
   const { currentAddress, activeChain } = useWallet()
@@ -10,6 +12,8 @@ export function WalletConnectModal({ onClose }) {
   const [dappInfo, setDappInfo] = useState(null)
   const [session, setSession] = useState(null)
   const [error, setError] = useState('')
+  const [showQRScanner, setShowQRScanner] = useState(false)
+  const [showQRDisplay, setShowQRDisplay] = useState(false)
 
   const handleConnect = async () => {
     if (!uri.trim()) return setError('Paste a WalletConnect URI first')
@@ -53,6 +57,15 @@ export function WalletConnectModal({ onClose }) {
     setDappInfo(null)
   }
 
+  const handleQRScan = async (scannedUri) => {
+    setShowQRScanner(false)
+    setUri(scannedUri)
+    // Auto-connect if URI is valid
+    if (scannedUri.startsWith('wc:')) {
+      await handleConnect()
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -82,10 +95,29 @@ export function WalletConnectModal({ onClose }) {
                 <div className="wc-step-row">
                   <span className="wc-step-num">3</span>
                   <span>
-                    Copy the <code>wc:</code> URI and paste below
+                    Copy the <code>wc:</code> URI and paste below, or scan QR code
                   </span>
                 </div>
               </div>
+              
+              {/* QR Code Buttons */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button
+                  className="btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setShowQRScanner(true)}
+                >
+                  📷 Scan QR
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setShowQRDisplay(true)}
+                >
+                  📱 Show QR
+                </button>
+              </div>
+              
               <textarea
                 className="field textarea"
                 rows={3}
@@ -210,6 +242,22 @@ export function WalletConnectModal({ onClose }) {
           )}
         </div>
       </div>
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {/* QR Display Modal */}
+      {showQRDisplay && (
+        <QRCodeDisplay
+          uri={uri || 'wc:example@2?relay-protocol=irn&symKey=example'}
+          onClose={() => setShowQRDisplay(false)}
+        />
+      )}
     </div>
   )
 }
@@ -341,23 +389,21 @@ export function SessionRequestModal() {
           data: request.params[1],
         }
       case 'eth_sendTransaction':
+      case 'eth_signTransaction':
         const tx = request.params[0]
+        const decoded = decodeTransaction(tx)
+        const summary = getTransactionSummary(decoded)
+        
         return {
-          type: 'Send Transaction',
-          icon: '📤',
-          description: 'Send a transaction',
+          type: request.method === 'eth_sendTransaction' ? 'Send Transaction' : 'Sign Transaction',
+          icon: request.method === 'eth_sendTransaction' ? '📤' : '📝',
+          description: summary,
+          decoded,
           data: {
             to: tx.to,
             value: tx.value ? `${Number(tx.value) / 1e18} ETH` : '0 ETH',
             data: tx.data,
           },
-        }
-      case 'eth_signTransaction':
-        return {
-          type: 'Sign Transaction',
-          icon: '📝',
-          description: 'Sign a transaction (not broadcast)',
-          data: request.params[0],
         }
       case 'eth_signTypedData_v4':
       case 'eth_signTypedData':
@@ -409,14 +455,88 @@ export function SessionRequestModal() {
             <p className="wc-request-desc">{requestInfo.description}</p>
           </div>
 
-          <div className="wc-request-data">
-            <p className="wc-request-data-title">Request Details:</p>
-            <pre className="wc-request-data-content">
-              {typeof requestInfo.data === 'string'
-                ? requestInfo.data
-                : JSON.stringify(requestInfo.data, null, 2)}
-            </pre>
-          </div>
+          {/* Transaction Preview with Risk Analysis */}
+          {requestInfo.decoded && (
+            <div className="wc-tx-preview" style={{ marginTop: '16px' }}>
+              <div 
+                className="wc-risk-badge"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  background: `${getRiskColor(requestInfo.decoded.riskLevel)}15`,
+                  border: `2px solid ${getRiskColor(requestInfo.decoded.riskLevel)}`,
+                  borderRadius: '8px',
+                  marginBottom: '12px',
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>{getRiskIcon(requestInfo.decoded.riskLevel)}</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 'bold', color: getRiskColor(requestInfo.decoded.riskLevel) }}>
+                    {requestInfo.decoded.riskLevel.toUpperCase()} RISK
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
+                    Risk Score: {requestInfo.decoded.riskScore}/100
+                  </p>
+                </div>
+              </div>
+
+              {requestInfo.decoded.warnings.length > 0 && (
+                <div className="wc-warnings" style={{ marginBottom: '12px' }}>
+                  <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>⚠️ Warnings:</p>
+                  {requestInfo.decoded.warnings.map((warning, idx) => (
+                    <p key={idx} style={{ margin: '4px 0', fontSize: '13px', color: '#f59e0b' }}>
+                      {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="wc-tx-details" style={{
+                background: '#f9fafb',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '13px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#666' }}>To:</span>
+                  <span className="mono" style={{ fontSize: '11px' }}>
+                    {requestInfo.decoded.to.slice(0, 10)}...{requestInfo.decoded.to.slice(-4)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#666' }}>Value:</span>
+                  <span style={{ fontWeight: 'bold' }}>{requestInfo.decoded.value}</span>
+                </div>
+                {requestInfo.decoded.functionCall && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#666' }}>Function:</span>
+                    <span>{requestInfo.decoded.functionCall.name}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#666' }}>Gas Limit:</span>
+                  <span className="mono">{requestInfo.decoded.gasLimit}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#666' }}>Max Fee:</span>
+                  <span className="mono">{requestInfo.decoded.maxFeePerGas}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!requestInfo.decoded && (
+            <div className="wc-request-data">
+              <p className="wc-request-data-title">Request Details:</p>
+              <pre className="wc-request-data-content">
+                {typeof requestInfo.data === 'string'
+                  ? requestInfo.data
+                  : JSON.stringify(requestInfo.data, null, 2)}
+              </pre>
+            </div>
+          )}
 
           {chainId && (
             <div className="wc-request-chain">
@@ -440,8 +560,10 @@ export function SessionRequestModal() {
 }
 
 export function ActiveSessionsList() {
-  const { sessions, disconnect } = useWalletConnect()
+  const { sessions, sessionMetadata, disconnect, switchNetwork } = useWalletConnect()
   const sessionEntries = Object.entries(sessions)
+  const [switchingTopic, setSwitchingTopic] = useState(null)
+  const [showNetworkSelector, setShowNetworkSelector] = useState(null) // topic
 
   if (sessionEntries.length === 0) {
     return (
@@ -461,6 +583,29 @@ export function ActiveSessionsList() {
     }
   }
 
+  const handleNetworkSwitch = async (topic, newChain) => {
+    setSwitchingTopic(topic)
+    try {
+      await switchNetwork(topic, newChain)
+      setShowNetworkSelector(null)
+    } catch (error) {
+      console.error('Failed to switch network:', error)
+      alert(error.message)
+    } finally {
+      setSwitchingTopic(null)
+    }
+  }
+
+  const networks = [
+    { key: 'ethereum', name: 'Ethereum', chainId: 1 },
+    { key: 'sepolia', name: 'Sepolia', chainId: 11155111 },
+    { key: 'base', name: 'Base', chainId: 8453 },
+    { key: 'baseSepolia', name: 'Base Sepolia', chainId: 84532 },
+    { key: 'polygon', name: 'Polygon', chainId: 137 },
+    { key: 'arbitrum', name: 'Arbitrum', chainId: 42161 },
+    { key: 'optimism', name: 'Optimism', chainId: 10 },
+  ]
+
   return (
     <div className="wc-sessions-list">
       {sessionEntries.map(([topic, session]) => {
@@ -468,6 +613,9 @@ export function ActiveSessionsList() {
         const dappName = dappMetadata.name || 'Unknown dApp'
         const dappUrl = dappMetadata.url || '#'
         const dappIcon = dappMetadata.icons?.[0]
+        const metadata = sessionMetadata[topic] || {}
+        const currentNetwork = metadata.network || 'Unknown'
+        const currentChainId = metadata.chainId || 'Unknown'
 
         return (
           <div key={topic} className="wc-session-item">
@@ -496,6 +644,70 @@ export function ActiveSessionsList() {
                 >
                   {dappUrl}
                 </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <span className="mono" style={{ fontSize: '10px', color: '#999' }}>
+                    Chain: {currentChainId}
+                  </span>
+                  <button
+                    className="btn-small"
+                    onClick={() => setShowNetworkSelector(showNetworkSelector === topic ? null : topic)}
+                    disabled={switchingTopic === topic}
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      background: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {switchingTopic === topic ? 'Switching...' : 'Switch Network'}
+                  </button>
+                </div>
+                
+                {/* Network Selector Dropdown */}
+                {showNetworkSelector === topic && (
+                  <div 
+                    className="wc-network-selector"
+                    style={{
+                      position: 'absolute',
+                      background: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                      zIndex: 1000,
+                      marginTop: '4px',
+                      minWidth: '200px',
+                    }}
+                  >
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
+                      Select Network:
+                    </p>
+                    {networks.map(network => (
+                      <button
+                        key={network.key}
+                        onClick={() => handleNetworkSwitch(topic, network.key)}
+                        disabled={network.chainId === currentChainId}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          padding: '6px 8px',
+                          marginBottom: '4px',
+                          fontSize: '12px',
+                          textAlign: 'left',
+                          background: network.chainId === currentChainId ? '#f3f4f6' : 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          cursor: network.chainId === currentChainId ? 'not-allowed' : 'pointer',
+                          opacity: network.chainId === currentChainId ? 0.5 : 1,
+                        }}
+                      >
+                        {network.name} {network.chainId === currentChainId && '✓'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <button
