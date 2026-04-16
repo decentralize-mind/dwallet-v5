@@ -26,6 +26,7 @@ const CHAIN_MAPPING = {
 
 /**
  * Get quote from 1inch API
+ * Note: 1inch requires API key. Falls back gracefully if not configured.
  */
 export async function get1inchQuote({
   tokenIn,
@@ -36,8 +37,15 @@ export async function get1inchQuote({
 }) {
   try {
     const apiKey = import.meta.env.VITE_1INCH_API_KEY
+    
+    // 1inch API requires authentication - skip if no key
     if (!apiKey) {
-      throw new Error('1inch API key not configured')
+      return {
+        dex: '1inch',
+        success: false,
+        error: 'API key not configured',
+        requiresKey: true,
+      }
     }
 
     const chainConfig = CHAIN_MAPPING[chainId]
@@ -135,8 +143,8 @@ export async function get0xQuote({
 }
 
 /**
- * Get quote from Uniswap V3 (direct pool calculation)
- * Uses on-chain data for accurate pricing
+ * Get quote from Uniswap V3 using public subgraph (NO API KEY REQUIRED)
+ * This is a free alternative that works without registration
  */
 export async function getUniswapQuote({
   tokenIn,
@@ -146,47 +154,125 @@ export async function getUniswapQuote({
   slippage = 0.5,
 }) {
   try {
-    // For MVP, we'll use Uniswap's public quote API
-    // In production, use @uniswap/v3-sdk for direct pool queries
-    
-    const chainConfig = CHAIN_MAPPING[chainId]
-    if (!chainConfig) {
-      throw new Error(`Chain ${chainId} not supported`)
+    // Uniswap V3 subgraph URLs (public, no API key needed)
+    const SUBGRAPH_URLS = {
+      [CHAIN_ID.ETHEREUM]: 'https://api.thegraph.com/subgraphs/name/uniswap/v3-mainnet',
+      [CHAIN_ID.BASE]: 'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-base',
+      [CHAIN_ID.BASE_SEPOLIA]: null, // No subgraph on testnet
+      [CHAIN_ID.ARBITRUM]: 'https://api.thegraph.com/subgraphs/name/ianlapham/arbitrum-dev',
+      [CHAIN_ID.POLYGON]: 'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-polygon',
     }
 
-    // Use 1inch as proxy for Uniswap routing (they aggregate Uniswap)
-    // This is a simplified approach - production should use Uniswap SDK directly
-    const quote = await get1inchQuote({
-      tokenIn,
-      tokenOut,
-      amount,
-      chainId,
-      slippage,
-    })
-
-    // Filter for Uniswap protocol only
-    if (quote.success && quote.protocols) {
-      const hasUniswap = quote.protocols.some(p => 
-        p.some(protocol => protocol.name === 'UNISWAP_V3')
-      )
-      
-      if (!hasUniswap) {
-        return {
-          dex: 'Uniswap V3',
-          success: false,
-          error: 'No Uniswap V3 liquidity available',
-        }
+    const subgraphUrl = SUBGRAPH_URLS[chainId]
+    if (!subgraphUrl) {
+      return {
+        dex: 'Uniswap V3',
+        success: false,
+        error: 'No Uniswap subgraph available for this chain',
       }
     }
 
+    // Query pool data from subgraph
+    const query = `
+      query GetPool($token0: String!, $token1: String!) {
+        pools(
+          where: {
+            token0_: { id_in: [$token0, $token1] },
+            token1_: { id_in: [$token0, $token1] }
+          }
+          first: 3
+          orderBy: totalValueLockedUSD
+          orderDirection: desc
+        ) {
+          id
+          token0 { id symbol }
+          token1 { id symbol }
+          token0Price
+          token1Price
+          liquidity
+          totalValueLockedUSD
+          feeTier
+        }
+      }
+    `
+
+    const response = await axios.post(
+      subgraphUrl,
+      {
+        query,
+        variables: {
+          token0: tokenIn.toLowerCase(),
+          token1: tokenOut.toLowerCase(),
+        },
+      },
+      { timeout: 5000 }
+    )
+
+    const pools = response.data.data?.pools || []
+
+    if (pools.length === 0) {
+      return {
+        dex: 'Uniswap V3',
+        success: false,
+        error: 'No liquidity pool found for this pair',
+      }
+    }
+
+    // Use the pool with highest TVL
+    const bestPool = pools[0]
+    const price = tokenIn.toLowerCase() === bestPool.token0.id.toLowerCase()
+      ? bestPool.token0Price
+      : bestPool.token1Price
+
+    // Calculate amount out (simplified)
+    const amountIn = Number(amount)
+    const priceNum = parseFloat(price)
+    const amountOut = Math.floor(amountIn * priceNum * (1 - parseFloat(bestPool.feeTier) / 1000000))
+
     return {
-      ...quote,
       dex: 'Uniswap V3',
+      amountOut: amountOut.toString(),
+      priceImpact: 0.5, // Simplified - would need more complex calculation
+      gasEstimate: 185000, // Average Uniswap V3 swap gas
+      pool: bestPool,
+      feeTier: bestPool.feeTier,
+      tvl: bestPool.totalValueLockedUSD,
+      success: true,
     }
   } catch (error) {
     console.warn('Uniswap quote failed:', error.message)
     return {
       dex: 'Uniswap V3',
+      success: false,
+      error: error.message,
+    }
+  }
+}
+
+/**
+ * Get quote from SushiSwap (public API, no key required)
+ */
+export async function getSushiSwapQuote({
+  tokenIn,
+  tokenOut,
+  amount,
+  chainId = CHAIN_ID.BASE,
+  slippage = 0.5,
+}) {
+  try {
+    // SushiSwap uses similar AMM model
+    // For now, we'll use their public router contract
+    // This is a simplified version - production should use their SDK
+    
+    return {
+      dex: 'SushiSwap',
+      success: false,
+      error: 'Not implemented yet - use Uniswap instead',
+    }
+  } catch (error) {
+    console.warn('SushiSwap quote failed:', error.message)
+    return {
+      dex: 'SushiSwap',
       success: false,
       error: error.message,
     }
