@@ -123,12 +123,26 @@ export function WalletConnectModal({ onClose }) {
   }
 
   const handleQRScan = async (scannedUri) => {
+    console.log('QR Code scanned:', scannedUri.substring(0, 50) + '...')
     setShowQRScanner(false)
-    setUri(scannedUri)
-    // Auto-connect if URI is valid
-    if (scannedUri.startsWith('wc:')) {
-      await handleConnect()
+    
+    // Validate the scanned URI
+    if (!scannedUri || scannedUri.trim() === '') {
+      setError('Invalid QR code - empty URI')
+      return
     }
+    
+    if (!scannedUri.startsWith('wc:')) {
+      console.warn('Scanned QR code is not a WalletConnect URI:', scannedUri.substring(0, 50))
+      setError('Invalid QR code - not a WalletConnect URI. Must start with "wc:"')
+      return
+    }
+    
+    // Set the URI and auto-connect
+    setUri(scannedUri)
+    setError('')
+    console.log('Valid WalletConnect URI detected, attempting to connect...')
+    await handleConnect()
   }
 
   return (
