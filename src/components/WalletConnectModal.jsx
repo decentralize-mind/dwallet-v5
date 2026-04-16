@@ -17,9 +17,15 @@ export function WalletConnectModal({ onClose }) {
 
   // Auto-detect when proposal arrives and update UI
   useEffect(() => {
+    console.log('WalletConnectModal - pendingProposal changed:', pendingProposal)
+    console.log('WalletConnectModal - current step:', step)
+    
     if (pendingProposal && step === 'connecting') {
+      console.log('Proposal detected! Updating UI to proposal state')
       const { proposer } = pendingProposal.params
       const dappMetadata = proposer.metadata || {}
+      
+      console.log('dApp metadata:', dappMetadata)
       
       setDappInfo({
         name: dappMetadata.name || 'Connected dApp',
@@ -31,17 +37,59 @@ export function WalletConnectModal({ onClose }) {
     }
   }, [pendingProposal, step, uri])
 
+  // Polling fallback: check for pending proposal every 500ms when connecting
+  useEffect(() => {
+    if (step !== 'connecting') return
+    
+    const interval = setInterval(() => {
+      if (pendingProposal) {
+        console.log('Polling detected pendingProposal!')
+        const { proposer } = pendingProposal.params
+        const dappMetadata = proposer.metadata || {}
+        
+        setDappInfo({
+          name: dappMetadata.name || 'Connected dApp',
+          description: dappMetadata.description || 'Requesting wallet connection',
+          url: dappMetadata.url || uri.split('?')[0].replace('wc:', ''),
+          icons: dappMetadata.icons || [],
+        })
+        setStep('proposal')
+        clearInterval(interval)
+      }
+    }, 500)
+    
+    // Timeout after 60 seconds
+    const timeout = setTimeout(() => {
+      clearInterval(interval)
+      if (step === 'connecting') {
+        console.warn('Connection timeout after 60 seconds')
+        setStep('input')
+        setError('Connection timed out. Please try again.')
+      }
+    }, 60000)
+    
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [step, pendingProposal, uri])
+
   const handleConnect = async () => {
     if (!uri.trim()) return setError('Paste a WalletConnect URI first')
     if (!uri.startsWith('wc:'))
       return setError('Invalid URI — must start with wc:')
+    
+    console.log('handleConnect called with URI:', uri.substring(0, 50) + '...')
     setStep('connecting')
     setError('')
     try {
+      console.log('Calling connectWithUri...')
       await connectWithUri(uri)
+      console.log('connectWithUri completed successfully')
       // The proposal will arrive via the context's pendingProposal
       // The useEffect will automatically detect it and update the UI
     } catch (e) {
+      console.error('Connection failed:', e)
       setError(e.message)
       setStep('input')
     }
