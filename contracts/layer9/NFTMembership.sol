@@ -49,6 +49,8 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     error TierNotEnabled();
     error NotTokenOwner();
     error InvalidWithdrawalAddress();
+    error MintCooldownActive();
+    error MaxMintsReached();
 
     // ── Events ────────────────────────────────────────────────────────────────
     event TierConfigured(uint8 tier, uint256 ethPrice, uint256 dwtPrice, uint256 maxSupply, bool soulbound);
@@ -58,6 +60,8 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     event AccessChecked(address indexed user, uint8 minTier, bool granted);
     event FreeMintWhitelistUpdated(address indexed user, bool status);
     event HighestTierUpdated(address indexed user, uint8 oldTier, uint8 newTier);
+    event MintCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
+    event MaxMintsPerUserUpdated(uint256 oldMax, uint256 newMax);
 
     // ── Constants ─────────────────────────────────────────────────────────────
     uint8 public constant TIER_COUNT = 4;
@@ -87,8 +91,13 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     mapping(uint256 => TokenData) public tokenData;
     mapping(address => uint8)     public highestTier; // user → highest tier owned (1-indexed, 0=none)
     mapping(address => bool)      public freeMintWhitelist;
+    mapping(address => uint256)   public lastMintTime; // Rate limiting: tracks last mint timestamp per user
 
     uint256 private _nextTokenId = 1;
+    
+    // Rate limiting configuration
+    uint256 public mintCooldown = 1 hours; // Minimum time between mints per user
+    uint256 public maxMintsPerUser = 10; // Maximum NFTs a user can hold
 
     // ── Constructor ───────────────────────────────────────────────────────────
     constructor(address _dwtToken, address _securityController)
@@ -158,6 +167,27 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
         tierConfigs[tier].baseURI = uri;
     }
 
+    /**
+     * @notice Set the mint cooldown period
+     * @param newCooldown New cooldown period in seconds
+     */
+    function setMintCooldown(uint256 newCooldown) external onlyOwner whenProtocolNotPaused {
+        uint256 oldCooldown = mintCooldown;
+        mintCooldown = newCooldown;
+        emit MintCooldownUpdated(oldCooldown, newCooldown);
+    }
+
+    /**
+     * @notice Set the maximum number of mints per user
+     * @param newMax New maximum number of NFTs per user
+     */
+    function setMaxMintsPerUser(uint256 newMax) external onlyOwner whenProtocolNotPaused {
+        require(newMax > 0, "Max mints must be > 0");
+        uint256 oldMax = maxMintsPerUser;
+        maxMintsPerUser = newMax;
+        emit MaxMintsPerUserUpdated(oldMax, newMax);
+    }
+
     function pause()   external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
 
@@ -214,6 +244,16 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     }
 
     function _mintPass(address to, uint8 tier, TierConfig storage tc) internal {
+        // Rate limiting: Check cooldown
+        if (lastMintTime[to] > 0 && block.timestamp < lastMintTime[to] + mintCooldown) {
+            revert MintCooldownActive();
+        }
+        
+        // Check max mints per user
+        if (balanceOf(to) >= maxMintsPerUser) {
+            revert MaxMintsReached();
+        }
+        
         uint256 tokenId = _nextTokenId++;
         uint256 expiry  = tc.durationSeconds > 0
             ? block.timestamp + tc.durationSeconds
@@ -224,6 +264,9 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
 
         // Track highest tier (tier is 0-indexed; add 1 so 0 = "no pass")
         _updateHighestTier(to, tier);
+        
+        // Update last mint time
+        lastMintTime[to] = block.timestamp;
 
         _safeMint(to, tokenId);
         emit PassMinted(to, tokenId, tier, expiry);

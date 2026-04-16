@@ -66,9 +66,13 @@ describe('NFTMembership - Comprehensive Tests', function () {
     it('Should allow minting Bronze tier with ETH', async function () {
       const bronzePrice = (await nft.tierConfigs(0)).ethPrice
       
-      await expect(nft.connect(user1).mintWithETH(0, { value: bronzePrice }))
+      const tx = await nft.connect(user1).mintWithETH(0, { value: bronzePrice })
+      const receipt = await tx.wait()
+      const block = await ethers.provider.getBlock(receipt.blockNumber)
+      
+      await expect(tx)
         .to.emit(nft, 'PassMinted')
-        .withArgs(user1.address, 1, 0, await ethers.provider.getBlock().then(b => b.timestamp + 365 * 24 * 3600))
+        .withArgs(user1.address, 1, 0, block.timestamp + 365 * 24 * 3600)
 
       expect(await nft.balanceOf(user1.address)).to.equal(1)
       expect(await nft.ownerOf(1)).to.equal(user1.address)
@@ -409,6 +413,11 @@ describe('NFTMembership - Comprehensive Tests', function () {
   describe('Active Tier Query', function () {
     it('Should return highest active tier', async function () {
       await nft.connect(user1).mintWithETH(0, { value: ethers.parseEther('0.05') }) // Bronze
+      
+      // Wait for cooldown to expire
+      await ethers.provider.send('evm_increaseTime', [3600]) // 1 hour
+      await ethers.provider.send('evm_mine')
+      
       await nft.connect(user1).mintWithETH(2, { value: ethers.parseEther('0.50') }) // Gold
       
       expect(await nft.activeTier(user1.address)).to.equal(2) // Gold

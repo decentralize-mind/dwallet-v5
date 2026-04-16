@@ -5,6 +5,7 @@ import SendModal from './SendModal'
 import ReceiveModal from './ReceiveModal'
 import SwapModal from './SwapModal'
 import NFTsView from './NFTsView'
+import NFTMembershipMint from './NFTMembershipMint'
 import DAppsView from './DAppsView'
 import SettingsView from './SettingsView'
 import TransactionHistory from './TransactionHistory'
@@ -21,6 +22,7 @@ import { formatAddress } from '../utils/crypto'
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Home', icon: '⊞' },
   { id: 'defi', label: 'DeFi', icon: '◈' },
+  { id: 'membership', label: 'Membership', icon: '🎫' },
   { id: 'history', label: 'Activity', icon: '↕' },
   { id: 'nfts', label: 'NFTs', icon: '◇' },
   { id: 'dapps', label: 'dApps', icon: '⬡' },
@@ -94,6 +96,8 @@ export default function MainWallet() {
     switch (activeTab) {
       case 'defi':
         return <DefiView />
+      case 'membership':
+        return <NFTMembershipMint />
       case 'history':
         return <TransactionHistory />
       case 'nfts':
