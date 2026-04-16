@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useWallet } from '../hooks/useWallet'
+import OnboardingScreen from './OnboardingScreen'
 
 const AVATAR_COLORS = [
   '#6366f1',
@@ -14,7 +15,7 @@ const AVATAR_COLORS = [
 const getColor = i => AVATAR_COLORS[i % AVATAR_COLORS.length]
 
 export default function AccountSelector({ onClose }) {
-  const { wallet, addAccount, switchAccount, renameAccount } = useWallet()
+  const { wallet, wallets, activeWalletIndex, addAccount, switchAccount, renameAccount, switchWallet } = useWallet()
   const accounts = wallet?.accounts || []
   const activeIndex = wallet?.activeAccount ?? 0
 
@@ -23,6 +24,8 @@ export default function AccountSelector({ onClose }) {
   const [editingI, setEditingI] = useState(null)
   const [editName, setEditName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState('accounts') // 'accounts' or 'wallets'
+  const [showAddWallet, setShowAddWallet] = useState(false)
 
   const handleSwitch = i => {
     if (i === activeIndex) return
@@ -34,6 +37,14 @@ export default function AccountSelector({ onClose }) {
     setAdding(true)
     await addAccount()
     setAdding(false)
+  }
+
+  const handleSwitchWallet = async (index) => {
+    if (index === activeWalletIndex) return
+    // For now, just notify user that they need to re-enter password
+    // In a full implementation, you'd prompt for password here
+    onClose()
+    // The actual wallet switching will happen through the settings or a password prompt
   }
 
   const handleCopy = (addr, e) => {
@@ -151,7 +162,55 @@ export default function AccountSelector({ onClose }) {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 0,
+            padding: '0 20px',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <button
+            onClick={() => setActiveTab('accounts')}
+            style={{
+              flex: 1,
+              padding: '12px 0',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'accounts' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'accounts' ? 'var(--accent)' : 'var(--text3)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Accounts ({accounts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('wallets')}
+            style={{
+              flex: 1,
+              padding: '12px 0',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'wallets' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'wallets' ? 'var(--accent)' : 'var(--text3)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Wallets ({wallets.length || 1})
+          </button>
+        </div>
+
         {/* Scrollable account list */}
+        {activeTab === 'accounts' && (
         <div
           style={{
             flex: 1,
@@ -431,6 +490,181 @@ export default function AccountSelector({ onClose }) {
             )
           })}
         </div>
+        )}
+
+        {/* Wallets tab */}
+        {activeTab === 'wallets' && (
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '0 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          {/* Current wallet info */}
+          <div
+            style={{
+              padding: '16px',
+              background: 'var(--accent)',
+              borderRadius: 14,
+              marginBottom: 8,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.8)',
+                margin: '0 0 4px',
+              }}
+            >
+              Current Wallet
+            </p>
+            <p
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: 'white',
+                margin: 0,
+              }}
+            >
+              {wallet?.accounts?.[0]?.name || 'Wallet 1'}
+            </p>
+            <p
+              style={{
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.9)',
+                margin: '4px 0 0',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {wallet?.accounts?.[0]?.address || ''}
+            </p>
+          </div>
+
+          {/* Wallets list */}
+          {(wallets.length > 0 ? wallets : [{ id: 'default', name: 'Wallet 1', address: wallet?.accounts?.[0]?.address, createdAt: Date.now() }]).map((w, i) => {
+            const isActive = i === activeWalletIndex
+            const color = getColor(i)
+            
+            return (
+              <div
+                key={w.id || i}
+                onClick={() => handleSwitchWallet(i)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '13px 14px',
+                  background: isActive ? color + '0f' : 'var(--bg3)',
+                  border:
+                    '1px solid ' + (isActive ? color + '55' : 'var(--border)'),
+                  borderRadius: 14,
+                  cursor: isActive ? 'default' : 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {/* Colored avatar */}
+                <div
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: color + '18',
+                    border: '2.5px solid ' + color + (isActive ? '99' : '40'),
+                    color,
+                    fontSize: 19,
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    userSelect: 'none',
+                  }}
+                >
+                  {(w.name || 'W')[0].toUpperCase()}
+                  {isActive && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        width: 15,
+                        height: 15,
+                        borderRadius: '50%',
+                        background: 'var(--green)',
+                        border: '2px solid var(--bg2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 8,
+                        color: 'white',
+                        fontWeight: 900,
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
+
+                {/* Name + address */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 3,
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        margin: 0,
+                        color: 'var(--text)',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {w.name || `Wallet ${i + 1}`}
+                    </p>
+                    {isActive && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          padding: '1px 6px',
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          background: color + '20',
+                          color,
+                        }}
+                      >
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--text3)',
+                      margin: 0,
+                      fontFamily: 'var(--font-mono)',
+                      letterSpacing: '0.2px',
+                      wordBreak: 'break-all',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {w.address || 'Locked'}
+                  </p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        )}
 
         {/* Footer */}
         <div
@@ -440,45 +674,102 @@ export default function AccountSelector({ onClose }) {
             marginTop: 8,
           }}
         >
-          <button
-            onClick={handleAdd}
-            disabled={adding}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              width: '100%',
-              padding: '13px',
-              background: adding ? 'rgba(99,102,241,0.06)' : 'var(--bg3)',
-              border:
-                '1.5px dashed ' + (adding ? 'var(--accent)' : 'var(--border)'),
-              borderRadius: 14,
-              cursor: adding ? 'default' : 'pointer',
-              fontSize: 13,
-              fontWeight: 600,
-              color: adding ? 'var(--accent)' : 'var(--text2)',
-              fontFamily: 'var(--font)',
-              transition: 'all 0.2s',
-            }}
-          >
-            {adding ? (
-              <>
-                <span
-                  style={{
-                    width: 14,
-                    height: 14,
-                    border: '2px solid rgba(99,102,241,0.25)',
-                    borderTopColor: 'var(--accent)',
-                    borderRadius: '50%',
-                    display: 'inline-block',
-                    animation: 'spin 0.8s linear infinite',
-                  }}
-                />
-                Creating account...
-              </>
-            ) : (
-              <>
+          {activeTab === 'accounts' ? (
+            <>
+              <button
+                onClick={handleAdd}
+                disabled={adding}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '13px',
+                  background: adding ? 'rgba(99,102,241,0.06)' : 'var(--bg3)',
+                  border:
+                    '1.5px dashed ' + (adding ? 'var(--accent)' : 'var(--border)'),
+                  borderRadius: 14,
+                  cursor: adding ? 'default' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: adding ? 'var(--accent)' : 'var(--text2)',
+                  fontFamily: 'var(--font)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {adding ? (
+                  <>
+                    <span
+                      style={{
+                        width: 14,
+                        height: 14,
+                        border: '2px solid rgba(99,102,241,0.25)',
+                        borderTopColor: 'var(--accent)',
+                        borderRadius: '50%',
+                        display: 'inline-block',
+                        animation: 'spin 0.8s linear infinite',
+                      }}
+                    />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: 'var(--accent)',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 15,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      +
+                    </span>
+                    Add Account
+                  </>
+                )}
+              </button>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text3)',
+                  textAlign: 'center',
+                  margin: '8px 0 0',
+                  lineHeight: 1.5,
+                }}
+              >
+                All accounts share the same seed phrase
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowAddWallet(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '13px',
+                  background: 'var(--bg3)',
+                  border: '1.5px dashed var(--border)',
+                  borderRadius: 14,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--text2)',
+                  fontFamily: 'var(--font)',
+                  transition: 'all 0.2s',
+                }}
+              >
                 <span
                   style={{
                     width: 22,
@@ -496,23 +787,131 @@ export default function AccountSelector({ onClose }) {
                 >
                   +
                 </span>
-                Add Account
-              </>
-            )}
-          </button>
-          <p
-            style={{
-              fontSize: 10,
-              color: 'var(--text3)',
-              textAlign: 'center',
-              margin: '8px 0 0',
-              lineHeight: 1.5,
-            }}
-          >
-            All accounts share the same seed phrase
-          </p>
+                Add Wallet
+              </button>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text3)',
+                  textAlign: 'center',
+                  margin: '8px 0 0',
+                  lineHeight: 1.5,
+                }}
+              >
+                Create or import a new wallet
+              </p>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Add Wallet Modal */}
+      {showAddWallet && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAddWallet(false)}
+          style={{ alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg2)',
+              borderRadius: '20px',
+              width: '90%',
+              maxWidth: 400,
+              padding: '24px',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+            }}
+          >
+            <h3
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                margin: '0 0 8px',
+                color: 'var(--text)',
+              }}
+            >
+              Add New Wallet
+            </h3>
+            <p
+              style={{
+                fontSize: 13,
+                color: 'var(--text2)',
+                margin: '0 0 20px',
+                lineHeight: 1.5,
+              }}
+            >
+              Choose how you want to add a wallet:
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              <button
+                onClick={() => {
+                  // Navigate to onboarding to create new wallet
+                  onClose()
+                  // In a real implementation, you'd trigger the onboarding flow
+                  alert('Create New Wallet flow will be triggered here')
+                }}
+                style={{
+                  padding: '16px',
+                  background: 'var(--accent)',
+                  border: 'none',
+                  borderRadius: 12,
+                  color: 'white',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                }}
+              >
+                Create New Wallet
+              </button>
+              <button
+                onClick={() => {
+                  // Navigate to onboarding to import wallet
+                  onClose()
+                  // In a real implementation, you'd trigger the import flow
+                  alert('Import Wallet flow will be triggered here')
+                }}
+                style={{
+                  padding: '16px',
+                  background: 'var(--bg3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  color: 'var(--text)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                }}
+              >
+                Import Existing Wallet
+              </button>
+              <button
+                onClick={() => setShowAddWallet(false)}
+                style={{
+                  padding: '12px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text3)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                  marginTop: 8,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

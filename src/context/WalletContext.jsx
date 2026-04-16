@@ -89,6 +89,7 @@ import {
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
 const STORAGE_KEY = 'dwallet_v5_encrypted'
+const WALLETS_INDEX_KEY = 'dwallet_v5_wallets_index'
 const SESSION_KEY = 'dwallet_v5_session'
 const AUTO_LOCK_MS = 30 * 60 * 1000
 
@@ -168,6 +169,47 @@ function clearSession() {
   logSessionSecurityEvent('session_cleared')
 }
 
+// Wallet index management functions
+function loadWalletsIndex() {
+  try {
+    const stored = localStorage.getItem(WALLETS_INDEX_KEY)
+    if (!stored) return []
+    return JSON.parse(stored)
+  } catch (error) {
+    console.error('❌ Failed to load wallets index:', error)
+    return []
+  }
+}
+
+function saveWalletsIndex(wallets) {
+  try {
+    localStorage.setItem(WALLETS_INDEX_KEY, JSON.stringify(wallets))
+  } catch (error) {
+    console.error('❌ Failed to save wallets index:', error)
+  }
+}
+
+function addWalletToIndex(walletMeta) {
+  const wallets = loadWalletsIndex()
+  wallets.push(walletMeta)
+  saveWalletsIndex(wallets)
+  return wallets
+}
+
+function removeWalletFromIndex(walletId) {
+  const wallets = loadWalletsIndex()
+  const filtered = wallets.filter(w => w.id !== walletId)
+  saveWalletsIndex(filtered)
+  return filtered
+}
+
+function updateWalletInIndex(walletId, updates) {
+  const wallets = loadWalletsIndex()
+  const updated = wallets.map(w => w.id === walletId ? { ...w, ...updates } : w)
+  saveWalletsIndex(updated)
+  return updated
+}
+
 function touchSession() {
   try {
     const session = loadSecureSession(SESSION_KEY)
@@ -183,6 +225,8 @@ function touchSession() {
 
 export function WalletProvider({ children }) {
   const [wallet, setWallet] = useState(null)
+  const [wallets, setWallets] = useState([]) // Array of wallet metadata
+  const [activeWalletIndex, setActiveWalletIndex] = useState(0)
   const [activeChain, setActiveChainRaw] = useState('ethereum')
   const [balances, setBalances] = useState({})
   const [transactions, setTransactions] = useState([])
@@ -240,13 +284,18 @@ export function WalletProvider({ children }) {
   useEffect(() => {
     const hasEncrypted = !!localStorage.getItem(STORAGE_KEY)
     const session = loadSession()
+    
+    // Load wallets index
+    const walletsIndex = loadWalletsIndex()
+    setWallets(walletsIndex)
 
     console.log('🔐 Wallet Init Debug:', {
       hasEncrypted,
       hasSession: !!session,
       storageKey: STORAGE_KEY,
       localStorageKeys: Object.keys(localStorage),
-      encryptedDataLength: localStorage.getItem(STORAGE_KEY)?.length || 0
+      encryptedDataLength: localStorage.getItem(STORAGE_KEY)?.length || 0,
+      walletsCount: walletsIndex.length
     })
 
     // Initialize secure session management (CSRF protection)
@@ -606,6 +655,116 @@ export function WalletProvider({ children }) {
     }
   }
 
+  // ── Wallet Management Functions ──────────────────────────────
+  
+  const addWallet = async (walletData, pwd) => {
+    // Generate unique ID for this wallet
+    const walletId = `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Store wallet with unique key
+    const walletStorageKey = `${STORAGE_KEY}_${walletId}`
+    const encrypted = await encryptData(JSON.stringify(walletData), pwd)
+    localStorage.setItem(walletStorageKey, encrypted)
+    
+    // Add to wallets index
+    const walletMeta = {
+      id: walletId,
+      name: walletData.name || `Wallet ${wallets.length + 1}`,
+      address: walletData.accounts[0]?.address,
+      createdAt: Date.now(),
+      accountsCount: walletData.accounts.length
+    }
+    
+    const updatedWallets = addWalletToIndex(walletMeta)
+    setWallets(updatedWallets)
+    
+    // Switch to the new wallet
+    setActiveWalletIndex(updatedWallets.length - 1)
+    setPassword(pwd)
+    setWallet(walletData)
+    saveSession(walletData)
+    
+    notify(`✓ ${walletMeta.name} added`, 'success')
+    return walletMeta
+  }
+
+  const switchWallet = async (walletIndex, pwd) => {
+    if (walletIndex === activeWalletIndex && wallet) return
+    
+    const walletMeta = wallets[walletIndex]
+    if (!walletMeta) throw new Error('Wallet not found')
+    
+    // Load the wallet from storage
+    const walletStorageKey = `${STORAGE_KEY}_${walletMeta.id}`
+    const stored = localStorage.getItem(walletStorageKey)
+    
+    if (!stored) throw new Error('Wallet data not found')
+    
+    try {
+      const walletData = JSON.parse(await decryptData(stored, pwd))
+      setActiveWalletIndex(walletIndex)
+      setPassword(pwd)
+      setWallet(walletData)
+      saveSession(walletData)
+      resetInactivityTimer()
+      
+      notify(`✓ Switched to ${walletMeta.name}`, 'success')
+    } catch (err) {
+      console.error('❌ Failed to switch wallet:', err)
+      throw new Error('Failed to unlock wallet. Please check your password.')
+    }
+  }
+
+  const removeWallet = async (walletIndex, pwd) => {
+    if (wallets.length <= 1) {
+      throw new Error('Cannot remove the last wallet')
+    }
+    
+    const walletMeta = wallets[walletIndex]
+    if (!walletMeta) throw new Error('Wallet not found')
+    
+    // Verify password before removing
+    const walletStorageKey = `${STORAGE_KEY}_${walletMeta.id}`
+    const stored = localStorage.getItem(walletStorageKey)
+    
+    if (!stored) throw new Error('Wallet data not found')
+    
+    try {
+      // Try to decrypt to verify password
+      await decryptData(stored, pwd)
+      
+      // Remove from storage
+      localStorage.removeItem(walletStorageKey)
+      
+      // Remove from index
+      const updatedWallets = removeWalletFromIndex(walletMeta.id)
+      setWallets(updatedWallets)
+      
+      // If we removed the active wallet, switch to another
+      if (walletIndex === activeWalletIndex) {
+        const newActiveIndex = walletIndex > 0 ? walletIndex - 1 : 0
+        setActiveWalletIndex(newActiveIndex)
+        
+        // Load the new active wallet
+        const newWalletMeta = updatedWallets[newActiveIndex]
+        if (newWalletMeta) {
+          const newWalletKey = `${STORAGE_KEY}_${newWalletMeta.id}`
+          const newStored = localStorage.getItem(newWalletKey)
+          if (newStored) {
+            const newWalletData = JSON.parse(await decryptData(newStored, pwd))
+            setWallet(newWalletData)
+            saveSession(newWalletData)
+          }
+        }
+      }
+      
+      notify(`✓ ${walletMeta.name} removed`, 'success')
+    } catch (err) {
+      console.error('❌ Failed to remove wallet:', err)
+      throw new Error('Failed to verify password. Please try again.')
+    }
+  }
+
   const setActiveChain = chain => setActiveChainRaw(chain)
 
   const sendTransaction = async (to, amount, token, chainId) => {
@@ -924,6 +1083,8 @@ export function WalletProvider({ children }) {
     <WalletContext.Provider
       value={{
         wallet,
+        wallets,
+        activeWalletIndex,
         isLocked,
         sessionReady,
         activeChain,
@@ -953,6 +1114,9 @@ export function WalletProvider({ children }) {
         addAccount,
         switchAccount,
         renameAccount,
+        addWallet,
+        switchWallet,
+        removeWallet,
         refreshBalances: addr => refreshBalances(addr, activeChain),
         ensureKeys,
         // Security utilities
