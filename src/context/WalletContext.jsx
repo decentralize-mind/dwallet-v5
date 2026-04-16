@@ -666,13 +666,16 @@ export function WalletProvider({ children }) {
     const encrypted = await encryptData(JSON.stringify(walletData), pwd)
     localStorage.setItem(walletStorageKey, encrypted)
     
-    // Add to wallets index
+    // Add to wallets index with optional group/color
     const walletMeta = {
       id: walletId,
       name: walletData.name || `Wallet ${wallets.length + 1}`,
       address: walletData.accounts[0]?.address,
       createdAt: Date.now(),
-      accountsCount: walletData.accounts.length
+      accountsCount: walletData.accounts.length,
+      color: walletData.color || null, // Optional color tag
+      group: walletData.group || null, // Optional group/category
+      notes: walletData.notes || '' // Optional notes
     }
     
     const updatedWallets = addWalletToIndex(walletMeta)
@@ -683,6 +686,14 @@ export function WalletProvider({ children }) {
     setPassword(pwd)
     setWallet(walletData)
     saveSession(walletData)
+    
+    // Log wallet creation
+    logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
+      walletId,
+      address: walletData.accounts[0]?.address,
+      imported: walletData.imported || false,
+      accountsCount: walletData.accounts.length
+    })
     
     notify(`✓ ${walletMeta.name} added`, 'success')
     return walletMeta
@@ -708,9 +719,24 @@ export function WalletProvider({ children }) {
       saveSession(walletData)
       resetInactivityTimer()
       
+      // Log wallet switch
+      logSecurityEvent(AUDIT_EVENTS.LOGIN_SUCCESS, {
+        walletId: walletMeta.id,
+        address: walletData.accounts[0]?.address,
+        walletIndex
+      })
+      
       notify(`✓ Switched to ${walletMeta.name}`, 'success')
     } catch (err) {
       console.error('❌ Failed to switch wallet:', err)
+      
+      // Log failed switch attempt
+      logSecurityEvent(AUDIT_EVENTS.LOGIN_FAILED, {
+        walletId: walletMeta.id,
+        walletIndex,
+        reason: 'invalid_password'
+      })
+      
       throw new Error('Failed to unlock wallet. Please check your password.')
     }
   }
@@ -758,9 +784,106 @@ export function WalletProvider({ children }) {
         }
       }
       
+      // Log wallet removal
+      logSecurityEvent(AUDIT_EVENTS.WALLET_DELETED, {
+        walletId: walletMeta.id,
+        address: walletMeta.address,
+        walletIndex
+      })
+      
       notify(`✓ ${walletMeta.name} removed`, 'success')
     } catch (err) {
       console.error('❌ Failed to remove wallet:', err)
+      
+      // Log failed removal attempt
+      logSecurityEvent(AUDIT_EVENTS.LOGIN_FAILED, {
+        walletId: walletMeta.id,
+        walletIndex,
+        reason: 'wallet_remooval_failed',
+        error: err.message
+      })
+      
+      throw new Error('Failed to verify password. Please try again.')
+    }
+  }
+
+  const renameWallet = async (walletIndex, newName, pwd) => {
+    if (!newName || !newName.trim()) {
+      throw new Error('Wallet name cannot be empty')
+    }
+    
+    if (newName.trim().length > 30) {
+      throw new Error('Wallet name must be 30 characters or less')
+    }
+    
+    const walletMeta = wallets[walletIndex]
+    if (!walletMeta) throw new Error('Wallet not found')
+    
+    // Verify password before renaming
+    const walletStorageKey = `${STORAGE_KEY}_${walletMeta.id}`
+    const stored = localStorage.getItem(walletStorageKey)
+    
+    if (!stored) throw new Error('Wallet data not found')
+    
+    try {
+      // Try to decrypt to verify password
+      await decryptData(stored, pwd)
+      
+      // Update wallet name in index
+      const updatedWallets = updateWalletInIndex(walletMeta.id, {
+        name: newName.trim()
+      })
+      setWallets(updatedWallets)
+      
+      // If this is the active wallet, update the session
+      if (walletIndex === activeWalletIndex && wallet) {
+        const updatedWallet = { ...wallet, name: newName.trim() }
+        saveSession(updatedWallet)
+      }
+      
+      // Log wallet rename
+      logSecurityEvent('WALLET_RENAMED', {
+        walletId: walletMeta.id,
+        oldName: walletMeta.name,
+        newName: newName.trim(),
+        walletIndex
+      })
+      
+      notify(`✓ Wallet renamed to "${newName.trim()}"`, 'success')
+    } catch (err) {
+      console.error('❌ Failed to rename wallet:', err)
+      throw new Error('Failed to verify password. Please try again.')
+    }
+  }
+
+  const updateWalletMetadata = async (walletIndex, metadata, pwd) => {
+    const walletMeta = wallets[walletIndex]
+    if (!walletMeta) throw new Error('Wallet not found')
+    
+    // Verify password before updating
+    const walletStorageKey = `${STORAGE_KEY}_${walletMeta.id}`
+    const stored = localStorage.getItem(walletStorageKey)
+    
+    if (!stored) throw new Error('Wallet data not found')
+    
+    try {
+      // Try to decrypt to verify password
+      await decryptData(stored, pwd)
+      
+      // Update wallet metadata in index
+      const updatedWallets = updateWalletInIndex(walletMeta.id, metadata)
+      setWallets(updatedWallets)
+      
+      // Log wallet metadata update
+      logSecurityEvent('WALLET_METADATA_UPDATED', {
+        walletId: walletMeta.id,
+        updates: Object.keys(metadata),
+        walletIndex
+      })
+      
+      notify('✓ Wallet updated', 'success')
+    } catch (err) {
+      console.error('❌ Failed to update wallet:', err)
       throw new Error('Failed to verify password. Please try again.')
     }
   }
@@ -1117,6 +1240,8 @@ export function WalletProvider({ children }) {
         addWallet,
         switchWallet,
         removeWallet,
+        renameWallet,
+        updateWalletMetadata,
         refreshBalances: addr => refreshBalances(addr, activeChain),
         ensureKeys,
         // Security utilities

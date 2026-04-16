@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useWallet } from '../hooks/useWallet'
-import OnboardingScreen from './OnboardingScreen'
+import PasswordPrompt from './PasswordPrompt'
+import WalletCreationModal from './WalletCreationModal'
+import WalletImportModal from './WalletImportModal'
+import WalletExportModal from './WalletExportModal'
 
 const AVATAR_COLORS = [
   '#6366f1',
@@ -15,7 +18,7 @@ const AVATAR_COLORS = [
 const getColor = i => AVATAR_COLORS[i % AVATAR_COLORS.length]
 
 export default function AccountSelector({ onClose }) {
-  const { wallet, wallets, activeWalletIndex, addAccount, switchAccount, renameAccount, switchWallet } = useWallet()
+  const { wallet, wallets, activeWalletIndex, addAccount, switchAccount, renameAccount, switchWallet, removeWallet, renameWallet, biometricEnabled, unlockWithBiometric } = useWallet()
   const accounts = wallet?.accounts || []
   const activeIndex = wallet?.activeAccount ?? 0
 
@@ -26,6 +29,18 @@ export default function AccountSelector({ onClose }) {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('accounts') // 'accounts' or 'wallets'
   const [showAddWallet, setShowAddWallet] = useState(false)
+  const [showCreateWallet, setShowCreateWallet] = useState(false)
+  const [showImportWallet, setShowImportWallet] = useState(false)
+  const [showSwitchPassword, setShowSwitchPassword] = useState(false)
+  const [pendingSwitchIndex, setPendingSwitchIndex] = useState(null)
+  const [showRemovePassword, setShowRemovePassword] = useState(false)
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState(null)
+  const [walletOperationLoading, setWalletOperationLoading] = useState(false)
+  const [showRenamePassword, setShowRenamePassword] = useState(false)
+  const [pendingRenameIndex, setPendingRenameIndex] = useState(null)
+  const [pendingRenameName, setPendingRenameName] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [pendingExportIndex, setPendingExportIndex] = useState(null)
 
   const handleSwitch = i => {
     if (i === activeIndex) return
@@ -41,10 +56,111 @@ export default function AccountSelector({ onClose }) {
 
   const handleSwitchWallet = async (index) => {
     if (index === activeWalletIndex) return
-    // For now, just notify user that they need to re-enter password
-    // In a full implementation, you'd prompt for password here
-    onClose()
-    // The actual wallet switching will happen through the settings or a password prompt
+    
+    // If biometric is enabled, try it first
+    if (biometricEnabled) {
+      try {
+        await unlockWithBiometric()
+        // Biometric succeeded, now we still need password for decryption
+        // but we can show a different message
+        setPendingSwitchIndex(index)
+        setShowSwitchPassword(true)
+        return
+      } catch (err) {
+        // Biometric failed or cancelled, fall back to password
+        console.log('Biometric failed, falling back to password')
+      }
+    }
+    
+    setPendingSwitchIndex(index)
+    setShowSwitchPassword(true)
+  }
+
+  const handleSwitchWalletWithPassword = async (password) => {
+    if (pendingSwitchIndex === null) return
+    
+    setWalletOperationLoading(true)
+    try {
+      await switchWallet(pendingSwitchIndex, password)
+      setShowSwitchPassword(false)
+      setPendingSwitchIndex(null)
+      onClose()
+    } catch (err) {
+      console.error('Failed to switch wallet:', err)
+      // Error is handled by PasswordPrompt
+    } finally {
+      setWalletOperationLoading(false)
+    }
+  }
+
+  const handleBiometricSwitch = async () => {
+    if (pendingSwitchIndex === null) return
+    
+    try {
+      await unlockWithBiometric()
+      // After biometric succeeds, user still needs to enter password
+      // but we can show a success notification
+      notify('✓ Biometric verified', 'success')
+    } catch (err) {
+      console.error('Biometric verification failed:', err)
+      notify('Biometric verification failed', 'error')
+    }
+  }
+
+  const handleRemoveWallet = (index) => {
+    if (wallets.length <= 1) {
+      alert('Cannot remove the last wallet')
+      return
+    }
+    setPendingRemoveIndex(index)
+    setShowRemovePassword(true)
+  }
+
+  const handleRemoveWalletWithPassword = async (password) => {
+    if (pendingRemoveIndex === null) return
+    
+    setWalletOperationLoading(true)
+    try {
+      await removeWallet(pendingRemoveIndex, password)
+      setShowRemovePassword(false)
+      setPendingRemoveIndex(null)
+    } catch (err) {
+      console.error('Failed to remove wallet:', err)
+      // Error is handled by PasswordPrompt
+    } finally {
+      setWalletOperationLoading(false)
+    }
+  }
+
+  const handleRenameWallet = (index, currentName) => {
+    const newName = prompt('Enter new wallet name:', currentName)
+    if (newName && newName.trim() && newName.trim() !== currentName) {
+      setPendingRenameIndex(index)
+      setPendingRenameName(newName.trim())
+      setShowRenamePassword(true)
+    }
+  }
+
+  const handleExportWallet = (index) => {
+    setPendingExportIndex(index)
+    setShowExportModal(true)
+  }
+
+  const handleRenameWalletWithPassword = async (password) => {
+    if (pendingRenameIndex === null || !pendingRenameName) return
+    
+    setWalletOperationLoading(true)
+    try {
+      await renameWallet(pendingRenameIndex, pendingRenameName, password)
+      setShowRenamePassword(false)
+      setPendingRenameIndex(null)
+      setPendingRenameName('')
+    } catch (err) {
+      console.error('Failed to rename wallet:', err)
+      // Error is handled by PasswordPrompt
+    } finally {
+      setWalletOperationLoading(false)
+    }
   }
 
   const handleCopy = (addr, e) => {
@@ -645,6 +761,115 @@ export default function AccountSelector({ onClose }) {
                         Active
                       </span>
                     )}
+                    {!isActive && wallets.length > 1 && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          handleRemoveWallet(i)
+                        }}
+                        title="Remove wallet"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text3)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: 12,
+                          lineHeight: 1,
+                        }}
+                        onMouseEnter={e =>
+                          (e.currentTarget.style.color = '#ef4444')
+                        }
+                        onMouseLeave={e =>
+                          (e.currentTarget.style.color = 'var(--text3)')
+                        }
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 4h8M5 4V3a1 1 0 011-1h2a1 1 0 011 1v1M6 6v5M8 6v5M4 4l1 8h4l1-8" />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleRenameWallet(i, w.name || `Wallet ${i + 1}`)
+                      }}
+                      title="Rename wallet"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text3)',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: 12,
+                        lineHeight: 1,
+                      }}
+                      onMouseEnter={e =>
+                        (e.currentTarget.style.color = 'var(--accent)')
+                      }
+                      onMouseLeave={e =>
+                        (e.currentTarget.style.color = 'var(--text3)')
+                      }
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
+                        <path d="M8 4l2 2" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleExportWallet(i)
+                      }}
+                      title="Export wallet seed phrase"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text3)',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: 12,
+                        lineHeight: 1,
+                      }}
+                      onMouseEnter={e =>
+                        (e.currentTarget.style.color = '#f59e0b')
+                      }
+                      onMouseLeave={e =>
+                        (e.currentTarget.style.color = 'var(--text3)')
+                      }
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 9v3a1 1 0 01-1 1H3a1 1 0 01-1-1V9" />
+                        <path d="M7 3v6M4 6l3 3 3-3" />
+                      </svg>
+                    </button>
                   </div>
                   <p
                     style={{
@@ -853,10 +1078,8 @@ export default function AccountSelector({ onClose }) {
             >
               <button
                 onClick={() => {
-                  // Navigate to onboarding to create new wallet
-                  onClose()
-                  // In a real implementation, you'd trigger the onboarding flow
-                  alert('Create New Wallet flow will be triggered here')
+                  setShowAddWallet(false)
+                  setShowCreateWallet(true)
                 }}
                 style={{
                   padding: '16px',
@@ -874,10 +1097,8 @@ export default function AccountSelector({ onClose }) {
               </button>
               <button
                 onClick={() => {
-                  // Navigate to onboarding to import wallet
-                  onClose()
-                  // In a real implementation, you'd trigger the import flow
-                  alert('Import Wallet flow will be triggered here')
+                  setShowAddWallet(false)
+                  setShowImportWallet(true)
                 }}
                 style={{
                   padding: '16px',
@@ -911,6 +1132,88 @@ export default function AccountSelector({ onClose }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Wallet Creation Modal */}
+      {showCreateWallet && (
+        <WalletCreationModal
+          onSuccess={() => {
+            setShowCreateWallet(false)
+            onClose()
+          }}
+          onCancel={() => setShowCreateWallet(false)}
+        />
+      )}
+
+      {/* Wallet Import Modal */}
+      {showImportWallet && (
+        <WalletImportModal
+          onSuccess={() => {
+            setShowImportWallet(false)
+            onClose()
+          }}
+          onCancel={() => setShowImportWallet(false)}
+        />
+      )}
+
+      {/* Password Prompt for Switching Wallets */}
+      {showSwitchPassword && (
+        <PasswordPrompt
+          title="Switch Wallet"
+          message="Enter your password to switch to this wallet"
+          onSuccess={handleSwitchWalletWithPassword}
+          onCancel={() => {
+            setShowSwitchPassword(false)
+            setPendingSwitchIndex(null)
+          }}
+          buttonText="Switch Wallet"
+          showBiometric={biometricEnabled}
+          onBiometricClick={handleBiometricSwitch}
+        />
+      )}
+
+      {/* Password Prompt for Removing Wallets */}
+      {showRemovePassword && (
+        <PasswordPrompt
+          title="Remove Wallet"
+          message="Enter your password to confirm wallet removal. This action cannot be undone."
+          onSuccess={handleRemoveWalletWithPassword}
+          onCancel={() => {
+            setShowRemovePassword(false)
+            setPendingRemoveIndex(null)
+          }}
+          buttonText="Remove Wallet"
+        />
+      )}
+
+      {/* Password Prompt for Renaming Wallets */}
+      {showRenamePassword && (
+        <PasswordPrompt
+          title="Rename Wallet"
+          message={`Enter your password to rename wallet to "${pendingRenameName}"`}
+          onSuccess={handleRenameWalletWithPassword}
+          onCancel={() => {
+            setShowRenamePassword(false)
+            setPendingRenameIndex(null)
+            setPendingRenameName('')
+          }}
+          buttonText="Rename Wallet"
+        />
+      )}
+
+      {/* Wallet Export Modal */}
+      {showExportModal && pendingExportIndex !== null && (
+        <WalletExportModal
+          walletIndex={pendingExportIndex}
+          onSuccess={() => {
+            setShowExportModal(false)
+            setPendingExportIndex(null)
+          }}
+          onCancel={() => {
+            setShowExportModal(false)
+            setPendingExportIndex(null)
+          }}
+        />
       )}
     </div>
   )
