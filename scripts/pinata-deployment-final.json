@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-04-16T13:45:00.000Z",
+  "status": "SUCCESS",
+  "ipfsHash": "bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y",
+  "deploymentMethod": "Pinata Web Interface - Folder Upload",
+  "testResults": {
+    "ipfsIo": "ONLINE (HTTP 200)",
+    "dweb": "ONLINE (HTTP 200)",
+    "pinata": "PROPAGATING",
+    "cloudflare": "PROPAGATING",
+    "contentValid": true,
+    "htmlVerified": true
+  },
+  "gateways": {
+    "pinata": "https://bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y.ipfs.pinata.cloud",
+    "ipfsio": "https://ipfs.io/ipfs/bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y",
+    "cloudflare": "https://cloudflare-ipfs.com/ipfs/bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y",
+    "dweb": "https://bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y.ipfs.dweb.link"
+  },
+  "ens": {
+    "contentHash": "ipfs://bafybeihvjxqxiykleaqf5pzziox2tljh5zrxt4tpnfwrowb2uusnz2kx6y",
+    "ensLimo": "https://dwallet.eth.limo",
+    "ensLink": "https://dwallet.eth.link"
+  },
+  "previousHash": "bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly",
+  "previousHashIssue": "ZIP file uploaded instead of folder structure",
+  "notes": "Successfully deployed as folder via Pinata web interface. Website loads correctly with proper HTML content."
+}

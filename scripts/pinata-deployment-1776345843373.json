@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-04-16T13:24:03.373Z",
+  "ipfsHash": "bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly",
+  "pinSize": 745545,
+  "pinataTimestamp": "2026-04-16T13:24:03.114Z",
+  "gateways": {
+    "pinata": "https://bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly.ipfs.pinata.cloud",
+    "ipfsio": "https://ipfs.io/ipfs/bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly",
+    "cloudflare": "https://cloudflare-ipfs.com/ipfs/bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly",
+    "dweb": "https://bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly.ipfs.dweb.link"
+  },
+  "ens": {
+    "contentHash": "ipfs://bafybeidhxptozo6hlnnou7kltorygqc7gqwahljpvg7iwsdhcuwdflytly",
+    "ensLimo": "https://dwallet.eth.limo",
+    "ensLink": "https://dwallet.eth.link"
+  },
+  "pinata": {
+    "apiKey": "319ccae58d...",
+    "region": "FRA1, NYC1"
+  }
+}

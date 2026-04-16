@@ -3,6 +3,7 @@ const STATIC = ['/', '/index.html', '/favicon.svg', '/manifest.json']
 
 // External API domains — never cache these, always network
 const API_DOMAINS = [
+  'pro-api.coinmarketcap.com',
   'api.coingecko.com',
   'infura.io',
   'etherscan.io',

@@ -1,0 +1,14 @@
+{
+    "IpfsHash": "QmUAhL7tesYBu4tttXgMExgnjiXxGNrvGNNvGmb5kFCAfU",
+    "PinSize": 748227,
+    "Timestamp": "2026-04-16T13:53:43.279Z",
+    "ID": "019d9691-ad15-7d43-8746-f99294a089d1",
+    "Name": "dWallet-Frontend-2026-04-16",
+    "NumberOfFiles": 1,
+    "MimeType": "application/gzip",
+    "GroupId": null,
+    "Keyvalues": {
+        "project": "dWallet v5",
+        "type": "frontend"
+    }
+}

@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Use relative base path for IPFS deployment
+  // This ensures assets load correctly from IPFS gateways
+  base: './',
   define: {
     global: 'globalThis',
     'process.env': '{}',

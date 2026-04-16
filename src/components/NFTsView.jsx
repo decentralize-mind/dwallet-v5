@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { fetchNFTs } from '../utils/blockchain'
+import { getIPFSFailoverManager } from '../utils/ipfsFailover'
 
 const MOCK_NFTS = [
   {
@@ -46,6 +47,20 @@ export default function NFTsView() {
   const [nfts, setNfts] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
+  const [ipfsManager, setIpfsManager] = useState(null)
+
+  // Initialize IPFS failover manager
+  useEffect(() => {
+    const manager = getIPFSFailoverManager()
+    setIpfsManager(manager)
+    
+    // Cleanup on unmount
+    return () => {
+      if (manager) {
+        manager.destroy()
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!currentAddress) return
@@ -96,9 +111,19 @@ export default function NFTsView() {
                   {(() => {
                     const img = nft.image || ''
                     if (img.startsWith('http') || img.startsWith('ipfs')) {
+                      // Use IPFS failover gateway for IPFS URLs
+                      let imageUrl = img
+                      if (img.startsWith('ipfs://') && ipfsManager) {
+                        // Use synchronous URL resolution for rendering
+                        imageUrl = ipfsManager.getUrlSync(img)
+                      } else if (img.startsWith('ipfs://')) {
+                        // Fallback if manager not initialized
+                        imageUrl = img.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                      }
+                      
                       return (
                         <img
-                          src={img.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+                          src={imageUrl}
                           alt={nft.name}
                           style={{
                             width: '100%',
@@ -136,15 +161,36 @@ export default function NFTsView() {
             </div>
             <div className="modal-body center">
               <div className="nft-detail-image">
-                {selected.image?.startsWith('http') ? (
-                  <img
-                    src={selected.image}
-                    alt={selected.name}
-                    style={{ maxWidth: '160px', borderRadius: '12px' }}
-                  />
-                ) : (
-                  selected.image
-                )}
+                {(() => {
+                  const img = selected.image || ''
+                  if (img.startsWith('ipfs://') && ipfsManager) {
+                    return (
+                      <img
+                        src={ipfsManager.getUrlSync(img)}
+                        alt={selected.name}
+                        style={{ maxWidth: '160px', borderRadius: '12px' }}
+                      />
+                    )
+                  } else if (img.startsWith('ipfs://')) {
+                    return (
+                      <img
+                        src={img.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+                        alt={selected.name}
+                        style={{ maxWidth: '160px', borderRadius: '12px' }}
+                      />
+                    )
+                  } else if (img.startsWith('http')) {
+                    return (
+                      <img
+                        src={img}
+                        alt={selected.name}
+                        style={{ maxWidth: '160px', borderRadius: '12px' }}
+                      />
+                    )
+                  } else {
+                    return img
+                  }
+                })()}
               </div>
               <p className="nft-detail-collection">{selected.collection}</p>
               <div className="nft-detail-attrs">
