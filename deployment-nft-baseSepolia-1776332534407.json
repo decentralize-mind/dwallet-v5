@@ -1,0 +1,17 @@
+{
+  "network": "baseSepolia",
+  "chainId": "84532",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-16T09:42:14.406Z",
+  "contracts": {
+    "NFTMembership": "0x77c3f6A47a37AE3eF26F48A73430EAed79Af59b7",
+    "DWTToken": "0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f",
+    "SecurityController": "0x6840C2E06ACBb0274a624ac47Cd435E7b7be9C67"
+  },
+  "verification": {
+    "name": "DWT Membership Pass",
+    "symbol": "DWTPASS",
+    "owner": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+    "tierCount": 4
+  }
+}
