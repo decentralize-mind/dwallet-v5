@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { useWalletConnect } from '../context/WalletConnectContext'
 import { decodeTransaction, getRiskColor, getRiskIcon, getTransactionSummary } from '../utils/transactionPreview'
@@ -6,7 +6,7 @@ import { QRCodeScanner, QRCodeDisplay } from './QRCodeScanner'
 
 export function WalletConnectModal({ onClose }) {
   const { currentAddress, activeChain } = useWallet()
-  const { connectWithUri, wcReady } = useWalletConnect()
+  const { connectWithUri, wcReady, pendingProposal, approveSession: approveSessionFromContext, rejectSession: rejectSessionFromContext } = useWalletConnect()
   const [uri, setUri] = useState('')
   const [step, setStep] = useState('input') // input | connecting | proposal | connected | error
   const [dappInfo, setDappInfo] = useState(null)
@@ -14,6 +14,22 @@ export function WalletConnectModal({ onClose }) {
   const [error, setError] = useState('')
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showQRDisplay, setShowQRDisplay] = useState(false)
+
+  // Auto-detect when proposal arrives and update UI
+  useEffect(() => {
+    if (pendingProposal && step === 'connecting') {
+      const { proposer } = pendingProposal.params
+      const dappMetadata = proposer.metadata || {}
+      
+      setDappInfo({
+        name: dappMetadata.name || 'Connected dApp',
+        description: dappMetadata.description || 'Requesting wallet connection',
+        url: dappMetadata.url || uri.split('?')[0].replace('wc:', ''),
+        icons: dappMetadata.icons || [],
+      })
+      setStep('proposal')
+    }
+  }, [pendingProposal, step, uri])
 
   const handleConnect = async () => {
     if (!uri.trim()) return setError('Paste a WalletConnect URI first')
@@ -24,16 +40,7 @@ export function WalletConnectModal({ onClose }) {
     try {
       await connectWithUri(uri)
       // The proposal will arrive via the context's pendingProposal
-      // We'll detect it in a useEffect or just wait a bit for demo
-      setTimeout(() => {
-        setDappInfo({
-          name: 'Connected dApp',
-          description: 'Requesting wallet connection',
-          url: uri.split('?')[0].replace('wc:', ''),
-          icons: [],
-        })
-        setStep('proposal')
-      }, 1500)
+      // The useEffect will automatically detect it and update the UI
     } catch (e) {
       setError(e.message)
       setStep('input')
@@ -42,8 +49,10 @@ export function WalletConnectModal({ onClose }) {
 
   const handleApprove = async () => {
     try {
-      // This will be handled by the SessionProposalModal via context
-      // For the manual URI flow, we just show success
+      // Approve the session through the context
+      if (pendingProposal) {
+        await approveSessionFromContext()
+      }
       setStep('connected')
     } catch (e) {
       setError(e.message)
@@ -52,6 +61,14 @@ export function WalletConnectModal({ onClose }) {
   }
 
   const handleReject = async () => {
+    try {
+      // Reject the session through the context if there's a pending proposal
+      if (pendingProposal) {
+        await rejectSessionFromContext()
+      }
+    } catch (e) {
+      console.error('Failed to reject session:', e)
+    }
     setStep('input')
     setUri('')
     setDappInfo(null)
