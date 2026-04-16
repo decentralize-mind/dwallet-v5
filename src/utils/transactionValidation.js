@@ -4,11 +4,14 @@
  * Features:
  * - Comprehensive pre-transaction checks
  * - Address validation and blacklist checking
+ * - External threat intelligence integration
  * - Amount limit enforcement
  * - Gas price validation
  * - Transaction simulation
  * - Risk scoring
  */
+
+import { calculateThreatScore } from './threatIntelligence.js'
 
 // ─────────────────────────────────────────────────────────────────────
 //  TRANSACTION LIMITS
@@ -96,9 +99,23 @@ export async function validateTransaction(params) {
     errors.push(addressValidation.error)
   }
   
-  // Check blacklist
+  // Check local blacklist
   if (isAddressBlacklisted(to)) {
     errors.push('Recipient address is blacklisted')
+  }
+  
+  // Check external threat intelligence
+  try {
+    const threatAssessment = await calculateThreatScore(to)
+    if (threatAssessment.shouldBlock) {
+      errors.push(`Transaction blocked: ${threatAssessment.flags[0]?.message || 'Address poses critical security risk'}`)
+    } else if (threatAssessment.requiresReview) {
+      warnings.push(`⚠️ Caution: Address has risk indicators (${threatAssessment.level} risk)`)
+      riskFactors.push('threat_intelligence_warning')
+    }
+  } catch (error) {
+    console.warn('Threat intelligence check failed:', error.message)
+    // Don't block on threat check failure, but log it
   }
   
   // 2. Validate amount

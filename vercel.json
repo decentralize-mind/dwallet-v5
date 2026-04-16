@@ -21,7 +21,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; connect-src 'self' https://pro-api.coinmarketcap.com https://api.coingecko.com https://mainnet.infura.io https://sepolia.infura.io https://bsc-dataseed.binance.org https://polygon-rpc.com https://api.opensea.io https://rpc.ankr.com https://api.simplehash.com https://api.etherscan.io https://sepolia.etherscan.io https://basescan.org https://sepolia.basescan.org wss://mainnet.infura.io https://cloudflareinsights.com/cdn-cgi/scripts/; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; connect-src 'self' https://pro-api.coinmarketcap.com https://api.coingecko.com https://mainnet.infura.io https://sepolia.infura.io https://bsc-dataseed.binance.org https://polygon-rpc.com https://api.opensea.io https://rpc.ankr.com https://api.simplehash.com https://api.etherscan.io https://sepolia.etherscan.io https://basescan.org https://sepolia.basescan.org wss://mainnet.infura.io https://cloudflareinsights.com/cdn-cgi/scripts/; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none';"
         }
       ]
     }

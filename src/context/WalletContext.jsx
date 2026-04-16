@@ -74,6 +74,17 @@ import {
   createHardwareSigner,
   getHardwareWalletName
 } from '../utils/hardwareWallet'
+import {
+  checkMultisigRequirement,
+  proposeTransaction,
+  calculateMultisigProtectionScore
+} from '../utils/multisigSupport'
+import {
+  simulateTransaction,
+  generateCacheKey,
+  getCachedSimulation,
+  cacheSimulation
+} from '../utils/transactionSimulation'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const WalletContext = createContext(null)
@@ -649,6 +660,62 @@ export function WalletProvider({ children }) {
     if (validation.requiresConfirmation) {
       console.warn('⚠️ High risk transaction detected:', validation.warnings)
       // In production, you'd show a confirmation dialog here
+    }
+    
+    // SECURITY: Check if multi-sig is required
+    const amountUSD = parseFloat(amount) * tokenPrice
+    const multisigCheck = checkMultisigRequirement(amountUSD)
+    
+    if (multisigCheck.required) {
+      console.log('🔐 Multi-signature required:', multisigCheck.reason)
+      // Propose transaction for multi-sig approval
+      const proposal = proposeTransaction({
+        from: activeAcc.address,
+        to,
+        amount,
+        token,
+        chain,
+        amountUSD,
+        multisigLevel: multisigCheck.level,
+      })
+      
+      throw new Error(
+        `This transaction requires multi-signature approval (${multisigCheck.reason}). ` +
+        `Proposal ID: ${proposal.id}. Please collect ${multisigCheck.required} signatures.`
+      )
+    }
+    
+    // SECURITY: Simulate transaction before sending
+    try {
+      const cacheKey = generateCacheKey({
+        from: activeAcc.address,
+        to,
+        chain,
+      })
+      
+      let simulation = getCachedSimulation(cacheKey)
+      
+      if (!simulation) {
+        simulation = await simulateTransaction({
+          from: activeAcc.address,
+          to,
+          chain,
+        })
+        
+        // Cache the result
+        cacheSimulation(cacheKey, simulation)
+      }
+      
+      if (!simulation.wouldSucceed) {
+        console.error('❌ Transaction simulation failed:', simulation.reason)
+        throw new Error(`Transaction would fail: ${simulation.reason}`)
+      }
+    } catch (error) {
+      if (error.message.includes('Transaction would fail')) {
+        throw error
+      }
+      // Don't block on simulation failure, just log it
+      console.warn('⚠️ Simulation check failed:', error.message)
     }
     
     // Log key usage for auditing

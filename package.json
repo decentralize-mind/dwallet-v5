@@ -15,6 +15,9 @@
     "test": "hardhat test",
     "test:gas": "REPORT_GAS=true hardhat test",
     "test:coverage": "hardhat coverage",
+    "test:security": "node scripts/test-security-features.js",
+    "test:compatibility": "node scripts/verify-compatibility.js",
+    "test:all": "npm run test:security && npm run test:compatibility",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
@@ -41,6 +44,7 @@
     "@scure/bip32": "^1.5.0",
     "@scure/bip39": "^1.4.0",
     "ethers": "^6.13.4",
+    "ioredis": "^5.10.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
