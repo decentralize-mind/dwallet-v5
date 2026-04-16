@@ -9,31 +9,16 @@ export function QRCodeScanner({ onScan, onClose }) {
   const [error, setError] = useState('')
   const [scanning, setScanning] = useState(false)
   const [cameraPermission, setCameraPermission] = useState('prompt') // prompt | granted | denied
+  const [initialized, setInitialized] = useState(false)
   const scannerRef = useRef(null)
   const containerRef = useRef(null)
 
+  // Initialize scanner when camera permission is granted
   useEffect(() => {
-    // Check camera permission first
-    const checkCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-        setCameraPermission('granted')
-        // Stop the test stream
-        stream.getTracks().forEach(track => track.stop())
-      } catch (err) {
-        console.error('Camera permission check failed:', err)
-        setCameraPermission('denied')
-        setError('Camera access denied. Please allow camera access in your browser settings.')
-        return
-      }
-    }
-
-    checkCameraPermission()
-
-    // Initialize scanner
-    if (containerRef.current && !scannerRef.current && cameraPermission === 'granted') {
+    if (containerRef.current && !scannerRef.current && cameraPermission === 'granted' && !initialized) {
       setScanning(true)
       setError('')
+      setInitialized(true)
 
       const scanner = new Html5QrcodeScanner(
         'qr-reader',
@@ -72,7 +57,45 @@ export function QRCodeScanner({ onScan, onClose }) {
         scannerRef.current = null
       }
     }
-  }, [cameraPermission])
+  }, [cameraPermission, initialized])
+
+  // Request camera permission
+  const requestCameraAccess = async () => {
+    try {
+      console.log('Requesting camera access...')
+      setError('')
+      setCameraPermission('prompt')
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Prefer back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      })
+      
+      console.log('Camera access granted')
+      setCameraPermission('granted')
+      
+      // Stop the test stream - scanner will create its own
+      stream.getTracks().forEach(track => track.stop())
+    } catch (err) {
+      console.error('Camera permission denied:', err)
+      setCameraPermission('denied')
+      
+      if (err.name === 'NotAllowedError') {
+        setError('Camera access was denied. Please click the camera icon 🔒 in your browser\'s address bar and allow camera access.')
+      } else if (err.name === 'NotFoundError') {
+        setError('No camera found on this device.')
+      } else if (err.name === 'NotReadableError') {
+        setError('Camera is already in use by another application. Please close other apps using the camera.')
+      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        setError('Camera access requires HTTPS. Please use a secure connection.')
+      } else {
+        setError(`Camera error: ${err.message}`)
+      }
+    }
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -90,10 +113,46 @@ export function QRCodeScanner({ onScan, onClose }) {
               ? 'Point your camera at a WalletConnect QR code'
               : cameraPermission === 'denied'
               ? 'Camera access is required to scan QR codes'
-              : 'Requesting camera access...'
+              : 'Click the button below to enable camera access'
             }
           </p>
 
+          {/* Camera permission prompt */}
+          {cameraPermission !== 'granted' && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '32px 20px',
+              background: '#f9fafb',
+              borderRadius: '12px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>📷</div>
+              <p style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>
+                Camera Access Required
+              </p>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', maxWidth: '300px', margin: '0 auto 20px' }}>
+                To scan QR codes, we need access to your camera. Your privacy is protected - the camera only runs locally.
+              </p>
+              <button
+                className="btn-primary"
+                onClick={requestCameraAccess}
+                style={{ 
+                  padding: '12px 32px',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Enable Camera 📸
+              </button>
+              {cameraPermission === 'denied' && (
+                <p style={{ fontSize: '12px', color: '#999', marginTop: '12px' }}>
+                  Or click the 🔒 icon in your browser's address bar
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* QR Scanner (only shown when camera is granted) */}
           {cameraPermission === 'granted' && (
             <div
               id="qr-reader"
@@ -112,11 +171,6 @@ export function QRCodeScanner({ onScan, onClose }) {
             <div className="error-msg" style={{ marginTop: '12px', padding: '12px', background: '#fee2e2', borderRadius: '8px' }}>
               <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>⚠️ Error</p>
               <p style={{ margin: 0, fontSize: '13px' }}>{error}</p>
-              {cameraPermission === 'denied' && (
-                <p style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
-                  <strong>How to fix:</strong> Click the camera icon in your browser's address bar and allow camera access.
-                </p>
-              )}
             </div>
           )}
 
