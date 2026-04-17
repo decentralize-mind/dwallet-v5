@@ -17,7 +17,7 @@ async function main() {
   // Contract addresses
   const FLASH_LOAN = "0x468772f20864403A0071690ef8c620D9E02BD649";
   const INSURANCE_FUND = "0x8ba2Bb332764217079DFFb280dD70C8B351B5770";
-  const DWT_TOKEN = hre.ethers.getAddress("0xe149b32b97384131204C86a23459b544498BC46A");
+  const DWT_TOKEN = hre.ethers.getAddress("0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48");
 
   console.log("📋 Target Addresses:");
   console.log("  FlashLoan:", FLASH_LOAN);

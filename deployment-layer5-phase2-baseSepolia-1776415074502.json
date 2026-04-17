@@ -1,0 +1,18 @@
+{
+  "network": "baseSepolia",
+  "timestamp": "2026-04-17T08:37:54.502Z",
+  "contracts": {
+    "testPriceOracle": "0x22830a8c7fb402517809F79D242A57Fb1BBA2b40",
+    "limitOrders": "0x924B1A7846456e9de97A7E952e756daF4A995b3e",
+    "liquidityIncentive": "0x1145848222450fe6669716f7AF5cdf6EeF03fF34",
+    "crossChainMessenger": "0x64f3fFdE0bbA86e072a2595Cd550AeC44a1e0e38",
+    "flashLoan": "0x468772f20864403A0071690ef8c620D9E02BD649",
+    "insuranceFund": "0x8ba2Bb332764217079DFFb280dD70C8B351B5770"
+  },
+  "configuration": {
+    "layer7Security": "0x20d859c9EB3FA612C604213F74dcC6Ae49Cd040c",
+    "dwtToken": "0xe149b32b97384131204C86a23459b544498BC46A",
+    "uniswapPositionManager": "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2",
+    "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5"
+  }
+}
