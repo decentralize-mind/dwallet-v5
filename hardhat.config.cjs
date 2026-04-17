@@ -60,10 +60,22 @@ module.exports = {
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
       chainId: 42161,
     },
+    arbitrumSepolia: {
+      url: 'https://sepolia-rollup.arbitrum.io/rpc',
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
+      chainId: 421614,
+      gasPrice: 'auto',
+    },
     polygon: {
       url: 'https://polygon-rpc.com',
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
       chainId: 137,
+    },
+    polygonAmoy: {
+      url: 'https://rpc-amoy.polygon.technology',
+      accounts: [`0x${DEPLOYER_PRIVATE_KEY}`],
+      chainId: 80002,
+      gasPrice: 'auto',
     },
   },
 

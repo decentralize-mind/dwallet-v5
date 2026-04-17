@@ -1,0 +1,14 @@
+{
+  "network": "baseSepolia",
+  "timestamp": 1776395477991,
+  "contract": "0x1aAFBAF7cB31EFccb74832986AaF3aa2b8a22C7A",
+  "features": {
+    "flashLoanProviders": true,
+    "incidentResponse": true,
+    "anomalyDetection": true,
+    "formalVerification": true,
+    "behavioralAnalysis": true,
+    "automatedResponse": true
+  },
+  "initializedBy": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5"
+}

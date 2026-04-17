@@ -33,6 +33,14 @@ async function main() {
     AXELAR_GATEWAY,
     AXELAR_GAS_SERVICE,
     LAYER7_SECURITY_ADDRESS,
+    deployer.address, // admin
+    deployer.address, // governor
+    deployer.address, // guardian
+    deployer.address, // _access (lockEngine)
+    deployer.address, // _time
+    deployer.address, // _state (registry)
+    deployer.address, // _rate
+    deployer.address, // _verify (invariantChecker)
     { nonce: currentNonce++ },
   )
   await bridge.waitForDeployment()
@@ -48,7 +56,13 @@ async function main() {
     DWT_TOKEN,
     LZ_ENDPOINT,
     REWARD_RATE,
+    deployer.address, // admin
+    deployer.address, // governor
+    deployer.address, // guardian
     LAYER7_SECURITY_ADDRESS,
+    deployer.address, // _registry
+    deployer.address, // _lockEngine
+    deployer.address, // _invariantChecker
     { nonce: currentNonce++ },
   )
   await stakingHub.waitForDeployment()
@@ -67,7 +81,15 @@ async function main() {
     VOTING_PERIOD,
     THRESHOLD,
     QUORUM,
+    deployer.address, // admin
+    deployer.address, // governor
+    deployer.address, // guardian
     LAYER7_SECURITY_ADDRESS,
+    deployer.address, // _access
+    deployer.address, // _time
+    deployer.address, // _state
+    deployer.address, // _rate
+    deployer.address, // _verify
     { nonce: currentNonce++ },
   )
   await governanceHub.waitForDeployment()
@@ -86,7 +108,15 @@ async function main() {
     LZ_ENDPOINT,
     AXELAR_GATEWAY,
     AXELAR_GAS_SERVICE,
+    deployer.address, // admin
+    deployer.address, // governor
+    deployer.address, // guardian
     LAYER7_SECURITY_ADDRESS,
+    deployer.address, // _access
+    deployer.address, // _time
+    deployer.address, // _state
+    deployer.address, // _rate
+    deployer.address, // _verify
     { nonce: currentNonce++ },
   )
   await bridgedToken.waitForDeployment()
