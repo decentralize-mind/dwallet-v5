@@ -4,9 +4,17 @@ import StakingPanel from './defi/StakingPanel'
 import LendingPanel from './defi/LendingPanel'
 import YieldPanel from './defi/YieldPanel'
 import DWTStakingPanel from './DWTStakingPanel'
+import FlashLoanPanel from './defi/FlashLoanPanel'
+import InsuranceFundPanel from './defi/InsuranceFundPanel'
+import LimitOrdersPanel from './defi/LimitOrdersPanel'
+import LiquidityRewardsPanel from './defi/LiquidityRewardsPanel'
 
 const TABS = [
   { id: 'swap', label: 'Swap', icon: '⇄' },
+  { id: 'flash', label: 'Flash Loan', icon: '⚡' },
+  { id: 'insurance', label: 'Insurance', icon: '🛡️' },
+  { id: 'limits', label: 'Limit Orders', icon: '📈' },
+  { id: 'rewards', label: 'Rewards', icon: '💧' },
   { id: 'stake', label: 'Stake', icon: '⬡' },
   { id: 'lending', label: 'Lend', icon: '⊕' },
   { id: 'yield', label: 'Yield LP', icon: '◈' },
@@ -41,6 +49,10 @@ export default function DefiView() {
       {/* Panel content */}
       <div className="defi-panel">
         {activeTab === 'swap' && <SwapPanel />}
+        {activeTab === 'flash' && <FlashLoanPanel />}
+        {activeTab === 'insurance' && <InsuranceFundPanel />}
+        {activeTab === 'limits' && <LimitOrdersPanel />}
+        {activeTab === 'rewards' && <LiquidityRewardsPanel />}
         {activeTab === 'stake' && <StakingPanel />}
         {activeTab === 'lending' && <LendingPanel />}
         {activeTab === 'yield' && <YieldPanel />}

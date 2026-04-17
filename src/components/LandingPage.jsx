@@ -476,6 +476,67 @@ const features = [
     )
   },
   {
+    icon: '⚡',
+    label: 'Flash Loans',
+    title: 'Instant Flash Loans',
+    description: 'Borrow up to 25,000 DWT instantly with no collateral required. Perfect for arbitrage, liquidation, and advanced DeFi strategies.',
+    benefits: [
+      'No collateral required - borrow instantly',
+      'Only 0.09% fee per transaction',
+      'Up to 25,000 DWT per loan',
+      'Perfect for arbitrage opportunities'
+    ],
+    visual: (
+      <div className="feature-visual-content">
+        <div className="flash-loan-preview">
+          <div className="loan-stats">
+            <div className="stat-box">
+              <div className="stat-value">50,000</div>
+              <div className="stat-label">DWT Pool</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-value">0.09%</div>
+              <div className="stat-label">Fee</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-value">Instant</div>
+              <div className="stat-label">Approval</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: '🛡️',
+    label: 'Insurance',
+    title: 'Insurance Fund Protection',
+    description: '100,000 DWT insurance fund protects you from exploits and system failures. File claims and get compensated for covered losses.',
+    benefits: [
+      '100,000 DWT protection fund',
+      'Coverage for exploits and bugs',
+      'Easy claim filing process',
+      '48-hour secure execution'
+    ],
+    visual: (
+      <div className="feature-visual-content">
+        <div className="insurance-preview">
+          <div className="shield-icon">🛡️</div>
+          <div className="coverage-details">
+            <div className="coverage-item">
+              <span>Single Claim:</span>
+              <strong>Up to 20,000 DWT</strong>
+            </div>
+            <div className="coverage-item">
+              <span>Monthly Cap:</span>
+              <strong>40,000 DWT</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
     icon: '🤖',
     label: 'AI Agent',
     title: 'AI-Powered Assistant',
