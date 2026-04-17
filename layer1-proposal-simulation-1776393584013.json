@@ -1,0 +1,29 @@
+{
+  "status": "SIMULATION_ONLY",
+  "reason": "Insufficient tokens to propose",
+  "proposal": {
+    "targets": [
+      "0xe149b32b97384131204C86a23459b544498BC46A"
+    ],
+    "values": [
+      "0"
+    ],
+    "calldatas": [
+      "0x40c10f190000000000000000000000004c0b7314441dfe8e61267c0d87fc1a657611dcf500000000000000000000000000000000000000000000d3c21bcecceda1000000"
+    ],
+    "description": "Mint 1,000,000 DWT for testing governance and staking"
+  },
+  "timeline": {
+    "proposalCreated": "T+0",
+    "votingStarts": "T+1 day",
+    "votingEnds": "T+8 days",
+    "queueProposal": "T+8 days (if quorum)",
+    "timelockEnds": "T+10 days",
+    "executeAndReceive": "T+10 days"
+  },
+  "amounts": {
+    "mintAmount": "1000000.0",
+    "proposalThreshold": "100000.0",
+    "currentBalance": "0.0"
+  }
+}
