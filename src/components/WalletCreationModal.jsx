@@ -16,6 +16,7 @@ export default function WalletCreationModal({ onSuccess, onCancel }) {
   const [confirmed, setConfirmed] = useState(false)
   const [verifyWords, setVerifyWords] = useState({})
   const [verifyError, setVerifyError] = useState('')
+  const [seedLength, setSeedLength] = useState(12)  // 12 or 24 words
 
   // Step 1: Generate new wallet
   const handleGenerate = async () => {
@@ -23,7 +24,7 @@ export default function WalletCreationModal({ onSuccess, onCancel }) {
     setError('')
     
     try {
-      const newMnemonic = generateMnemonic()
+      const newMnemonic = generateMnemonic(seedLength)
       const seed = mnemonicToSeedSync(newMnemonic)
       const derived = deriveWalletFromSeed(seed, 0)
       
@@ -182,9 +183,53 @@ export default function WalletCreationModal({ onSuccess, onCancel }) {
                   lineHeight: 1.6,
                 }}
               >
-                A new wallet will be generated with a unique 12-word seed phrase. 
+                A new wallet will be generated with a unique seed phrase. 
                 This phrase is the only way to recover your wallet.
               </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                marginBottom: 20,
+              }}
+            >
+              {[12, 24].map(length => (
+                <button
+                  key={length}
+                  onClick={() => setSeedLength(length)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 16px',
+                    background: seedLength === length ? 'rgba(99,102,241,0.1)' : 'var(--bg3)',
+                    border: `2px solid ${seedLength === length ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: seedLength === length ? 'var(--accent)' : 'var(--text)',
+                      marginBottom: 4,
+                    }}
+                  >
+                    {length} words
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: seedLength === length ? 'var(--accent)' : 'var(--text3)',
+                    }}
+                  >
+                    {length === 12 ? 'Standard' : 'Extended'}
+                  </div>
+                </button>
+              ))}
             </div>
 
             {error && (

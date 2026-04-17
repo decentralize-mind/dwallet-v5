@@ -44,7 +44,7 @@ export function SecurityBriefingStep({ agreedTerms, setAgreedTerms, onBack, onNe
             'rgba(245,158,11,0.25)',
             'var(--amber)',
             'Seed phrase = master key',
-            'Your 12-word recovery phrase can restore your wallet on any device. Write it on paper. Store it offline. Never screenshot, save in a file, or share it with anyone.',
+            'Your recovery phrase (12 or 24 words) can restore your wallet on any device. Write it on paper. Store it offline. Never screenshot, save in a file, or share it with anyone.',
           ],
           [
             '⚠️',

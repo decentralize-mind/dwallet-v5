@@ -1,4 +1,8 @@
+import { useState } from 'react'
+
 export function WelcomeStep({ onSelectCreate, onSelectImport, onBack }) {
+  const [selectedLength, setSelectedLength] = useState(12)
+
   return (
     <div className="step-content">
       {onBack && (
@@ -125,10 +129,56 @@ export function WelcomeStep({ onSelectCreate, onSelectImport, onBack }) {
 
         <button
           className="btn-primary full-width"
-          onClick={onSelectCreate}
+          onClick={() => onSelectCreate(selectedLength)}
+          style={{ marginBottom: 10 }}
         >
           Create new wallet →
         </button>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          {[12, 24].map(length => (
+            <button
+              key={length}
+              onClick={() => setSelectedLength(length)}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: selectedLength === length ? 'rgba(99,102,241,0.1)' : '#f8fafc',
+                border: `2px solid ${selectedLength === length ? '#6366f1' : '#e2e8f0'}`,
+                borderRadius: 10,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: selectedLength === length ? '#6366f1' : '#0f172a',
+                  marginBottom: 4,
+                }}
+              >
+                {length} words
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: selectedLength === length ? '#6366f1' : '#94a3b8',
+                }}
+              >
+                {length === 12 ? 'Standard' : 'Extended'}
+              </div>
+            </button>
+          ))}
+        </div>
+
         <button
           className="btn-secondary full-width"
           onClick={onSelectImport}

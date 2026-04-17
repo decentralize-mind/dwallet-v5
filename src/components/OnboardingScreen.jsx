@@ -49,6 +49,7 @@ export default function OnboardingScreen({ onBack }) {
   // flow
   const [mode, setMode] = useState(null)   // 'new' | 'import'
   const [step, setStep] = useState('welcome')
+  const [seedLength, setSeedLength] = useState(12)  // 12 or 24 words
 
   // new wallet state
   const [mnemonic, setMnemonic]           = useState('')
@@ -89,8 +90,9 @@ export default function OnboardingScreen({ onBack }) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleSelectCreate = async () => {
-    const { mnemonic: m, pending } = await createWallet()
+  const handleSelectCreate = async (length = 12) => {
+    setSeedLength(length)
+    const { mnemonic: m, pending } = await createWallet(length)
     setMnemonic(m)
     setPendingData(pending)
     setMode('new')

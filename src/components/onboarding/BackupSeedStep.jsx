@@ -37,7 +37,7 @@ export function BackupSeedStep({
           Back up your recovery phrase
         </h2>
         <p className="step-sub" style={{ margin: 0 }}>
-          These 12 words are the only way to recover your wallet. Write them on
+          These {words.length} words are the only way to recover your wallet. Write them on
           paper — in order.
         </p>
       </div>
@@ -121,7 +121,7 @@ export function BackupSeedStep({
               color: 'var(--text2)',
             }}
           >
-            Your 12-word recovery phrase
+            Your {words.length}-word recovery phrase
           </span>
           {seedRevealed && (
             <button
@@ -304,7 +304,7 @@ export function BackupSeedStep({
               ) : (
                 <>
                   <span>⎘</span>
-                  <span>Copy all 12 words</span>
+                  <span>Copy all {words.length} words</span>
                 </>
               )}
             </button>
@@ -385,7 +385,7 @@ export function BackupSeedStep({
                 lineHeight: 1.6,
               }}
             >
-              I have written down all 12 words{' '}
+              I have written down all {words.length} words{' '}
               <strong>in the correct order</strong> on paper
             </span>
           </label>
@@ -442,7 +442,7 @@ export function BackupSeedStep({
               fontWeight: 500,
             }}
           >
-            Tap the phrase above to reveal your 12 words
+            Tap the phrase above to reveal your {words.length} words
           </span>
         </div>
       )}

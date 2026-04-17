@@ -7,11 +7,15 @@ import {
 import { wordlist } from '@scure/bip39/wordlists/english'
 
 /**
- * Generate a cryptographically secure 12-word BIP39 mnemonic.
+ * Generate a cryptographically secure BIP39 mnemonic.
  * Uses the full 2048-word English wordlist.
+ * @param {number} wordCount - Number of words (12 or 24). Default: 12
+ * @returns {string} The generated mnemonic phrase
  */
-export function generateMnemonic() {
-  return scureGenerate(wordlist, 128)
+export function generateMnemonic(wordCount = 12) {
+  // BIP39: 12 words = 128 bits entropy, 24 words = 256 bits entropy
+  const entropy = wordCount === 24 ? 256 : 128
+  return scureGenerate(wordlist, entropy)
 }
 
 /**

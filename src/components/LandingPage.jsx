@@ -672,7 +672,7 @@ const features = [
 const steps = [
   {
     title: 'Create Your Wallet',
-    description: 'Generate a secure wallet with a unique 12-word seed phrase. Your keys are encrypted and never leave your device.'
+    description: 'Generate a secure wallet with a unique 12 or 24-word seed phrase. Your keys are encrypted and never leave your device.'
   },
   {
     title: 'Fund Your Wallet',

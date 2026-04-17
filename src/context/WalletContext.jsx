@@ -432,8 +432,8 @@ export function WalletProvider({ children }) {
     return walletData
   }
 
-  const createWallet = async () => {
-    const mnemonic = generateMnemonic()
+  const createWallet = async (wordCount = 12) => {
+    const mnemonic = generateMnemonic(wordCount)
     const seed = mnemonicToSeedSync(mnemonic)
     const derived = deriveWalletFromSeed(seed, 0)
     const pending = {
