@@ -231,11 +231,64 @@ export default function FlashLoanPanel() {
       
       // Estimate gas first
       try {
+        console.log('Estimating gas for flash loan...')
+        console.log('Token:', DWT_TOKEN_ADDRESS)
+        console.log('Amount:', ethers.formatEther(amount), 'DWT')
+        
         const gasEstimate = await receiverContract.executeFlashLoan.estimateGas(DWT_TOKEN_ADDRESS, amount, '0x')
-        console.log('Gas estimate:', gasEstimate.toString())
+        console.log('✅ Gas estimate:', gasEstimate.toString())
       } catch (estimateError) {
-        console.error('Gas estimation failed:', estimateError)
-        alert('Transaction would fail. Please ensure you have enough DWT for the fee (0.09%).')
+        console.error('❌ Gas estimation failed:', estimateError)
+        
+        // Get more details about the failure
+        let detailedError = 'Transaction would fail. Reasons:\n\n'
+        
+        if (estimateError.reason) {
+          detailedError += 'Contract Error: ' + estimateError.reason + '\n\n'
+        }
+        
+        // Check user's DWT balance
+        try {
+          const userBalance = await tokenContract.balanceOf(userAddress)
+          const balanceFormatted = ethers.formatEther(userBalance)
+          const feeFormatted = ethers.formatEther(fee)
+          
+          detailedError += 'Your DWT Balance: ' + balanceFormatted + ' DWT\n'
+          detailedError += 'Required for Fee: ' + feeFormatted + ' DWT\n'
+          
+          if (userBalance < fee) {
+            detailedError += '\n❌ You do not have enough DWT to pay the flash loan fee!\n'
+            detailedError += 'You need at least ' + feeFormatted + ' DWT in your wallet.\n'
+          } else {
+            detailedError += '\n✅ You have enough DWT for the fee.\n'
+          }
+        } catch (balanceError) {
+          detailedError += 'Could not check balance: ' + balanceError.message + '\n'
+        }
+        
+        // Check pool balance
+        try {
+          const IERC20FullABI = [
+            'function balanceOf(address) view returns (uint256)'
+          ]
+          const poolProvider = new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC)
+          const poolTokenContract = new ethers.Contract(DWT_TOKEN_ADDRESS, IERC20FullABI, poolProvider)
+          const poolBalance = await poolTokenContract.balanceOf(FLASH_LOAN_ADDRESS)
+          
+          detailedError += '\nFlashLoan Pool Balance: ' + ethers.formatEther(poolBalance) + ' DWT\n'
+          
+          if (poolBalance < amount) {
+            detailedError += '❌ Pool has insufficient balance for this loan!\n'
+          } else {
+            detailedError += '✅ Pool has sufficient balance.\n'
+          }
+        } catch (poolError) {
+          detailedError += '\nCould not check pool: ' + poolError.message + '\n'
+        }
+        
+        detailedError += '\nPlease check the console for more details.'
+        
+        alert(detailedError)
         return
       }
       
