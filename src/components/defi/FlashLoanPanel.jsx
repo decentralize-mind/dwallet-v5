@@ -92,13 +92,100 @@ export default function FlashLoanPanel() {
       const browserProvider = new ethers.BrowserProvider(window.ethereum)
       const signer = await browserProvider.getSigner()
       
-      // Verify we're on Base Sepolia
+      // Check current network
       const network = await browserProvider.getNetwork()
-      if (network.chainId !== 84532n) { // 84532 is Base Sepolia chain ID
-        alert('Please switch to Base Sepolia network (Chain ID: 84532)')
-        return
+      const BASE_SEPOLIA_CHAIN_ID = 84532n
+      
+      if (network.chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        console.log('Wrong network detected. Current:', network.chainId, 'Expected:', BASE_SEPOLIA_CHAIN_ID)
+        
+        // Try to switch to Base Sepolia automatically
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x14a34' }], // 84532 in hex
+          })
+          console.log('Successfully switched to Base Sepolia')
+          
+          // Wait a moment for the network switch
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Re-create provider with new network
+          const newProvider = new ethers.BrowserProvider(window.ethereum)
+          const newSigner = await newProvider.getSigner()
+          
+          // Continue with the rest of the function using newSigner
+          return await executeFlashLoan(newProvider, newSigner, amount)
+        } catch (switchError) {
+          // This error code indicates that the chain has not been added to MetaMask
+          if (switchError.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0x14a34',
+                  chainName: 'Base Sepolia',
+                  nativeCurrency: {
+                    name: 'Ethereum',
+                    symbol: 'ETH',
+                    decimals: 18
+                  },
+                  rpcUrls: ['https://sepolia.base.org'],
+                  blockExplorerUrls: ['https://sepolia.basescan.org']
+                }],
+              })
+              console.log('Base Sepolia network added')
+              
+              // Wait for network switch
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              
+              // Re-create provider
+              const newProvider = new ethers.BrowserProvider(window.ethereum)
+              const newSigner = await newProvider.getSigner()
+              
+              return await executeFlashLoan(newProvider, newSigner, amount)
+            } catch (addError) {
+              console.error('Failed to add Base Sepolia network:', addError)
+              alert('Failed to add Base Sepolia network. Please add it manually in your wallet settings.')
+              return
+            }
+          } else {
+            console.error('Failed to switch network:', switchError)
+            alert('Please manually switch to Base Sepolia network in your wallet.\n\nNetwork Details:\n- Name: Base Sepolia\n- Chain ID: 84532\n- RPC: https://sepolia.base.org')
+            return
+          }
+        }
       }
+      
+      // If we're already on the correct network, execute directly
+      return await executeFlashLoan(browserProvider, signer, amount)
+      
+    } catch (error) {
+      console.error('Flash loan failed:', error)
+      
+      // Better error handling
+      let errorMessage = 'Flash loan failed: '
+      if (error.reason) {
+        errorMessage += error.reason
+      } else if (error.message) {
+        if (error.message.includes('missing revert data')) {
+          errorMessage += 'Transaction reverted. You may not have enough DWT for the fee.'
+        } else {
+          errorMessage += error.message
+        }
+      } else {
+        errorMessage += 'Unknown error'
+      }
+      
+      alert(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  // Helper function to execute the actual flash loan
+  const executeFlashLoan = async (provider, signer, amount) => {
+    try {
       // First, approve DWT spending for the fee
       const IERC20ABI = [
         'function approve(address spender, uint256 amount) returns (bool)',
