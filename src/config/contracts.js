@@ -38,7 +38,7 @@ export const CONTRACT_ADDRESSES = {
     Multisend: '0xdBbeb44bA01c4aBDee340844e649a5a25FdC501C',
     Slasher: '0x17FF8F3F9ac37f3f25187e4b9278FB5B1A256abE',
     DWTStaking: '0xb7c51EfC06f6b3499b7403156711437b390858Db',
-    DWalletFeeRouter: '0x2c9F19767E985F946fa3dA774C4AcAFfb2ff6a58',
+    DWalletFeeRouter: '0xd23f3d7fF87c1DC27178D34Ee30ffc6B17bb658d', // Updated 2026-04-16 - New secure version with timelock
     BaseSafe: '0xD2B02ccc57dCad1e51Af35152685fE6D3F1983C5',
   },
   allocations: {

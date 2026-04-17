@@ -169,14 +169,36 @@ export const IPNS_CONFIG = {
 
 /**
  * ENS domain configuration for IPFS
+ * Update this when you set up your ENS domain
  */
 export const ENS_CONFIG = {
-  domain: null, // Set your ENS domain (e.g., 'dwallet.eth')
-  gateway: 'https://dwallet.eth.limo', // ENS gateway
+  domain: 'dwallet.eth', // Your ENS domain (change if different)
+  gateway: 'https://dwallet.eth.limo', // ENS gateway for accessing content
+  
+  /**
+   * Get ENS gateway URL
+   * @returns {string|null} ENS gateway URL or null if not configured
+   */
   getUrl: function() {
     if (!this.domain) {
       return null;
     }
     return this.gateway;
+  },
+  
+  /**
+   * Check if ENS is properly configured
+   * @returns {boolean}
+   */
+  isConfigured: function() {
+    return !!this.domain && this.domain !== 'dwallet.eth' // Change this check when you set your domain
+  },
+  
+  /**
+   * Get display name for sharing
+   * @returns {string}
+   */
+  getDisplayName: function() {
+    return this.domain || 'IPFS Gateway';
   }
 };

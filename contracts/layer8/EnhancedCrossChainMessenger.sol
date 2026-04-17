@@ -28,6 +28,7 @@ contract EnhancedCrossChainMessenger is AccessControl, SecurityGated {
     using ECDSA for bytes32;
 
     bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
+    bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
     bytes32 public constant LAYER_ID = keccak256("LAYER_8_BRIDGE");
     bytes32 public constant MESSAGE_ACTION = keccak256("MESSAGE_ACTION");
 
@@ -165,6 +166,13 @@ contract EnhancedCrossChainMessenger is AccessControl, SecurityGated {
      * @dev Can remove underperforming or malicious relayers
      */
     function removeRelayer(address relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _removeRelayer(relayer);
+    }
+    
+    /**
+     * @notice Internal function to remove relayer
+     */
+    function _removeRelayer(address relayer) internal {
         require(isRelayer[relayer], "Not a relayer");
 
         isRelayer[relayer] = false;
@@ -175,12 +183,15 @@ contract EnhancedCrossChainMessenger is AccessControl, SecurityGated {
         relayerInfo[relayer].stake = 0;
         relayerInfo[relayer].active = false;
 
-        payable(relayer).transfer(stake);
-
         // Remove from array
         _removeRelayerFromArray(relayer);
 
         emit RelayerRemoved(relayer);
+        
+        // Return stake if exists
+        if (stake > 0) {
+            payable(relayer).transfer(stake);
+        }
     }
 
     /**
@@ -204,7 +215,7 @@ contract EnhancedCrossChainMessenger is AccessControl, SecurityGated {
 
         // Auto-remove if too many failures
         if (relayerInfo[relayer].failedMessages > 100) {
-            removeRelayer(relayer);
+            _removeRelayer(relayer);
         }
     }
 

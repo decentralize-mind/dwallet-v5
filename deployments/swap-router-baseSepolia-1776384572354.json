@@ -1,0 +1,14 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "timestamp": "2026-04-17T00:09:32.354Z",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "contracts": {
+    "swapRouter": "0x8223DFf1d2F1dD1f983a6826e7D35a101467F1fd",
+    "feeRouter": "0xd23f3d7fF87c1DC27178D34Ee30ffc6B17bb658d"
+  },
+  "config": {
+    "admin": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+    "governor": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5"
+  }
+}
