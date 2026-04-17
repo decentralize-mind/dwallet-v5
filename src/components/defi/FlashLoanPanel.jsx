@@ -186,6 +186,21 @@ export default function FlashLoanPanel() {
   // Helper function to execute the actual flash loan
   const executeFlashLoan = async (provider, signer, amount) => {
     try {
+      // Get user address from signer
+      const userAddress = await signer.getAddress()
+      console.log('Executing flash loan for address:', userAddress)
+      console.log('FlashLoanReceiver address:', FLASH_LOAN_RECEIVER_ADDRESS)
+      console.log('DWT Token address:', DWT_TOKEN_ADDRESS)
+      
+      // Validate addresses
+      if (!FLASH_LOAN_RECEIVER_ADDRESS || FLASH_LOAN_RECEIVER_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        throw new Error('FlashLoanReceiver address is not configured')
+      }
+      
+      if (!DWT_TOKEN_ADDRESS || DWT_TOKEN_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        throw new Error('DWT Token address is not configured')
+      }
+      
       // First, approve DWT spending for the fee
       const IERC20ABI = [
         'function approve(address spender, uint256 amount) returns (bool)',
@@ -195,10 +210,14 @@ export default function FlashLoanPanel() {
       const fee = (amount * 9n) / 10000n // 0.09% fee
       const tokenContract = new ethers.Contract(DWT_TOKEN_ADDRESS, IERC20ABI, signer)
       
-      const allowance = await tokenContract.allowance(wallet.address, FLASH_LOAN_RECEIVER_ADDRESS)
+      console.log('Checking allowance for:', userAddress, 'spender:', FLASH_LOAN_RECEIVER_ADDRESS)
+      const allowance = await tokenContract.allowance(userAddress, FLASH_LOAN_RECEIVER_ADDRESS)
+      console.log('Current allowance:', ethers.formatEther(allowance))
+      
       if (allowance < fee) {
         console.log('Approving DWT for flash loan fee...')
         const approveTx = await tokenContract.approve(FLASH_LOAN_RECEIVER_ADDRESS, fee)
+        console.log('Approval tx hash:', approveTx.hash)
         await approveTx.wait()
         console.log('Approval successful')
       }
