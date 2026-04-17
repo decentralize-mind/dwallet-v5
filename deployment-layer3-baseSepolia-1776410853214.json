@@ -1,0 +1,33 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-17T07:27:33.214Z",
+  "layer": "Layer 3 - Oracles, Bridge & Emergency",
+  "contracts": {
+    "priceOracle": "0xec9cfD7103F22aFCa171D5b45b18a13D1016A393",
+    "emergencyPause": "0xC52961a1b024A7561b495C3881D2C9f668733f79",
+    "dwtBridge": "0x351A4A9Ccbd1f2DEd13250E5A6d5D0cE668a7c45",
+    "feeSplitter": "0xb28841908e1Fdf4AC8369C9a947Bb6e1DFCEB059",
+    "buybackAndBurn": "0x776bB4C7E2c8fd31a086A9244a8f326b42a3DdFF",
+    "veDWT": "0xbf26241dba953f1caC106773858f178f1fb5e40C",
+    "dwalletMultisig": "0xD87820cd302B7454C7eAa1268a9EF04721AB4370",
+    "rewardDistributor": "0xE82C39Ef5b61eC69718775687AA337ab726e0e66"
+  },
+  "dependencies": {
+    "securityController": "0x813b537A21bF5AC6967E870db47Ec2770651B11F",
+    "lockEngine": "0x059327A069Ba66A74ecF21fde8c1c0D2915e0DB3",
+    "dwtToken": "0xe149b32b97384131204C86a23459b544498BC46A",
+    "swapRouter": "0x2a4b239C15f54218a30116c630a32d9305859a43",
+    "treasury": "0x6552d7c4628e9e71c2E3cBEaB9f17CF67Bee1D89"
+  },
+  "security": {
+    "bridgeRequiredSignatures": 3,
+    "multisigRequiredConfirmations": 3,
+    "multisigSignerCount": 5,
+    "buybackCooldown": "1 day",
+    "buybackMaxSingle": "10,000 DWT",
+    "veDWTMinLock": "1 week",
+    "veDWTMaxLock": "4 years"
+  }
+}

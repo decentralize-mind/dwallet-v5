@@ -1,0 +1,71 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-17T07:27:33.214Z",
+  "layer": "Layer 3 - Oracles, Bridge & Emergency",
+  "contracts": {
+    "priceOracle": "0xec9cfD7103F22aFCa171D5b45b18a13D1016A393",
+    "emergencyPause": "0xC52961a1b024A7561b495C3881D2C9f668733f79",
+    "dwtBridge": "0x351A4A9Ccbd1f2DEd13250E5A6d5D0cE668a7c45",
+    "feeSplitter": "0xb28841908e1Fdf4AC8369C9a947Bb6e1DFCEB059",
+    "buybackAndBurn": "0x776bB4C7E2c8fd31a086A9244a8f326b42a3DdFF",
+    "veDWT": "0xbf26241dba953f1caC106773858f178f1fb5e40C",
+    "dwalletMultisig": "0xD87820cd302B7454C7eAa1268a9EF04721AB4370",
+    "rewardDistributor": "0xE82C39Ef5b61eC69718775687AA337ab726e0e66"
+  },
+  "dependencies": {
+    "securityController": "0x813b537A21bF5AC6967E870db47Ec2770651B11F",
+    "lockEngine": "0x059327A069Ba66A74ecF21fde8c1c0D2915e0DB3",
+    "dwtToken": "0xe149b32b97384131204C86a23459b544498BC46A",
+    "swapRouter": "0x2a4b239C15f54218a30116c630a32d9305859a43",
+    "treasury": "0x6552d7c4628e9e71c2E3cBEaB9f17CF67Bee1D89"
+  },
+  "security": {
+    "bridgeRequiredSignatures": 3,
+    "multisigRequiredConfirmations": 3,
+    "multisigSignerCount": 5,
+    "buybackCooldown": "1 day",
+    "buybackMaxSingle": "10,000 DWT",
+    "veDWTMinLock": "1 week",
+    "veDWTMaxLock": "4 years"
+  },
+  "configuration": {
+    "timestamp": "2026-04-17T07:35:12.908Z",
+    "relayers": [
+      "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+      "0xc46A897aF73E46e2FEb5c4Afca5fBAB748B31505",
+      "0xAc17fb8B5738DeF637A417A81Cd728A751b7411b",
+      "0x96f4107A107e7753CE6E13Bb6B810140Ea20069d",
+      "0x50D5D091ea97BABeE5d8b9A9E931DE87319def62"
+    ],
+    "priceFeeds": [
+      {
+        "token": "0xe149b32b97384131204C86a23459b544498BC46A",
+        "aggregator": "0x0000000000000000000000000000000000000001",
+        "stalenessThreshold": 3600,
+        "fallbackPrice": "1.00 USD"
+      }
+    ],
+    "emergencyPauseContracts": [
+      "0xe149b32b97384131204C86a23459b544498BC46A",
+      "0x2a4b239C15f54218a30116c630a32d9305859a43",
+      "0xec9cfD7103F22aFCa171D5b45b18a13D1016A393",
+      "0x351A4A9Ccbd1f2DEd13250E5A6d5D0cE668a7c45",
+      "0xb28841908e1Fdf4AC8369C9a947Bb6e1DFCEB059",
+      "0x776bB4C7E2c8fd31a086A9244a8f326b42a3DdFF",
+      "0xbf26241dba953f1caC106773858f178f1fb5e40C",
+      "0xD87820cd302B7454C7eAa1268a9EF04721AB4370",
+      "0xE82C39Ef5b61eC69718775687AA337ab726e0e66"
+    ],
+    "feeSplitterConfig": {
+      "treasury": "0x6552d7c4628e9e71c2E3cBEaB9f17CF67Bee1D89",
+      "rewardDistributor": "0xE82C39Ef5b61eC69718775687AA337ab726e0e66",
+      "buybackAndBurn": "0x776bB4C7E2c8fd31a086A9244a8f326b42a3DdFF",
+      "treasuryBps": 4000,
+      "rewardBps": 4000,
+      "buybackBps": 2000
+    }
+  },
+  "verificationStatus": "In Progress - Check BaseScan for individual contract status"
+}
