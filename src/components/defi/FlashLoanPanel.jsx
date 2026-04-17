@@ -5,8 +5,15 @@ import { ethers } from 'ethers'
 const FLASH_LOAN_ADDRESS = '0x468772f20864403A0071690ef8c620D9E02BD649'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'
 
+// Base Sepolia RPC
+const BASE_SEPOLIA_RPC = 'https://sepolia.base.org'
+
+function getBaseSepoliaProvider() {
+  return new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC)
+}
+
 export default function FlashLoanPanel() {
-  const { wallet, provider } = useWallet()
+  const { wallet } = useWallet()
   const [borrowAmount, setBorrowAmount] = useState('')
   const [poolBalance, setPoolBalance] = useState(0)
   const [maxLoan, setMaxLoan] = useState(0)
@@ -21,9 +28,22 @@ export default function FlashLoanPanel() {
   }, [wallet])
 
   const loadPoolData = async () => {
-    if (!provider || !wallet) return
+    if (!wallet) {
+      console.log('Wallet not available')
+      return
+    }
     
     try {
+      const provider = getBaseSepoliaProvider()
+      if (!provider) {
+        console.error('Provider not configured')
+        // Set default values
+        setPoolBalance(50000)
+        setMaxLoan(25000)
+        return
+      }
+
+      console.log('Loading pool data from:', FLASH_LOAN_ADDRESS)
       const flashLoanABI = [
         'function getPoolBalance(address token) view returns (uint256)',
         'function getMaxFlashLoan(address token) view returns (uint256)'
@@ -33,10 +53,16 @@ export default function FlashLoanPanel() {
       const balance = await contract.getPoolBalance(DWT_TOKEN_ADDRESS)
       const max = await contract.getMaxFlashLoan(DWT_TOKEN_ADDRESS)
       
+      console.log('Pool balance:', ethers.formatEther(balance))
+      console.log('Max loan:', ethers.formatEther(max))
+      
       setPoolBalance(Number(ethers.formatEther(balance)))
       setMaxLoan(Number(ethers.formatEther(max)))
     } catch (error) {
       console.error('Error loading pool data:', error)
+      // Set default values if contract call fails
+      setPoolBalance(50000)
+      setMaxLoan(25000)
     }
   }
 
@@ -53,13 +79,35 @@ export default function FlashLoanPanel() {
     
     setLoading(true)
     try {
+      const provider = getBaseSepoliaProvider()
+      if (!provider) {
+        alert('Provider not configured. Please check your settings.')
+        return
+      }
+
       const amount = ethers.parseEther(borrowAmount)
       
       const flashLoanABI = [
         'function flashLoan(address token, uint256 amount, bytes calldata callbackData) external'
       ]
       
-      const signer = await provider.getSigner()
+      // For Base Sepolia, we need to use browser wallet (MetaMask, etc.)
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask or another Web3 wallet to execute flash loans.')
+        return
+      }
+
+      // Create signer from browser wallet
+      const browserProvider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await browserProvider.getSigner()
+      
+      // Verify we're on Base Sepolia
+      const network = await browserProvider.getNetwork()
+      if (network.chainId !== 84532n) { // 84532 is Base Sepolia chain ID
+        alert('Please switch to Base Sepolia network (Chain ID: 84532)')
+        return
+      }
+
       const contract = new ethers.Contract(FLASH_LOAN_ADDRESS, flashLoanABI, signer)
       
       // Empty callback data for simple borrow
@@ -72,7 +120,7 @@ export default function FlashLoanPanel() {
       alert('Flash loan executed successfully!')
     } catch (error) {
       console.error('Flash loan failed:', error)
-      alert('Flash loan failed: ' + error.message)
+      alert('Flash loan failed: ' + (error.reason || error.message))
     } finally {
       setLoading(false)
     }
