@@ -1,0 +1,10 @@
+{
+  "network": "baseSepolia",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-17T08:04:15.939Z",
+  "contracts": {
+    "CrossChainMessenger": "0x64f3fFdE0bbA86e072a2595Cd550AeC44a1e0e38",
+    "FlashLoan": "0x468772f20864403A0071690ef8c620D9E02BD649",
+    "InsuranceFund": "0x8ba2Bb332764217079DFFb280dD70C8B351B5770"
+  }
+}

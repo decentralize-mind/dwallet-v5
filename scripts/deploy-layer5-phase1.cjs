@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   console.log("=".repeat(80));
-  console.log("🚀 Deploying Layer 5 - Cross-Chain & Advanced DeFi");
+  console.log("🚀 Deploying Layer 5 - Core Contracts (Phase 1)");
   console.log("=".repeat(80));
 
   const [deployer] = await hre.ethers.getSigners();
@@ -11,29 +11,19 @@ async function main() {
   const network = hre.network.name;
   console.log("🌐 Network:", network);
   
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log("💰 Deployer balance:", hre.ethers.formatEther(balance), "ETH");
+  
   const deployedContracts = {};
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Prerequisites - These should already be deployed
+  // Prerequisites
   // ───────────────────────────────────────────────────────────────────────────
   
-  console.log("\n⚠️  Prerequisites (should be already deployed):");
-  console.log("  - Layer 7 Security contract address");
-  console.log("  - Layer 1 DWT token address");
-  console.log("  - Price Oracle address (for LimitOrders)");
-  console.log("  - Uniswap V3 Position Manager address (for LiquidityIncentive)");
-  
-  // You should set these addresses based on your deployment
   const LAYER7_SECURITY = process.env.LAYER7_SECURITY_ADDRESS || "0x20d859c9EB3FA612C604213F74dcC6Ae49Cd040c";
-  const DWT_TOKEN = process.env.DWT_TOKEN_ADDRESS || "0x3400b0167dA5b2dba0b88b9604ee7df4BFc1f1fa";
-  const PRICE_ORACLE = process.env.PRICE_ORACLE_ADDRESS || "0x0000000000000000000000000000000000000001"; // Placeholder
-  const UNISWAP_V3_POSITION_MANAGER = process.env.UNISWAP_V3_POSITION_MANAGER || "0x0000000000000000000000000000000000000002"; // Placeholder
   
   console.log("\n📋 Using addresses:");
   console.log("  Layer 7 Security:", LAYER7_SECURITY);
-  console.log("  DWT Token:", DWT_TOKEN);
-  console.log("  Price Oracle:", PRICE_ORACLE);
-  console.log("  Uniswap V3 Position Manager:", UNISWAP_V3_POSITION_MANAGER);
 
   // ───────────────────────────────────────────────────────────────────────────
   // Step 1: Deploy CrossChainMessenger
@@ -96,61 +86,11 @@ async function main() {
   deployedContracts.InsuranceFund = insuranceFundAddress;
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Step 4: Deploy LimitOrders
-  // ───────────────────────────────────────────────────────────────────────────
-  
-  console.log("\n" + "─".repeat(80));
-  console.log("📊 Step 4: Deploying LimitOrders...");
-  
-  const LimitOrders = await hre.ethers.getContractFactory("LimitOrders");
-  const limitOrders = await LimitOrders.deploy(
-    deployer.address,  // admin
-    deployer.address,  // operator
-    deployer.address,  // guardian
-    LAYER7_SECURITY,   // layer7 security
-    PRICE_ORACLE       // price oracle
-  );
-  await limitOrders.waitForDeployment();
-  
-  const limitOrdersAddress = await limitOrders.getAddress();
-  console.log("✅ LimitOrders deployed to:", limitOrdersAddress);
-  deployedContracts.LimitOrders = limitOrdersAddress;
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // Step 5: Deploy LiquidityIncentive
-  // ───────────────────────────────────────────────────────────────────────────
-  
-  console.log("\n" + "─".repeat(80));
-  console.log("💧 Step 5: Deploying LiquidityIncentive...");
-  
-  const now = Math.floor(Date.now() / 1000);
-  const startTimestamp = now + 60; // Start in 1 minute
-  const endTimestamp = now + (365 * 24 * 60 * 60); // End in 1 year
-  
-  const LiquidityIncentive = await hre.ethers.getContractFactory("LiquidityIncentive");
-  const liquidityIncentive = await LiquidityIncentive.deploy(
-    deployer.address,              // admin
-    deployer.address,              // operator
-    deployer.address,              // guardian
-    LAYER7_SECURITY,               // layer7 security
-    UNISWAP_V3_POSITION_MANAGER,   // position manager
-    DWT_TOKEN,                     // reward token
-    hre.ethers.parseEther("100"),  // emission rate (100 tokens per second)
-    startTimestamp,                // start timestamp
-    endTimestamp                   // end timestamp
-  );
-  await liquidityIncentive.waitForDeployment();
-  
-  const liquidityIncentiveAddress = await liquidityIncentive.getAddress();
-  console.log("✅ LiquidityIncentive deployed to:", liquidityIncentiveAddress);
-  deployedContracts.LiquidityIncentive = liquidityIncentiveAddress;
-
-  // ───────────────────────────────────────────────────────────────────────────
   // Summary
   // ───────────────────────────────────────────────────────────────────────────
   
   console.log("\n" + "=".repeat(80));
-  console.log("🎉 LAYER 5 DEPLOYMENT COMPLETE!");
+  console.log("🎉 LAYER 5 PHASE 1 DEPLOYMENT COMPLETE!");
   console.log("=".repeat(80));
   
   console.log("\n📊 Deployed Contracts:");
@@ -173,7 +113,7 @@ async function main() {
     contracts: deployedContracts
   };
   
-  const deploymentFile = `deployment-layer5-${network}-${Date.now()}.json`;
+  const deploymentFile = `deployment-layer5-phase1-${network}-${Date.now()}.json`;
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
   console.log("\n💾 Deployment info saved to:", deploymentFile);
   
@@ -193,17 +133,9 @@ async function main() {
   console.log("   - Fund the insurance pool");
   console.log("   - Set up claims assessors");
   console.log("");
-  console.log("4. Configure LimitOrders:");
-  console.log("   - Verify price oracle is working");
-  console.log("   - Test order creation and filling");
-  console.log("");
-  console.log("5. Configure LiquidityIncentive:");
-  console.log("   - Add liquidity pools");
-  console.log("   - Set allocation points");
-  console.log("   - Fund with reward tokens");
-  console.log("");
-  console.log("6. Verify contracts on block explorer");
-  console.log("7. Run comprehensive tests");
+  console.log("4. Next Phase - Deploy LimitOrders & LiquidityIncentive:");
+  console.log("   - Need Price Oracle address");
+  console.log("   - Need Uniswap V3 Position Manager address");
   console.log("=".repeat(80));
 }
 
