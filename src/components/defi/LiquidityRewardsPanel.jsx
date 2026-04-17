@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../../context/WalletContext'
+import { LiquidityIncentive_ABI } from '../../config/abis'
 
 const LIQUIDITY_INCENTIVE_ADDRESS = '0x56b2E198518584e75643611140A5157931F777FA'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'
@@ -10,7 +11,10 @@ export default function LiquidityRewardsPanel() {
   const [totalStaked, setTotalStaked] = useState(0)
   const [userStaked, setUserStaked] = useState(0)
   const [rewardsEarned, setRewardsEarned] = useState(0)
+  const [stakeAmount, setStakeAmount] = useState('')
   const [loading, setLoading] = useState(false)
+  const [txHash, setTxHash] = useState(null)
+  const [poolId, setPoolId] = useState(0)
 
   useEffect(() => {
     loadRewardsData()
@@ -20,43 +24,97 @@ export default function LiquidityRewardsPanel() {
     if (!provider || !wallet) return
     
     try {
-      const incentiveABI = [
-        'function emissionRate() view returns (uint256)',
-        'function totalStaked() view returns (uint256)',
-        'function getUserStaked(address user) view returns (uint256)',
-        'function getRewardsEarned(address user) view returns (uint256)'
-      ]
+      const contract = new ethers.Contract(LIQUIDITY_INCENTIVE_ADDRESS, LiquidityIncentive_ABI, provider)
       
-      const contract = new ethers.Contract(LIQUIDITY_INCENTIVE_ADDRESS, incentiveABI, provider)
-      const emission = await contract.emissionRate()
-      const total = await contract.totalStaked()
+      // Get emission rate (reward per second)
+      const rewardPerSecond = await contract.rewardPerSecond()
+      const dailyEmission = Number(ethers.formatEther(rewardPerSecond)) * 86400
+      setEmissionRate(Math.round(dailyEmission))
       
-      setEmissionRate(Number(ethers.formatEther(emission)))
+      // Get total staked
+      const poolInfo = await contract.poolInfo(0)
+      const total = await contract.totalSupply()
+      
       setTotalStaked(Number(ethers.formatEther(total)))
+      
+      // Get user staked amount
+      const userInfo = await contract.userInfo(0, wallet.address)
+      setUserStaked(Number(ethers.formatEther(userInfo.amount)))
+      
+      // Get pending rewards
+      const pending = await contract.pendingReward(0, wallet.address)
+      setRewardsEarned(Number(ethers.formatEther(pending)))
     } catch (error) {
       console.error('Error loading rewards data:', error)
     }
   }
 
   const handleStake = async () => {
+    if (!wallet || !stakeAmount) return
+    
     setLoading(true)
     try {
-      alert('Staking feature coming soon! Will integrate with deployed LiquidityIncentive contract.')
+      const signer = await provider.getSigner()
+      const contract = new ethers.Contract(LIQUIDITY_INCENTIVE_ADDRESS, LiquidityIncentive_ABI, signer)
+      
+      const amount = ethers.parseEther(stakeAmount)
+      const tx = await contract.deposit(poolId, amount)
+      setTxHash(tx.hash)
+      
+      await tx.wait()
+      
+      alert('Staking successful!')
+      await loadRewardsData()
+      setStakeAmount('')
     } catch (error) {
       console.error('Staking failed:', error)
-      alert('Staking failed: ' + error.message)
+      alert('Staking failed: ' + (error.reason || error.message))
     } finally {
       setLoading(false)
     }
   }
 
   const handleClaimRewards = async () => {
+    if (!wallet) return
+    
     setLoading(true)
     try {
-      alert('Claim rewards feature coming soon!')
+      const signer = await provider.getSigner()
+      const contract = new ethers.Contract(LIQUIDITY_INCENTIVE_ADDRESS, LiquidityIncentive_ABI, signer)
+      
+      const tx = await contract.harvest(poolId)
+      setTxHash(tx.hash)
+      
+      await tx.wait()
+      
+      alert('Rewards claimed successfully!')
+      await loadRewardsData()
     } catch (error) {
       console.error('Claim failed:', error)
-      alert('Claim failed: ' + error.message)
+      alert('Claim failed: ' + (error.reason || error.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleWithdraw = async () => {
+    if (!wallet || !userStaked) return
+    
+    setLoading(true)
+    try {
+      const signer = await provider.getSigner()
+      const contract = new ethers.Contract(LIQUIDITY_INCENTIVE_ADDRESS, LiquidityIncentive_ABI, signer)
+      
+      const tx = await contract.withdraw(poolId, ethers.parseEther(userStaked.toString()))
+      setTxHash(tx.hash)
+      
+      await tx.wait()
+      
+      alert('Withdrawal successful!')
+      await loadRewardsData()
+    } catch (error) {
+      console.error('Withdrawal failed:', error)
+      alert('Withdrawal failed: ' + (error.reason || error.message))
     } finally {
       setLoading(false)
     }
@@ -92,8 +150,8 @@ export default function LiquidityRewardsPanel() {
             <span>{emissionRate} DWT per day</span>
           </div>
           <div className="detail-row">
-            <span>Reward Period:</span>
-            <span>365 days (1 year)</span>
+            <span>Your Stake:</span>
+            <span>{userStaked.toFixed(2)} DWT</span>
           </div>
           <div className="detail-row">
             <span>Total Rewards:</span>
@@ -102,11 +160,25 @@ export default function LiquidityRewardsPanel() {
         </div>
       </div>
 
+      <div className="stake-form">
+        <div className="input-group">
+          <label>Amount to Stake (DWT)</label>
+          <input
+            type="number"
+            value={stakeAmount}
+            onChange={(e) => setStakeAmount(e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
+
       <div className="stake-section">
         <button
           className="btn-primary btn-stake"
           onClick={handleStake}
-          disabled={loading}
+          disabled={loading || !stakeAmount}
         >
           {loading ? 'Processing...' : 'Stake Liquidity'}
         </button>
@@ -116,8 +188,18 @@ export default function LiquidityRewardsPanel() {
           onClick={handleClaimRewards}
           disabled={loading || rewardsEarned === 0}
         >
-          Claim Rewards
+          Claim Rewards ({rewardsEarned.toFixed(2)} DWT)
         </button>
+
+        {userStaked > 0 && (
+          <button
+            className="btn-secondary btn-withdraw"
+            onClick={handleWithdraw}
+            disabled={loading}
+          >
+            Withdraw ({userStaked.toFixed(2)} DWT)
+          </button>
+        )}
       </div>
 
       <div className="info-box">
@@ -129,6 +211,14 @@ export default function LiquidityRewardsPanel() {
           <li>Claim rewards anytime</li>
         </ul>
       </div>
+
+      {txHash && (
+        <div className="tx-success">
+          ✅ Transaction: <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer">
+            View on BaseScan
+          </a>
+        </div>
+      )}
     </div>
   )
 }

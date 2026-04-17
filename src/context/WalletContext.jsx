@@ -4,6 +4,7 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useContext,
 } from 'react'
 import { generateMnemonic, mnemonicToSeedSync } from '../utils/bip39'
 import {
@@ -1269,4 +1270,13 @@ export function WalletProvider({ children }) {
       {children}
     </WalletContext.Provider>
   )
+}
+
+// Custom hook to use the Wallet context
+export function useWallet() {
+  const context = useContext(WalletContext)
+  if (!context) {
+    throw new Error('useWallet must be used within a WalletProvider')
+  }
+  return context
 }

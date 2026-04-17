@@ -2568,6 +2568,494 @@ select.field {
   background: rgba(99, 102, 241, 0.25);
 }
 
+/* ─── Layer 5 DeFi Panels ────────────────────────────────────────── */
+.flash-loan-panel,
+.insurance-fund-panel,
+.limit-orders-panel,
+.liquidity-rewards-panel {
+  background: var(--bg2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.badge-success {
+  background: var(--green-light);
+  color: var(--green);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pool-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg3);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--accent-light);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.borrow-form,
+.claim-form,
+.order-form,
+.rewards-info {
+  margin-top: 24px;
+}
+
+.borrow-form h4,
+.claim-form h4,
+.order-form h4,
+.rewards-info h4 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.input-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.input-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+
+.input-group input,
+.input-group textarea {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  transition: all 0.2s ease;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.input-group input::placeholder,
+.input-group textarea::placeholder {
+  color: var(--text3);
+}
+
+.btn-max {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-max:hover {
+  background: var(--accent-hover);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.loan-details,
+.order-total {
+  background: var(--bg3);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  margin: 20px 0;
+  border: 1px solid var(--border);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detail-row.total {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid var(--accent);
+}
+
+.total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: white;
+  box-shadow: 0 4px 12px var(--accent-light);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-light);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  margin-top: 12px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg4);
+  border-color: var(--accent);
+}
+
+.btn-borrow,
+.btn-claim,
+.btn-order,
+.btn-stake {
+  margin-top: 20px;
+}
+
+.btn-order.buy {
+  background: linear-gradient(135deg, var(--green), #059669);
+}
+
+.btn-order.sell {
+  background: linear-gradient(135deg, var(--red), #dc2626);
+}
+
+.info-box {
+  background: var(--amber-light);
+  border: 1px solid var(--amber);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.info-box strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--amber);
+  font-size: 15px;
+}
+
+.info-box ul,
+.info-box ol {
+  margin: 12px 0 0 20px;
+  line-height: 1.8;
+}
+
+.info-box li {
+  margin-bottom: 4px;
+}
+
+.tx-success {
+  background: var(--green-light);
+  border: 1px solid var(--green);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  margin-top: 20px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.tx-success a {
+  color: var(--green);
+  text-decoration: underline;
+  margin-left: 8px;
+}
+
+.tx-success a:hover {
+  color: var(--accent);
+}
+
+/* Tab Switcher */
+.tab-switcher {
+  display: flex;
+  gap: 8px;
+  margin: 24px 0;
+  background: var(--bg3);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.tab-switcher button {
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-switcher button.active {
+  background: var(--bg2);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-switcher button:hover:not(.active) {
+  color: var(--text);
+  background: var(--bg4);
+}
+
+/* Order Type Toggle */
+.order-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.order-type-toggle button {
+  flex: 1;
+  padding: 14px 20px;
+  border: 2px solid var(--border);
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.order-type-toggle button.active.buy {
+  background: var(--green-light);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.order-type-toggle button.active.sell {
+  background: var(--red-light);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.order-type-toggle button:hover:not(.active) {
+  border-color: var(--accent);
+}
+
+/* Coverage Info */
+.coverage-info {
+  margin-top: 24px;
+}
+
+.coverage-info h4 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.coverage-item {
+  background: var(--bg3);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.coverage-label {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.coverage-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.coverage-detail {
+  font-size: 14px;
+  color: var(--text3);
+}
+
+.covered-events,
+.not-covered {
+  background: var(--bg3);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.covered-events h5,
+.not-covered h5 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.covered-events ul,
+.not-covered ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.covered-events li,
+.not-covered li {
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+
+.covered-events li:last-child,
+.not-covered li:last-child {
+  border-bottom: none;
+}
+
+/* Stake Section */
+.stake-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.stake-section .btn-primary,
+.stake-section .btn-secondary {
+  margin-top: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pool-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .coverage-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stake-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
 /* ─── DeFi View ──────────────────────────────────────────────────── */
 .defi-view {
   padding-bottom: 20px;
