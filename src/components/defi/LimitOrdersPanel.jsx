@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { LimitOrders_ABI } from '../../config/abis'
+import { ethers } from 'ethers'
 
 const LIMIT_ORDERS_ADDRESS = '0x81C4684340f3Ff3B02a813653ADfAFFb67948FB7'
 const PRICE_ORACLE_ADDRESS = '0x89be925c1F13AA14c343467883A82a7C2bC808d3'

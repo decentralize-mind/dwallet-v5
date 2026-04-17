@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { LiquidityIncentive_ABI } from '../../config/abis'
+import { ethers } from 'ethers'
 
 const LIQUIDITY_INCENTIVE_ADDRESS = '0x56b2E198518584e75643611140A5157931F777FA'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'

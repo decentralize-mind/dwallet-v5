@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../../context/WalletContext'
+import { ethers } from 'ethers'
 
 const INSURANCE_FUND_ADDRESS = '0x8ba2Bb332764217079DFFb280dD70C8B351B5770'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'

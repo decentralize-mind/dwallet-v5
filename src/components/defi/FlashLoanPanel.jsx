@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../../context/WalletContext'
+import { ethers } from 'ethers'
 
 const FLASH_LOAN_ADDRESS = '0x468772f20864403A0071690ef8c620D9E02BD649'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'
