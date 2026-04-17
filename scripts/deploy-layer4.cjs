@@ -26,9 +26,10 @@ async function main() {
 
   // Deploy StakingPool (DWT auto-compounding)
   console.log('📦 Deploying StakingPool...');
+  const DWT_TOKEN = '0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f'; // From Layer 9 deployment
   const StakingPool = await ethers.getContractFactory('StakingPool');
   const stakingPool = await StakingPool.deploy(
-    '0x0000000000000000000000000000000000000000', // DWT token - will update
+    DWT_TOKEN,
     deployer.address,  // admin
     deployer.address,  // governor
     securityController,
@@ -42,9 +43,9 @@ async function main() {
 
   // Deploy DWTStaking (DWT → ETH rewards)
   console.log('\n📦 Deploying DWTStaking...');
-  const DWTStaking = await ethers.getContractFactory('DWTStaking');
+  const DWTStaking = await ethers.getContractFactory('contracts/layer4/DWTStaking.sol:DWTStaking');
   const dwtStaking = await DWTStaking.deploy(
-    '0x0000000000000000000000000000000000000000', // DWT token - will update
+    DWT_TOKEN,
     securityController,
     deployer.address
   );

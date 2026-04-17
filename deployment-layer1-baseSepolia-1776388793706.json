@@ -1,0 +1,35 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-17T01:19:53.706Z",
+  "layer": "Layer 1 - Governance",
+  "contracts": {
+    "dwtToken": "0xe149b32b97384131204C86a23459b544498BC46A",
+    "timelock": "0x2255a32202f4356129F81D862231DB064508e7aB",
+    "governor": "0x68863af6C056C8672F9199f16024FD5dB445A84B",
+    "securityController": "0x813b537A21bF5AC6967E870db47Ec2770651B11F",
+    "lockEngine": "0x059327A069Ba66A74ecF21fde8c1c0D2915e0DB3"
+  },
+  "security": {
+    "timelockDelay": "48 hours",
+    "proposalThreshold": "100,000 DWT",
+    "quorum": "4%",
+    "votingDelay": "~1 day (7200 blocks)",
+    "votingPeriod": "~1 week (50400 blocks)",
+    "tokenOwnership": "Transferred to Timelock",
+    "adminRole": "Renounced",
+    "executorRole": "address(0) - Open execution",
+    "emergencyPause": "Enabled (SecurityGated)",
+    "transferRateLimit": "1M DWT per transfer",
+    "protocolPauseIntegration": true
+  },
+  "governance": {
+    "token": "0xe149b32b97384131204C86a23459b544498BC46A",
+    "timelock": "0x2255a32202f4356129F81D862231DB064508e7aB",
+    "governor": "0x68863af6C056C8672F9199f16024FD5dB445A84B",
+    "proposerRole": "0x68863af6C056C8672F9199f16024FD5dB445A84B",
+    "cancellerRole": "0x68863af6C056C8672F9199f16024FD5dB445A84B",
+    "executorRole": "Anyone (address(0))"
+  }
+}

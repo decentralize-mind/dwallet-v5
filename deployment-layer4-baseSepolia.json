@@ -1,0 +1,27 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "timestamp": "2026-04-17T00:00:00.000Z",
+  "layer": "Layer 4 - Staking",
+  "securityRating": "10/10",
+  "contracts": {
+    "stakingPool": "0xF84180615134D9291887063EC4551daDaC3Da792",
+    "dwtStaking": "0xd8a08Fd138E4E8c3362556CCa2BFf443E6BcDbE3",
+    "dwtToken": "0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f",
+    "securityController": "0x813b537A21bF5AC6967E870db47Ec2770651B11F",
+    "lockEngine": "0x059327A069Ba66A74ecF21fde8c1c0D2915e0DB3"
+  },
+  "security": {
+    "emergencyWithdraw": true,
+    "maxDeposit": "10000000000000000000000000",
+    "feeUpdateCooldown": "7 days",
+    "lockUpdateCooldown": "7 days",
+    "lockPeriod": "7 days",
+    "reentrancyGuard": true,
+    "protocolPause": true,
+    "nonTransferable": true,
+    "inputValidation": true,
+    "adminCooldowns": true
+  }
+}
