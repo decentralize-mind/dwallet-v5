@@ -3,6 +3,7 @@ import { useWallet } from '../../context/WalletContext'
 import { ethers } from 'ethers'
 
 const FLASH_LOAN_ADDRESS = '0x468772f20864403A0071690ef8c620D9E02BD649'
+const FLASH_LOAN_RECEIVER_ADDRESS = '0x89b1E2b38196AD9F8dbC7fA75e8B135ac492B6c4'
 const DWT_TOKEN_ADDRESS = '0x769F23dd0F6bc92C9d9d914190Ae9006d3FbDe48'
 
 // Base Sepolia RPC
@@ -79,19 +80,9 @@ export default function FlashLoanPanel() {
     
     setLoading(true)
     try {
-      const provider = getBaseSepoliaProvider()
-      if (!provider) {
-        alert('Provider not configured. Please check your settings.')
-        return
-      }
-
       const amount = ethers.parseEther(borrowAmount)
       
-      const flashLoanABI = [
-        'function flashLoan(address token, uint256 amount, bytes calldata callbackData) external'
-      ]
-      
-      // For Base Sepolia, we need to use browser wallet (MetaMask, etc.)
+      // Verify we're on Base Sepolia
       if (typeof window.ethereum === 'undefined') {
         alert('Please install MetaMask or another Web3 wallet to execute flash loans.')
         return
@@ -108,11 +99,47 @@ export default function FlashLoanPanel() {
         return
       }
 
-      const contract = new ethers.Contract(FLASH_LOAN_ADDRESS, flashLoanABI, signer)
+      // First, approve DWT spending for the fee
+      const IERC20ABI = [
+        'function approve(address spender, uint256 amount) returns (bool)',
+        'function allowance(address owner, address spender) view returns (uint256)'
+      ]
       
-      // Empty callback data for simple borrow
-      const tx = await contract.flashLoan(DWT_TOKEN_ADDRESS, amount, '0x')
+      const fee = (amount * 9n) / 10000n // 0.09% fee
+      const tokenContract = new ethers.Contract(DWT_TOKEN_ADDRESS, IERC20ABI, signer)
+      
+      const allowance = await tokenContract.allowance(wallet.address, FLASH_LOAN_RECEIVER_ADDRESS)
+      if (allowance < fee) {
+        console.log('Approving DWT for flash loan fee...')
+        const approveTx = await tokenContract.approve(FLASH_LOAN_RECEIVER_ADDRESS, fee)
+        await approveTx.wait()
+        console.log('Approval successful')
+      }
+
+      // Call FlashLoanReceiver to execute the flash loan
+      const receiverABI = [
+        'function executeFlashLoan(address token, uint256 amount, bytes calldata data) external'
+      ]
+      
+      const receiverContract = new ethers.Contract(FLASH_LOAN_RECEIVER_ADDRESS, receiverABI, signer)
+      
+      // Estimate gas first
+      try {
+        const gasEstimate = await receiverContract.executeFlashLoan.estimateGas(DWT_TOKEN_ADDRESS, amount, '0x')
+        console.log('Gas estimate:', gasEstimate.toString())
+      } catch (estimateError) {
+        console.error('Gas estimation failed:', estimateError)
+        alert('Transaction would fail. Please ensure you have enough DWT for the fee (0.09%).')
+        return
+      }
+      
+      // Execute flash loan through receiver
+      const tx = await receiverContract.executeFlashLoan(DWT_TOKEN_ADDRESS, amount, '0x', {
+        gasLimit: 500000
+      })
+      
       setTxHash(tx.hash)
+      console.log('Transaction sent:', tx.hash)
       
       await tx.wait()
       await loadPoolData()
@@ -120,7 +147,22 @@ export default function FlashLoanPanel() {
       alert('Flash loan executed successfully!')
     } catch (error) {
       console.error('Flash loan failed:', error)
-      alert('Flash loan failed: ' + (error.reason || error.message))
+      
+      // Better error handling
+      let errorMessage = 'Flash loan failed: '
+      if (error.reason) {
+        errorMessage += error.reason
+      } else if (error.message) {
+        if (error.message.includes('missing revert data')) {
+          errorMessage += 'Transaction reverted. You may not have enough DWT for the fee.'
+        } else {
+          errorMessage += error.message
+        }
+      } else {
+        errorMessage += 'Unknown error'
+      }
+      
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -190,9 +232,10 @@ export default function FlashLoanPanel() {
         <button
           className="btn-primary btn-borrow"
           onClick={handleBorrow}
-          disabled={!borrowAmount || loading || parseFloat(borrowAmount) > maxLoan}
+          disabled={!borrowAmount || loading || parseFloat(borrowAmount) > maxLoan || maxLoan === 0}
+          title={maxLoan === 0 ? "Flash loan pool is not configured yet" : ""}
         >
-          {loading ? 'Processing...' : 'Execute Flash Loan'}
+          {loading ? 'Processing...' : maxLoan === 0 ? 'Pool Not Configured' : 'Execute Flash Loan'}
         </button>
 
         <div className="info-box">
@@ -202,6 +245,7 @@ export default function FlashLoanPanel() {
             <li>Use for arbitrage, liquidation, or collateral swapping</li>
             <li>Maximum 50% of pool per transaction</li>
             <li>Fee: 0.09% of borrowed amount</li>
+            <li><strong>Note:</strong> You need DWT tokens in your wallet to pay the flash loan fee</li>
           </ul>
         </div>
 
