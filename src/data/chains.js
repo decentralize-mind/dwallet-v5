@@ -121,9 +121,9 @@ export const TOKEN_ICONS = {
 
 export const DEFAULT_TOKENS = {
   ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'DWT'],
-  sepolia: ['ETH', 'DWT'],
-  baseSepolia: ['ETH', 'DWT'],
-  base: ['ETH', 'DWT', 'USDC'],
+  sepolia: ['ETH', 'DWT', 'USDT', 'USDC', 'DAI'],
+  baseSepolia: ['ETH', 'DWT', 'USDT', 'USDC'],
+  base: ['ETH', 'DWT', 'USDC', 'USDT'],
   bnb: ['BNB', 'CAKE', 'USDT', 'BUSD'],
   polygon: ['MATIC', 'USDC', 'USDT'],
   solana: ['SOL', 'USDC'],

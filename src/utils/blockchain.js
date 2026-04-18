@@ -95,13 +95,21 @@ const TOKEN_ADDRESSES = {
   },
   sepolia: {
     DWT: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa',
+    // Testnet USDT (faucet tokens for testing)
+    USDT: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
+    USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    DAI: '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357',
   },
   baseSepolia: {
     DWT: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa',
+    // Testnet USDT for Base Sepolia
+    USDT: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
   },
   base: {
     DWT: '0x9ce235f8574bde67393884550F02135CE4fB8387',
     USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
   },
   bnb: {
     // eslint-disable-next-line no-secrets/no-secrets

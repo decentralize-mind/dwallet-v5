@@ -107,15 +107,21 @@ const TOKEN_CONTRACTS = {
   // ── Sepolia testnet ───────────────────────────────────────────────────
   sepolia: {
     DWT: { address: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', decimals: 18 },
+    USDT: { address: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0', decimals: 6 },
+    USDC: { address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', decimals: 6 },
+    DAI: { address: '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357', decimals: 18 },
   },
   // ── Base Sepolia testnet ──────────────────────────────────────────────
   baseSepolia: {
     DWT: { address: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', decimals: 18 },
+    USDT: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+    USDC: { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', decimals: 6 },
   },
   // ── Base mainnet ──────────────────────────────────────────────────────
   base: {
     DWT:  { address: '0x9ce235f8574bde67393884550F02135CE4fB8387', decimals: 18 },
     USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+    USDT: { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6 },
   },
   polygon: {
     USDC: { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', decimals: 6 },
