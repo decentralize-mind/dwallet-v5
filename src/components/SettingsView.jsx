@@ -43,6 +43,11 @@ export default function SettingsView({ onNavigate }) {
   const [referralStats, setReferralStats] = useState({ signups: 0, earned: 0 })
   const [onChainStats, setOnChainStats] = useState({ totalReferrals: 0, totalRewards: '0' })
   
+  // Manual referral resolution state
+  const [manualRefCode, setManualRefCode] = useState('')
+  const [manualRefAddress, setManualRefAddress] = useState('')
+  const [manualRefStatus, setManualRefStatus] = useState('')
+  
   // Anti-phishing code state
   const [phishingCode, setPhishingCode] = useState(
     localStorage.getItem('dwallet_phishing_code') || ''
@@ -145,6 +150,36 @@ export default function SettingsView({ onNavigate }) {
           setTimeout(() => setCopied(false), 2000)
         })
         .catch(err => console.error('Copy failed:', err))
+    }
+  }
+  
+  // Manual referral code resolution
+  const handleResolveReferralCode = () => {
+    if (!manualRefCode || !manualRefAddress) {
+      setManualRefStatus('error: Both code and address required')
+      return
+    }
+    
+    try {
+      // Validate address format
+      if (!manualRefAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        setManualRefStatus('error: Invalid Ethereum address')
+        return
+      }
+      
+      // Cache the referral code to address mapping
+      const cache = JSON.parse(localStorage.getItem('referral_address_cache') || '{}')
+      cache[manualRefCode.toUpperCase()] = manualRefAddress
+      localStorage.setItem('referral_address_cache', JSON.stringify(cache))
+      
+      setManualRefStatus('✓ Referral code linked successfully!')
+      setManualRefCode('')
+      setManualRefAddress('')
+      
+      // Clear status after 3 seconds
+      setTimeout(() => setManualRefStatus(''), 3000)
+    } catch (err) {
+      setManualRefStatus('error: ' + err.message)
     }
   }
 
@@ -852,6 +887,80 @@ export default function SettingsView({ onNavigate }) {
               <li>Rewards are automatically distributed via smart contract</li>
               <li>No limit on how many friends you can refer</li>
             </ul>
+          </div>
+
+          {/* Manual Referral Code Resolver */}
+          <div
+            className="settings-item"
+            style={{
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 10,
+              padding: '12px',
+              background: 'var(--bg3)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px dashed var(--border)',
+            }}
+          >
+            <p className="settings-label" style={{ fontWeight: 600 }}>🔧 Manual Referral Code Setup</p>
+            <p className="settings-sub">Link a referral code to an address (for testing)</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+              <input
+                type="text"
+                placeholder="Referral Code (e.g., DW69DA59)"
+                value={manualRefCode}
+                onChange={(e) => setManualRefCode(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text)',
+                  fontSize: 12,
+                  fontFamily: 'var(--font-mono)',
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Referrer Address (0x...)"
+                value={manualRefAddress}
+                onChange={(e) => setManualRefAddress(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text)',
+                  fontSize: 12,
+                  fontFamily: 'var(--font-mono)',
+                }}
+              />
+              <button
+                onClick={handleResolveReferralCode}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--accent)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Link Referral Code
+              </button>
+              {manualRefStatus && (
+                <p style={{
+                  fontSize: 11,
+                  color: manualRefStatus.startsWith('error') ? 'var(--danger)' : 'var(--green)',
+                  margin: 0,
+                }}>
+                  {manualRefStatus}
+                </p>
+              )}
+            </div>
           </div>
         </div>
         )}

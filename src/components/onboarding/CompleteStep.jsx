@@ -44,18 +44,25 @@ export function CompleteStep({ flow }) {
 
         console.log('Processing referral code:', refCode)
         
-        // Resolve the referral code to an address
+        // First, try to resolve the referral code to an address from cache
         const referralCache = JSON.parse(localStorage.getItem('referral_address_cache') || '{}')
-        const referrerAddress = referralCache[refCode]
+        let referrerAddress = referralCache[refCode]
         
+        // If not found in cache, store the referral code for later resolution
         if (!referrerAddress) {
-          console.log('Referrer address not found for code:', refCode)
-          // Still track this attempt for analytics
+          console.log('Referrer address not found in cache for code:', refCode)
+          console.log('Storing referral code for manual resolution later')
+          
+          // Store the referral code so it can be resolved later
+          localStorage.setItem('pending_referral_code', refCode)
+          
+          // Track this attempt
           addToReferralHistory({
-            type: 'referral_code_not_found',
+            type: 'referral_code_stored',
             code: refCode,
-            status: 'failed'
+            status: 'stored_for_resolution'
           })
+          
           setReferralProcessed(true)
           return
         }
