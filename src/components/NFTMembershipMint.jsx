@@ -61,19 +61,25 @@ export default function NFTMembershipMint() {
 
   // Fetch user's current tier, balance, owned passes, and revenue
   const fetchUserData = async () => {
-    if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) return
+    if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) {
+      console.log('⚠️ fetchUserData: Missing address or contract', { currentAddress, NFT_MEMBERSHIP_ADDRESS })
+      return
+    }
 
     try {
+      console.log('🔄 fetchUserData: Starting fetch...', { currentAddress, NFT_MEMBERSHIP_ADDRESS })
       setIsRefreshing(true)
       const provider = new ethers.BrowserProvider(window.ethereum)
       const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, provider)
 
       // Get highest tier
       const tier = await contract.highestTier(currentAddress)
+      console.log('📊 User tier:', Number(tier))
       setUserTier(Number(tier))
 
       // Get DWT balance
       const dwtAddress = await contract.dwtToken()
+      console.log('🪙 DWT Token Address from contract:', dwtAddress)
       const dwtContract = new ethers.Contract(dwtAddress, [
         'function balanceOf(address) view returns (uint256)',
         'function symbol() view returns (string)',
@@ -82,7 +88,9 @@ export default function NFTMembershipMint() {
       const balance = await dwtContract.balanceOf(currentAddress)
       const symbol = await dwtContract.symbol()
       const decimals = await dwtContract.decimals()
-      setUserBalance({ balance: parseFloat(ethers.formatUnits(balance, decimals)), symbol })
+      const balanceFormatted = parseFloat(ethers.formatUnits(balance, decimals))
+      console.log('💰 DWT Balance:', balanceFormatted, symbol)
+      setUserBalance({ balance: balanceFormatted, symbol })
 
       // Fetch tier configs
       const configs = []
