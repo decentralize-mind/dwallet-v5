@@ -54,88 +54,105 @@ export default function NFTMembershipMint() {
   const [isOwner, setIsOwner] = useState(false)
   const [contractRevenue, setContractRevenue] = useState({ eth: 0, dwt: 0 })
   const [activeView, setActiveView] = useState('mint')
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const NFT_MEMBERSHIP_ADDRESS = import.meta.env.VITE_NFT_MEMBERSHIP_ADDRESS || ''
 
   // Fetch user's current tier, balance, owned passes, and revenue
+  const fetchUserData = async () => {
+    if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) return
+
+    try {
+      setIsRefreshing(true)
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, provider)
+
+      // Get highest tier
+      const tier = await contract.highestTier(currentAddress)
+      setUserTier(Number(tier))
+
+      // Get DWT balance
+      const dwtAddress = await contract.dwtToken()
+      const dwtContract = new ethers.Contract(dwtAddress, [
+        'function balanceOf(address) view returns (uint256)',
+        'function symbol() view returns (string)',
+        'function decimals() view returns (uint8)',
+      ], provider)
+      const balance = await dwtContract.balanceOf(currentAddress)
+      const symbol = await dwtContract.symbol()
+      const decimals = await dwtContract.decimals()
+      setUserBalance({ balance: parseFloat(ethers.formatUnits(balance, decimals)), symbol })
+
+      // Fetch tier configs
+      const configs = []
+      for (let i = 0; i < 4; i++) {
+        const config = await contract.tierConfigs(i)
+        configs.push({
+          ethPrice: ethers.formatEther(config.ethPrice),
+          dwtPrice: ethers.formatUnits(config.dwtPrice, decimals),
+          dwtHoldRequirement: ethers.formatUnits(config.dwtHoldRequirement, decimals),
+          maxSupply: Number(config.maxSupply),
+          currentSupply: Number(config.currentSupply),
+          durationSeconds: Number(config.durationSeconds),
+          soulbound: config.soulbound,
+          enabled: config.enabled,
+        })
+      }
+      setTierConfigs(configs)
+
+      // Fetch owned passes
+      const balanceOf = await contract.balanceOf(currentAddress)
+      const passes = []
+      for (let i = 0; i < Number(balanceOf); i++) {
+        const tokenId = await contract.tokenOfOwnerByIndex(currentAddress, i)
+        const tokenData = await contract.tokenData(tokenId)
+        passes.push({
+          tokenId: Number(tokenId),
+          tier: Number(tokenData.tier),
+          expiry: Number(tokenData.expiry),
+        })
+      }
+      setOwnedPasses(passes)
+
+      // Check if user is contract owner
+      const owner = await contract.owner()
+      setIsOwner(owner.toLowerCase() === currentAddress.toLowerCase())
+
+      // Fetch contract revenue (if owner)
+      if (owner.toLowerCase() === currentAddress.toLowerCase()) {
+        const ethBalance = await provider.getBalance(NFT_MEMBERSHIP_ADDRESS)
+        const dwtBalance = await dwtContract.balanceOf(NFT_MEMBERSHIP_ADDRESS)
+        setContractRevenue({
+          eth: parseFloat(ethers.formatEther(ethBalance)),
+          dwt: parseFloat(ethers.formatUnits(dwtBalance, decimals)),
+        })
+      }
+
+      setLastUpdated(new Date())
+    } catch (err) {
+      console.error('Failed to fetch user data:', err)
+      setError('Failed to load membership data')
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  // Auto-refresh every 15 seconds
   useEffect(() => {
     if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) return
 
-    const fetchUserData = async () => {
-      try {
-        setLoading(true)
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, provider)
-
-        // Get highest tier
-        const tier = await contract.highestTier(currentAddress)
-        setUserTier(Number(tier))
-
-        // Get DWT balance
-        const dwtAddress = await contract.dwtToken()
-        const dwtContract = new ethers.Contract(dwtAddress, [
-          'function balanceOf(address) view returns (uint256)',
-          'function symbol() view returns (string)',
-          'function decimals() view returns (uint8)',
-        ], provider)
-        const balance = await dwtContract.balanceOf(currentAddress)
-        const symbol = await dwtContract.symbol()
-        const decimals = await dwtContract.decimals()
-        setUserBalance({ balance: parseFloat(ethers.formatUnits(balance, decimals)), symbol })
-
-        // Fetch tier configs
-        const configs = []
-        for (let i = 0; i < 4; i++) {
-          const config = await contract.tierConfigs(i)
-          configs.push({
-            ethPrice: ethers.formatEther(config.ethPrice),
-            dwtPrice: ethers.formatUnits(config.dwtPrice, decimals),
-            dwtHoldRequirement: ethers.formatUnits(config.dwtHoldRequirement, decimals),
-            maxSupply: Number(config.maxSupply),
-            currentSupply: Number(config.currentSupply),
-            durationSeconds: Number(config.durationSeconds),
-            soulbound: config.soulbound,
-            enabled: config.enabled,
-          })
-        }
-        setTierConfigs(configs)
-
-        // Fetch owned passes
-        const balanceOf = await contract.balanceOf(currentAddress)
-        const passes = []
-        for (let i = 0; i < Number(balanceOf); i++) {
-          const tokenId = await contract.tokenOfOwnerByIndex(currentAddress, i)
-          const tokenData = await contract.tokenData(tokenId)
-          passes.push({
-            tokenId: Number(tokenId),
-            tier: Number(tokenData.tier),
-            expiry: Number(tokenData.expiry),
-          })
-        }
-        setOwnedPasses(passes)
-
-        // Check if user is contract owner
-        const owner = await contract.owner()
-        setIsOwner(owner.toLowerCase() === currentAddress.toLowerCase())
-
-        // Fetch contract revenue (if owner)
-        if (owner.toLowerCase() === currentAddress.toLowerCase()) {
-          const ethBalance = await provider.getBalance(NFT_MEMBERSHIP_ADDRESS)
-          const dwtBalance = await dwtContract.balanceOf(NFT_MEMBERSHIP_ADDRESS)
-          setContractRevenue({
-            eth: parseFloat(ethers.formatEther(ethBalance)),
-            dwt: parseFloat(ethers.formatUnits(dwtBalance, decimals)),
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch user data:', err)
-        setError('Failed to load membership data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
+    // Initial fetch
     fetchUserData()
+
+    // Set up auto-refresh interval
+    const refreshInterval = setInterval(() => {
+      fetchUserData()
+    }, 15000) // 15 seconds
+
+    // Cleanup on unmount
+    return () => clearInterval(refreshInterval)
   }, [currentAddress, NFT_MEMBERSHIP_ADDRESS])
 
   const handleMintClick = (tierIndex) => {
@@ -306,6 +323,12 @@ export default function NFTMembershipMint() {
     }
   }
 
+  const handleManualRefresh = async () => {
+    await fetchUserData()
+    setSuccess('Data refreshed successfully!')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
   const formatDate = (timestamp) => {
     if (timestamp === 0) return 'Never (Permanent)'
     return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -346,11 +369,40 @@ export default function NFTMembershipMint() {
     <div className="view-container">
       <div className="view-header">
         <h2 className="view-title">Membership Passes</h2>
-        {userTier > 0 && (
-          <span className="view-count" style={{ color: TIER_CONFIG[userTier - 1]?.color }}>
-            {TIER_CONFIG[userTier - 1]?.icon} {TIER_CONFIG[userTier - 1]?.name} Member
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {userTier > 0 && (
+            <span className="view-count" style={{ color: TIER_CONFIG[userTier - 1]?.color }}>
+              {TIER_CONFIG[userTier - 1]?.icon} {TIER_CONFIG[userTier - 1]?.name} Member
+            </span>
+          )}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            style={{
+              padding: '6px 12px',
+              background: isRefreshing ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              color: 'var(--text2)',
+              fontSize: '12px',
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }}>
+              {isRefreshing ? '⟳' : '↻'}
+            </span>
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          {lastUpdated && (
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* View Tabs */}
