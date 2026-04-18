@@ -6,6 +6,7 @@ import { fetchPriceHistory, getPrice } from "../utils/prices";
 import { fetchMarketData, formatPrice, formatMarketCap } from "../utils/market";
 import { sanitizeSearchInput, validateBalanceData, sanitizeNumber } from "../utils/dataValidation";
 import PortfolioChart from "./PortfolioChart";
+import { getReferralStats, getReferralCode, getReferralLink } from "../utils/referral";
 
 const TOKEN_ICONS = {
   DWT:"◈", ETH: "⟠", BNB: "⬡", MATIC: "◈", SOL: "◎", USDC: "$", USDT: "₮", DAI: "⬙", WBTC: "₿", UNI: "🦄", LINK: "⬡" };
@@ -270,6 +271,188 @@ function generateDWTSparkline() {
 }
 const DWT_SPARKLINE = generateDWTSparkline();
 
+// ── DWT Summary Card with Airdrop & Referral Info ───────────────────────────
+function DWTSummaryCard({ chainBalances, currentAddress, setActiveTab }) {
+  const validatedBalances = validateBalanceData(chainBalances)
+  const dwtBal = sanitizeNumber(validatedBalances?.DWT ?? 0, { min: 0, max: 1e18, decimals: 18 })
+  const price = 3.50
+  const usdVal = (dwtBal * price).toFixed(2)
+  
+  // Get referral stats
+  const referralStats = getReferralStats()
+  const referralCode = currentAddress ? getReferralCode(currentAddress) : ''
+  const referralLink = currentAddress ? getReferralLink(currentAddress) : ''
+  
+  const [copiedLink, setCopiedLink] = useState(false)
+  
+  const handleCopyLink = async () => {
+    if (!referralLink) return
+    try {
+      await navigator.clipboard.writeText(referralLink)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+  
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(168,85,247,0.08) 100%)",
+      border: "1px solid rgba(99,102,241,0.2)",
+      borderRadius: "12px",
+      padding: "14px",
+      marginBottom: 16,
+    }}>
+      {/* Header */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 20 }}>◈</span>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "var(--text)" }}>
+            Toklo Rewards
+          </h3>
+        </div>
+        <span style={{
+          fontSize: 10,
+          padding: "3px 8px",
+          borderRadius: "6px",
+          fontWeight: 700,
+          background: "rgba(16,185,129,0.12)",
+          color: "var(--green)",
+          border: "1px solid rgba(16,185,129,0.2)"
+        }}>
+          Live
+        </span>
+      </div>
+      
+      {/* Stats Grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 10,
+        marginBottom: 12
+      }}>
+        {/* DWT Balance */}
+        <div style={{
+          padding: "10px",
+          background: "rgba(0,0,0,0.2)",
+          borderRadius: "8px",
+          border: "1px solid rgba(99,102,241,0.1)"
+        }}>
+          <p style={{ fontSize: 9, color: "var(--text3)", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+            DWT Balance
+          </p>
+          <p style={{ fontSize: 16, fontWeight: 800, margin: "0 0 2px", color: "var(--text)" }}>
+            {dwtBal > 0 ? formatDWT(dwtBal) : '0'}
+          </p>
+          <p style={{ fontSize: 10, color: "var(--green)", margin: 0, fontWeight: 600 }}>
+            ≈ ${usdVal}
+          </p>
+        </div>
+        
+        {/* Airdrop Status */}
+        <div style={{
+          padding: "10px",
+          background: "rgba(0,0,0,0.2)",
+          borderRadius: "8px",
+          border: "1px solid rgba(99,102,241,0.1)"
+        }}>
+          <p style={{ fontSize: 9, color: "var(--text3)", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+            Airdrop
+          </p>
+          <p style={{ fontSize: 16, fontWeight: 800, margin: "0 0 2px", color: "var(--accent)" }}>
+            5 DWT
+          </p>
+          <p style={{ fontSize: 10, color: "var(--text3)", margin: 0, fontWeight: 600 }}>
+            Claim Available
+          </p>
+        </div>
+        
+        {/* Referral Earnings */}
+        <div style={{
+          padding: "10px",
+          background: "rgba(0,0,0,0.2)",
+          borderRadius: "8px",
+          border: "1px solid rgba(99,102,241,0.1)"
+        }}>
+          <p style={{ fontSize: 9, color: "var(--text3)", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+            Referrals
+          </p>
+          <p style={{ fontSize: 16, fontWeight: 800, margin: "0 0 2px", color: "var(--text)" }}>
+            {referralStats.signups}
+          </p>
+          <p style={{ fontSize: 10, color: "var(--green)", margin: 0, fontWeight: 600 }}>
+            {referralStats.earned} DWT earned
+          </p>
+        </div>
+      </div>
+      
+      {/* Quick Actions */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => setActiveTab && setActiveTab('defi')}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            background: "rgba(99,102,241,0.15)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            borderRadius: "8px",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--accent)",
+            cursor: "pointer",
+            fontFamily: "var(--font)",
+            transition: "all 0.2s"
+          }}
+        >
+          💎 Stake DWT
+        </button>
+        <button
+          onClick={() => setActiveTab && setActiveTab('referral')}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            background: "rgba(16,185,129,0.12)",
+            border: "1px solid rgba(16,185,129,0.25)",
+            borderRadius: "8px",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--green)",
+            cursor: "pointer",
+            fontFamily: "var(--font)",
+            transition: "all 0.2s"
+          }}
+        >
+          🎁 Refer Friends
+        </button>
+        <button
+          onClick={handleCopyLink}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            background: copiedLink ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(99,102,241,0.2)",
+            borderRadius: "8px",
+            fontSize: 11,
+            fontWeight: 700,
+            color: copiedLink ? "var(--green)" : "var(--text2)",
+            cursor: "pointer",
+            fontFamily: "var(--font)",
+            transition: "all 0.2s"
+          }}
+        >
+          {copiedLink ? "✓ Copied" : "📋 Copy Link"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard({ onSend, onReceive, onSwap, setActiveTab }) {
   const { chainBalances, totalUSDValue, activeChain, transactions, prices, loadingBal, notification, currentAddress } = useWallet()
   
@@ -365,6 +548,12 @@ export default function Dashboard({ onSend, onReceive, onSwap, setActiveTab }) {
       </div>
 
       <DWTBanner chainBalances={chainBalances} activeChain={activeChain} />
+
+      <DWTSummaryCard 
+        chainBalances={chainBalances} 
+        currentAddress={currentAddress}
+        setActiveTab={setActiveTab}
+      />
 
       <PortfolioChart balances={chainBalances} prices={prices}/>
 
