@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ethers } from 'ethers'
 import { useWallet } from '../hooks/useWallet'
 import { useReferralPool } from '../hooks/useReferralPool'
+import { clearPendingReferral, addToReferralHistory, updateReferralStats } from '../utils/referralTracking'
 
 /**
  * PendingReferralHandler
@@ -70,8 +71,20 @@ export default function PendingReferralHandler() {
           console.log('Referral reward claimed successfully!', result.txHash)
           
           // Clear the pending referral
-          localStorage.removeItem('pending_referral')
+          clearPendingReferral()
           setProcessed(true)
+          
+          // Update local stats
+          updateReferralStats(1, 10)
+          
+          // Track successful referral
+          addToReferralHistory({
+            type: 'referral_completed',
+            referrer: pending.referrer,
+            referee: pending.referee,
+            txHash: result.txHash,
+            status: 'success'
+          })
           
           // Show notification to user
           if (window.notify) {

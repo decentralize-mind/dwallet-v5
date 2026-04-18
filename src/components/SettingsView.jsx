@@ -2,11 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { decryptData } from '../utils/crypto'
 import { useWallet } from '../hooks/useWallet'
 import { exportTransactionsCSV } from '../utils/csvExport'
+import { getReferralStats, getReferralLink, getReferralRewardAmount } from '../utils/referral'
+import { useReferralPool } from '../hooks/useReferralPool'
 
-function getReferralLink(address) {
-  const code = address ? 'DW' + address.slice(2, 8).toUpperCase() : 'DWALLET'
-  return 'https://www.toklo.xyz/?ref=' + code
-}
+// Removed local getReferralLink - now using imported version from utils/referral
 
 export default function SettingsView({ onNavigate }) {
   console.log('SettingsView rendering...')
@@ -39,6 +38,10 @@ export default function SettingsView({ onNavigate }) {
   )
   const [copied, setCopied] = useState(false)
   const [notifPerm, setNotifPerm] = useState('default')
+  
+  // Referral statistics state
+  const [referralStats, setReferralStats] = useState({ signups: 0, earned: 0 })
+  const [onChainStats, setOnChainStats] = useState({ totalReferrals: 0, totalRewards: '0' })
   
   // Anti-phishing code state
   const [phishingCode, setPhishingCode] = useState(
@@ -81,6 +84,10 @@ export default function SettingsView({ onNavigate }) {
     if (typeof Notification !== 'undefined') {
       setNotifPerm(Notification.permission)
     }
+    
+    // Load referral statistics
+    const stats = getReferralStats()
+    setReferralStats(stats)
   }, [])
 
   useEffect(() => {
@@ -709,6 +716,60 @@ export default function SettingsView({ onNavigate }) {
         </h3>
         {expandedSections.referral && (
         <div className="settings-list">
+          {/* Referral Statistics Dashboard */}
+          <div
+            className="settings-item"
+            style={{
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 12,
+              padding: '16px',
+              background: 'linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%)',
+              borderRadius: 'var(--radius-md)',
+              color: 'white',
+              marginBottom: '12px',
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              📊 Your Referral Statistics
+            </div>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+              gap: 12,
+              width: '100%',
+            }}>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                padding: '12px', 
+                borderRadius: 'var(--radius-sm)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{referralStats.signups}</div>
+                <div style={{ fontSize: 11, opacity: 0.9 }}>Total Referrals</div>
+              </div>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                padding: '12px', 
+                borderRadius: 'var(--radius-sm)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{referralStats.earned}</div>
+                <div style={{ fontSize: 11, opacity: 0.9 }}>DWT Earned</div>
+              </div>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                padding: '12px', 
+                borderRadius: 'var(--radius-sm)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{getReferralRewardAmount()}</div>
+                <div style={{ fontSize: 11, opacity: 0.9 }}>DWT Per Referral</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral Link Section */}
           <div
             className="settings-item"
             style={{
@@ -764,6 +825,33 @@ export default function SettingsView({ onNavigate }) {
                 {copied ? '✓ Copied!' : 'Copy'}
               </button>
             </div>
+          </div>
+
+          {/* How It Works */}
+          <div
+            className="settings-item"
+            style={{
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '12px',
+              background: 'var(--bg3)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <p className="settings-label" style={{ fontWeight: 600 }}>How it works:</p>
+            <ul style={{ 
+              margin: 0, 
+              paddingLeft: 20, 
+              fontSize: 12, 
+              color: 'var(--text2)',
+              lineHeight: 1.6,
+            }}>
+              <li>Share your unique referral link with friends</li>
+              <li>When they create a wallet, both of you earn 10 DWT</li>
+              <li>Rewards are automatically distributed via smart contract</li>
+              <li>No limit on how many friends you can refer</li>
+            </ul>
           </div>
         </div>
         )}

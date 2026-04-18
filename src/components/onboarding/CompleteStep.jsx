@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import { useReferralPool } from '../../hooks/useReferralPool'
 import { checkIncomingReferral, getReferralCode } from '../../utils/referral'
+import { savePendingReferral, addToReferralHistory } from '../../utils/referralTracking'
 import { ethers } from 'ethers'
 
 export function CompleteStep({ flow }) {
@@ -44,33 +45,51 @@ export function CompleteStep({ flow }) {
         console.log('Processing referral code:', refCode)
         
         // Resolve the referral code to an address
-        // For now, we'll try to match it from the cache
         const referralCache = JSON.parse(localStorage.getItem('referral_address_cache') || '{}')
         const referrerAddress = referralCache[refCode]
         
         if (!referrerAddress) {
           console.log('Referrer address not found for code:', refCode)
+          // Still track this attempt for analytics
+          addToReferralHistory({
+            type: 'referral_code_not_found',
+            code: refCode,
+            status: 'failed'
+          })
           setReferralProcessed(true)
           return
         }
 
         console.log('Found referrer address:', referrerAddress)
 
-        // Get the signer from the wallet
-        // Note: This requires the wallet to be connected to a provider
-        // For now, we'll store the referral info and process it when the user makes their first transaction
-        localStorage.setItem('pending_referral', JSON.stringify({
-          referrer: referrerAddress,
-          referee: userAddress,
-          code: refCode,
-          timestamp: Date.now()
-        }))
-
-        console.log('Referral registered (will be processed on-chain later)')
+        // Save pending referral with enhanced tracking
+        const pendingData = savePendingReferral(referrerAddress, userAddress)
+        
+        if (pendingData) {
+          console.log('Referral registered (will be processed on-chain later)')
+          
+          // Track this referral event
+          addToReferralHistory({
+            type: 'referral_registered',
+            referrer: referrerAddress,
+            referee: userAddress,
+            code: refCode,
+            status: 'pending'
+          })
+        }
+        
         setReferralProcessed(true)
       } catch (err) {
         console.error('Error processing referral:', err)
         setReferralError(err.message)
+        
+        // Track the error
+        addToReferralHistory({
+          type: 'referral_error',
+          error: err.message,
+          status: 'error'
+        })
+        
         setReferralProcessed(true) // Don't block the user
       }
     }

@@ -2,7 +2,8 @@ const KEY = 'dwallet_referral'
 
 export function getReferralCode(address) {
   if (!address) return 'TOKLO'
-  return 'TK' + address.slice(2, 8).toUpperCase()
+  // Using 'DW' prefix for dWallet referral codes
+  return 'DW' + address.slice(2, 8).toUpperCase()
 }
 
 export function getReferralLink(address) {
