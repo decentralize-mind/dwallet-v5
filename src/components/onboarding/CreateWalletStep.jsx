@@ -1,3 +1,5 @@
+import React, { useState } from 'react'
+
 export function CreateWalletStep({
   password,
   setPassword,
@@ -12,6 +14,9 @@ export function CreateWalletStep({
   onCreate,
   onBack,
 }) {
+  // Referral code state
+  const referralCodeInput = typeof window !== 'undefined' ? sessionStorage.getItem('toklo_ref') || '' : ''
+  const [referralCode, setReferralCode] = useState(referralCodeInput)
   return (
     <div className="step-content">
       <div style={{ textAlign: 'center', marginBottom: 4 }}>
@@ -248,6 +253,60 @@ export function CreateWalletStep({
         </p>
       </div>
       {error && <p className="error-msg">{error}</p>}
+      
+      {/* Referral Code Input */}
+      <div style={{ 
+        marginTop: 12,
+        padding: '12px',
+        background: 'var(--bg3)',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border)',
+      }}>
+        <label style={{ 
+          fontSize: 12, 
+          fontWeight: 600, 
+          color: 'var(--text2)',
+          display: 'block',
+          marginBottom: 6,
+        }}>
+          🎁 Referral Code (optional)
+        </label>
+        <input
+          type="text"
+          placeholder="Enter code (e.g., DW69DA59)"
+          value={referralCode}
+          onChange={(e) => {
+            const code = e.target.value.toUpperCase()
+            setReferralCode(code)
+            // Update sessionStorage as well
+            if (code) {
+              sessionStorage.setItem('toklo_ref', code)
+            } else {
+              sessionStorage.removeItem('toklo_ref')
+            }
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text)',
+            fontSize: 13,
+            fontFamily: 'var(--font-mono)',
+            boxSizing: 'border-box',
+          }}
+        />
+        <p style={{ 
+          fontSize: 11, 
+          color: 'var(--text3)', 
+          margin: '6px 0 0',
+          lineHeight: 1.4,
+        }}>
+          Have a referral code? Enter it above to both receive 10 DWT rewards!
+        </p>
+      </div>
+
       <button
         className="btn-primary full-width"
         onClick={onCreate}
