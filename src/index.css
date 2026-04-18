@@ -623,6 +623,60 @@ select.field {
   margin-bottom: 12px;
 }
 
+/* Section header with view all button */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.view-all-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+.view-all-btn:hover {
+  background: var(--accent-light);
+}
+
+/* Mini filter tabs for home section */
+.filter-tabs-mini {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.filter-tab-mini {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.filter-tab-mini:hover {
+  background: var(--bg4);
+  color: var(--text);
+}
+.filter-tab-mini--active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
 /* Token list */
 .token-list {
   display: flex;

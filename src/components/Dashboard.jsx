@@ -270,14 +270,18 @@ function generateDWTSparkline() {
 }
 const DWT_SPARKLINE = generateDWTSparkline();
 
-export default function Dashboard({ onSend, onReceive, onSwap }) {
+export default function Dashboard({ onSend, onReceive, onSwap, setActiveTab }) {
   const { chainBalances, totalUSDValue, activeChain, transactions, prices, loadingBal, notification, currentAddress } = useWallet()
   
   // Validate balances
   const validatedBalances = validateBalanceData(chainBalances)
   const tokens = useMemo(() => DEFAULT_TOKENS[activeChain] || [], [activeChain])
   const [sparklines, setSparklines] = useState({})
-  const recentTxs = transactions.slice(0, 5)
+  const [activityFilter, setActivityFilter] = useState('all')
+  
+  // Filter and limit recent transactions
+  const filteredTxs = transactions.filter(tx => activityFilter === 'all' || tx.type === activityFilter)
+  const recentTxs = filteredTxs.slice(0, 5)
 
 
   const [marketData,setMarketData]=useState([])
@@ -619,9 +623,33 @@ export default function Dashboard({ onSend, onReceive, onSwap }) {
 
       {/* Recent activity */}
       <section className="section">
-        <h3 className="section-title">Recent Activity</h3>
+        <div className="section-header">
+          <h3 className="section-title">Recent Activity</h3>
+          <button 
+            className="view-all-btn"
+            onClick={() => setActiveTab && setActiveTab('activity')}
+          >
+            View All →
+          </button>
+        </div>
+        
+        {/* Filter tabs */}
+        <div className="filter-tabs-mini">
+          {['all', 'send', 'receive', 'swap'].map(f => (
+            <button
+              key={f}
+              className={`filter-tab-mini ${activityFilter === f ? 'filter-tab-mini--active' : ''}`}
+              onClick={() => setActivityFilter(f)}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+        
         {recentTxs.length === 0 ? (
-          <p className="empty-state">No transactions yet</p>
+          <p className="empty-state">
+            {activityFilter === 'all' ? 'No transactions yet' : `No ${activityFilter} transactions`}
+          </p>
         ) : (
           <div className="tx-mini-list">
             {recentTxs.map(tx => (

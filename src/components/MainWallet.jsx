@@ -118,6 +118,7 @@ export default function MainWallet() {
             onSend={() => setModal('send')}
             onReceive={() => setModal('receive')}
             onSwap={() => setModal('swap')}
+            setActiveTab={setActiveTab}
           />
         )
     }
