@@ -1034,6 +1034,46 @@ export default function SettingsView({ onNavigate }) {
             <p className="settings-label">Network</p>
             <span className="settings-value">Mainnet</span>
           </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://x.com/dwallet_xyz', '_blank')}
+          >
+            <div>
+              <p className="settings-label">𝕏 X (Twitter)</p>
+              <p className="settings-sub">Follow us for latest updates</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://t.me/+K4mvZsmo0XgyM2E9', '_blank')}
+          >
+            <div>
+              <p className="settings-label">📢 Telegram Channel</p>
+              <p className="settings-sub">Official announcements & updates</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://t.me/+ZV9ou3mkhDAzMDQ1', '_blank')}
+          >
+            <div>
+              <p className="settings-label">💬 Telegram Community</p>
+              <p className="settings-sub">Chat, support & discussion</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://whatsapp.com/channel/0029VbCW2xuKQuJIHG2Q5V2k', '_blank')}
+          >
+            <div>
+              <p className="settings-label">📱 WhatsApp Channel</p>
+              <p className="settings-sub">Stay connected on WhatsApp</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
         </div>
         )}
       </section>

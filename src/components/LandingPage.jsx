@@ -354,9 +354,10 @@ export default function LandingPage({ onGetStarted }) {
                 Non-custodial DeFi wallet with AI agent and institutional-grade security.
               </p>
               <div className="footer-social">
-                <a href="#" className="social-link">𝕏</a>
-                <a href="#" className="social-link">💬</a>
-                <a href="#" className="social-link">📱</a>
+                <a href="https://x.com/dwallet_xyz" target="_blank" rel="noopener noreferrer" className="social-link" title="X (Twitter)">𝕏</a>
+                <a href="https://t.me/+K4mvZsmo0XgyM2E9" target="_blank" rel="noopener noreferrer" className="social-link" title="Telegram Channel">📢</a>
+                <a href="https://t.me/+ZV9ou3mkhDAzMDQ1" target="_blank" rel="noopener noreferrer" className="social-link" title="Telegram Group">💬</a>
+                <a href="https://whatsapp.com/channel/0029VbCW2xuKQuJIHG2Q5V2k" target="_blank" rel="noopener noreferrer" className="social-link" title="WhatsApp Channel">📱</a>
               </div>
             </div>
             <div className="footer-col">
