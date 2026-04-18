@@ -1,4 +1,9 @@
-const hre = require("hardhat");
+// scripts/deploy-referral-pool.js
+// Run with: npx hardhat run scripts/deploy-referral-pool.js --network baseSepolia
+
+const hre = require('hardhat');
+const fs = require('fs');
+require('dotenv').config();
 
 /**
  * Deploy ReferralPool Contract
@@ -21,7 +26,7 @@ async function main() {
   
   // Get the balance
   const balance = await hre.ethers.provider.getBalance(deployer.address);
-  console.log("Account balance:", hre.ethers.utils.formatEther(balance), "ETH\n");
+  console.log("Account balance:", hre.ethers.formatEther(balance), "ETH\n");
 
   // Get DWT token address from environment or config
   const DWT_TOKEN_ADDRESS = process.env.DWT_TOKEN_ADDRESS || 
@@ -38,25 +43,27 @@ async function main() {
     deployer.address // Owner
   );
 
-  await referralPool.deployed();
+  await referralPool.waitForDeployment();
+
+  const referralPoolAddress = await referralPool.getAddress();
 
   console.log("\n✅ ReferralPool deployed successfully!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("Contract Address:", referralPool.address);
+  console.log("Contract Address:", referralPoolAddress);
   console.log("DWT Token:", DWT_TOKEN_ADDRESS);
   console.log("Owner:", deployer.address);
   console.log("Reward Amount: 10 DWT per referral");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Verify the contract on Etherscan (if on a supported network)
-  if (process.env.ETHERSCAN_API_KEY) {
-    console.log("⏳ Waiting for block confirmations before verification...");
-    await referralPool.deployTransaction.wait(5);
+  if (process.env.BASESCAN_API_KEY) {
+    console.log("⌛ Waiting for block confirmations before verification...");
+    await referralPool.deploymentTransaction().wait(5);
     
     console.log("🔍 Verifying contract on Etherscan...");
     try {
       await hre.run("verify:verify", {
-        address: referralPool.address,
+        address: referralPoolAddress,
         constructorArguments: [
           DWT_TOKEN_ADDRESS,
           deployer.address
@@ -71,28 +78,35 @@ async function main() {
   // Fund the pool with initial DWT tokens (optional)
   const INITIAL_FUND_AMOUNT = process.env.INITIAL_REFERRAL_FUND || "1000"; // 1000 DWT
   console.log(`💰 To fund the pool with ${INITIAL_FUND_AMOUNT} DWT:`);
-  console.log(`   1. Approve DWT transfer: dwtToken.approve("${referralPool.address}", ${hre.ethers.utils.parseEther(INITIAL_FUND_AMOUNT)})`);
-  console.log(`   2. Fund the pool: referralPool.fundPool(${hre.ethers.utils.parseEther(INITIAL_FUND_AMOUNT)})`);
+  console.log(`   1. Approve DWT transfer: dwtToken.approve("${referralPoolAddress}", ${hre.ethers.parseEther(INITIAL_FUND_AMOUNT)})`);
+  console.log(`   2. Fund the pool: referralPool.fundPool(${hre.ethers.parseEther(INITIAL_FUND_AMOUNT)})`);
   console.log("\nOr use the fundPool() function directly after approval.\n");
 
   // Save deployment info
-  const fs = require("fs");
   const deploymentInfo = {
     network: hre.network.name,
     chainId: (await hre.ethers.provider.getNetwork()).chainId,
     contract: "ReferralPool",
-    address: referralPool.address,
+    address: referralPoolAddress,
     dwtToken: DWT_TOKEN_ADDRESS,
     owner: deployer.address,
     rewardAmount: "10 DWT",
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
-    txHash: referralPool.deployTransaction.hash,
+    txHash: referralPool.deploymentTransaction().hash,
   };
 
   const outputPath = `deployments/referral-pool-${hre.network.name}.json`;
   fs.mkdirSync("deployments", { recursive: true });
-  fs.writeFileSync(outputPath, JSON.stringify(deploymentInfo, null, 2));
+  
+  // Convert BigInt values to strings for JSON serialization
+  const serializedInfo = {
+    ...deploymentInfo,
+    chainId: deploymentInfo.chainId.toString(),
+    txHash: deploymentInfo.txHash || 'N/A'
+  };
+  
+  fs.writeFileSync(outputPath, JSON.stringify(serializedInfo, null, 2));
   console.log("📝 Deployment info saved to:", outputPath);
 
   console.log("\n🎉 Deployment complete!");

@@ -77,12 +77,11 @@ contract ReferralPool is Ownable, ReentrancyGuard {
      * @param _dwtToken Address of the DWT token contract
      * @param _owner Address of the contract owner
      */
-    constructor(address _dwtToken, address _owner) {
+    constructor(address _dwtToken, address _owner) Ownable(_owner) {
         if (_dwtToken == address(0)) revert ZeroAddress();
         if (_owner == address(0)) revert ZeroAddress();
         
         dwtToken = IERC20(_dwtToken);
-        transferOwnership(_owner);
     }
     
     // ─── Modifiers ────────────────────────────────────────────────────────────

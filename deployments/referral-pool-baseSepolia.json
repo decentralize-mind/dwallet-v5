@@ -1,0 +1,12 @@
+{
+  "network": "baseSepolia",
+  "chainId": "84532",
+  "contract": "ReferralPool",
+  "address": "0x0ea860ece31Fa7b3a8c59e9AEA069deb20DEAfdd",
+  "dwtToken": "0xe149b32b97384131204C86a23459b544498BC46A",
+  "owner": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "rewardAmount": "10 DWT",
+  "deployedAt": "2026-04-18T04:19:12.884Z",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "txHash": "0x31d6f9b49abcaef3a3af179fee8ce9c600430c29f693a77d95743bd49894b930"
+}
