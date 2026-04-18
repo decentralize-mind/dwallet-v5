@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { ethers } from 'ethers'
 import { CONTRACT_ADDRESSES } from '../config/contracts'
 import { ReferralPool_ABI } from '../config/abis'
-import { getReferralCode } from './referral'
+import { getReferralCode } from '../utils/referral'
 
 /**
  * Hook to interact with the ReferralPool smart contract
