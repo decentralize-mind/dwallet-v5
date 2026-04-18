@@ -13,7 +13,7 @@ export const DWT = {
 
   addresses: {
     sepolia: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
-    baseSepolia: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
+    baseSepolia: '0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f', // ✅ NFT Membership DWT
     base: '0x9ce235f8574bde67393884550F02135CE4fB8387', // ✅ live on Base mainnet
     ethereum: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', // ✅ live
     polygon: '', // deploy pending

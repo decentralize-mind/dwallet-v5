@@ -113,7 +113,7 @@ const TOKEN_CONTRACTS = {
   },
   // ── Base Sepolia testnet ──────────────────────────────────────────────
   baseSepolia: {
-    DWT: { address: '0x3400b0167dA5b2dba0b88b9604eE7df4BFc1f1fa', decimals: 18 },
+    DWT: { address: '0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f', decimals: 18 }, // NFT Membership DWT
     USDT: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
     USDC: { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', decimals: 6 },
   },

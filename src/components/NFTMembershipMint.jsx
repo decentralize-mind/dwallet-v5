@@ -502,13 +502,18 @@ export default function NFTMembershipMint() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <span style={{ fontSize: '32px' }}>{userTier > 0 ? TIER_CONFIG[userTier - 1]?.icon : '🎫'}</span>
-            <div>
+            <div style={{ flex: 1 }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>
                 {userTier > 0 ? `${TIER_CONFIG[userTier - 1]?.name} Member` : 'No Membership'}
               </h3>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.9 }}>
-                DWT Balance: {userBalance.balance.toFixed(2)} {userBalance.symbol}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>
+                  💰 DWT Balance: <strong>{userBalance.balance.toFixed(2)}</strong> {userBalance.symbol}
+                </p>
+                <p style={{ margin: 0, fontSize: '13px', opacity: 0.7 }}>
+                  (≈ ${(userBalance.balance * 3.50).toFixed(2)} USD)
+                </p>
+              </div>
             </div>
           </div>
           {userTier > 0 && (
