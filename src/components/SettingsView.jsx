@@ -1074,6 +1074,38 @@ export default function SettingsView({ onNavigate }) {
             </div>
             <span className="settings-arrow">↗</span>
           </div>
+          {/* Add these platforms when ready:
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://discord.gg/YOUR_INVITE', '_blank')}
+          >
+            <div>
+              <p className="settings-label">💬 Discord Server</p>
+              <p className="settings-sub">Join our community server</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://youtube.com/@dwallet', '_blank')}
+          >
+            <div>
+              <p className="settings-label">▶️ YouTube Channel</p>
+              <p className="settings-sub">Tutorials and updates</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          <div
+            className="settings-item clickable"
+            onClick={() => window.open('https://reddit.com/r/dwallet', '_blank')}
+          >
+            <div>
+              <p className="settings-label">🔴 Reddit Community</p>
+              <p className="settings-sub">Join discussions on Reddit</p>
+            </div>
+            <span className="settings-arrow">↗</span>
+          </div>
+          */}
         </div>
         )}
       </section>
