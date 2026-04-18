@@ -1,92 +1,93 @@
-const CACHE = 'toklo-v1'
-const STATIC = ['/', '/index.html', '/favicon.svg', '/manifest.json']
+// Service Worker for Push Notifications
+// This enables background price alerts even when dWallet is closed
 
-// External API domains — never cache these, always network
-const API_DOMAINS = [
-  'pro-api.coinmarketcap.com',
-  'api.coingecko.com',
-  'infura.io',
-  'etherscan.io',
-  'opensea.io',
-  'ankr.com',
-  'simplehash.com',
-  'moonpay.com',
-  'binance.org',
-  'polygon-rpc.com',
-]
+const CACHE_NAME = 'dwallet-notifications-v1'
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches
-      .open(CACHE)
-      .then(c => c.addAll(STATIC))
-      .catch(() => {}),
-  )
+// Install event - cache resources
+self.addEventListener('install', event => {
+  console.log('[SW] Service Worker installed')
   self.skipWaiting()
 })
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches
-      .keys()
-      .then(keys =>
-        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))),
-      ),
-  )
-  self.clients.claim()
-})
-
-self.addEventListener('fetch', e => {
-  const url = e.request.url
-
-  // Never intercept API calls — let them go directly to network
-  const isAPI = API_DOMAINS.some(domain => url.includes(domain))
-  if (isAPI) return // don't call e.respondWith — browser handles it normally
-
-  // Never intercept non-GET requests
-  if (e.request.method !== 'GET') return
-
-  // Never intercept chrome-extension or non-http
-  if (!url.startsWith('http')) return
-
-  // For app shell — cache first, then network
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached
-      return fetch(e.request)
-        .then(response => {
-          // Only cache same-origin static assets
-          if (response.ok && url.startsWith(self.location.origin)) {
-            const clone = response.clone()
-            caches
-              .open(CACHE)
-              .then(c => c.put(e.request, clone))
-              .catch(() => {})
-          }
-          return response
-        })
-        .catch(() => caches.match('/index.html'))
-    }),
+// Activate event - clean up old caches
+self.addEventListener('activate', event => {
+  console.log('[SW] Service Worker activated')
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
+          .map(name => caches.delete(name))
+      )
+    })
   )
 })
 
-// Push notifications
-self.addEventListener('push', e => {
-  const d = e.data?.json() || {}
-  e.waitUntil(
-    self.registration.showNotification(d.title || 'Toklo', {
-      body: d.body || 'Check your wallet',
-      icon: '/favicon.svg',
-    }),
+// Handle push notifications
+self.addEventListener('push', event => {
+  console.log('[SW] Push notification received', event)
+  
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch (e) {
+    data = { title: 'dWallet Alert', body: event.data?.text() || 'Price alert triggered!' }
+  }
+
+  const title = data.title || 'dWallet Price Alert'
+  const options = {
+    body: data.body || 'A price alert has been triggered',
+    icon: data.icon || '/favicon.svg',
+    badge: data.badge || '/favicon.svg',
+    tag: data.tag || 'price-alert',
+    requireInteraction: data.requireInteraction || false,
+    actions: data.actions || [
+      { action: 'view', title: 'View in dWallet' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ],
+    data: data.data || {}
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
   )
 })
 
-self.addEventListener('notificationclick', e => {
-  e.notification.close()
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then(wins => {
-      if (wins.length) return wins[0].focus()
-      return self.clients.openWindow('/')
-    }),
+// Handle notification clicks
+self.addEventListener('notificationclick', event => {
+  console.log('[SW] Notification clicked', event)
+  
+  event.notification.close()
+
+  if (event.action === 'dismiss') {
+    return
+  }
+
+  // Open or focus the dWallet app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // If dWallet is already open, focus it
+      for (const client of clientList) {
+        if (client.url.includes('localhost') || client.url.includes('dwallet')) {
+          return client.focus()
+        }
+      }
+      // Otherwise, open a new window
+      return clients.openWindow('/')
+    })
+  )
+})
+
+// Handle notification close
+self.addEventListener('notificationclose', event => {
+  console.log('[SW] Notification closed', event)
+})
+
+// Fetch event - serve from cache when offline
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request)
+    })
   )
 })

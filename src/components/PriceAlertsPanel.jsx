@@ -11,6 +11,7 @@ import { fetchMarketData } from '../utils/market'
 const COINS = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
   { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
+  { symbol: 'DWT', name: 'dWallet Token', icon: '◈' },
   { symbol: 'SOL', name: 'Solana', icon: '◎' },
   { symbol: 'BNB', name: 'BNB', icon: '🔶' },
   { symbol: 'XRP', name: 'XRP', icon: '✕' },
@@ -19,6 +20,8 @@ const COINS = [
   { symbol: 'LINK', name: 'Chainlink', icon: '🔗' },
   { symbol: 'DOT', name: 'Polkadot', icon: '●' },
   { symbol: 'DOGE', name: 'Dogecoin', icon: 'Ð' },
+  { symbol: 'UNI', name: 'Uniswap', icon: '🦄' },
+  { symbol: 'AAVE', name: 'Aave', icon: '👻' },
 ]
 
 export default function PriceAlertsPanel() {
@@ -43,6 +46,8 @@ export default function PriceAlertsPanel() {
         data.forEach(coin => {
           p[coin.symbol.toUpperCase()] = coin.current_price
         })
+        // Add DWT price (from your config)
+        p['DWT'] = 3.50
         setPrices(p)
       })
       .catch(() => {})
@@ -122,8 +127,8 @@ export default function PriceAlertsPanel() {
             gap: 10,
             padding: '12px 14px',
             marginBottom: 16,
-            background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.3)',
+            background: 'rgba(99,102,241,0.08)',
+            border: '1px solid rgba(99,102,241,0.3)',
             borderRadius: 'var(--radius-sm)',
           }}
         >
@@ -134,7 +139,7 @@ export default function PriceAlertsPanel() {
                 fontSize: 12,
                 fontWeight: 700,
                 margin: 0,
-                color: 'var(--amber)',
+                color: 'var(--accent)',
               }}
             >
               Enable notifications to receive alerts
@@ -142,14 +147,13 @@ export default function PriceAlertsPanel() {
             <p
               style={{ fontSize: 11, color: 'var(--text3)', margin: '2px 0 0' }}
             >
-              Toklo uses browser push notifications to alert you when prices
-              move
+              Get notified when prices hit your targets — even when dWallet is in the background
             </p>
           </div>
           <button
             onClick={handleEnableNotifications}
             style={{
-              background: 'var(--amber)',
+              background: 'var(--accent)',
               color: 'white',
               border: 'none',
               borderRadius: 6,

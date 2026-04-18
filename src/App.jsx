@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WalletProvider } from './context/WalletContext'
 import { useWallet } from './hooks/useWallet'
 import { WalletConnectProvider } from './context/WalletConnectContext'
@@ -10,11 +10,21 @@ import OnboardingScreen from './components/OnboardingScreen'
 import LandingPage from './components/LandingPage'
 import LockScreen from './components/LockScreen'
 import MainWallet from './components/MainWallet'
+import { registerServiceWorker } from './utils/pushNotifications'
 import './index.css'
 
 function AppContent() {
   const { wallet, sessionReady, isLocked } = useWallet()
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Register service worker for push notifications
+  useEffect(() => {
+    registerServiceWorker().then(success => {
+      if (success) {
+        console.log('✅ Push notification service worker ready')
+      }
+    })
+  }, [])
 
   // Wait until session check is done to avoid flashing unlock screen
   if (!sessionReady) {

@@ -8,7 +8,7 @@ const PERIODS = [
   { label: '90D', days: 90 },
 ]
 
-export default function PortfolioChart({ balances }) {
+export default function PortfolioChart({ balances, prices }) {
   const canvasRef = useRef(null)
   const [period, setPeriod] = useState('7D')
   const [history, setHistory] = useState([])
@@ -16,15 +16,39 @@ export default function PortfolioChart({ balances }) {
 
   useEffect(() => {
     const days = PERIODS.find(p => p.label === period)?.days || 7
+    // Fetch ETH price history as baseline for portfolio performance
     fetchPriceHistory('ETH', days).then(hist => {
       if (!hist || hist.length < 2) {
         setLoading(false)
         return
       }
-      setHistory(hist)
+      
+      // If we have balances and prices, calculate portfolio value history
+      if (balances && prices && Object.keys(balances).length > 0) {
+        // Calculate current portfolio value
+        let currentPortfolioValue = 0
+        Object.entries(balances).forEach(([token, balance]) => {
+          const tokenPrice = prices[token] || 0
+          currentPortfolioValue += balance * tokenPrice
+        })
+        
+        // Scale the ETH history to match portfolio value
+        const ethPriceNow = hist[hist.length - 1].price
+        const scaleFactor = currentPortfolioValue / ethPriceNow
+        
+        const portfolioHistory = hist.map(point => ({
+          timestamp: point.timestamp,
+          price: point.price * scaleFactor,
+        }))
+        
+        setHistory(portfolioHistory)
+      } else {
+        setHistory(hist)
+      }
+      
       setLoading(false)
     })
-  }, [period])
+  }, [period, balances, prices])
 
   useEffect(() => {
     if (!canvasRef.current || history.length < 2) return
@@ -81,12 +105,21 @@ export default function PortfolioChart({ balances }) {
     const last = history[history.length - 1].price
     const first = history[0].price
     const diff = ((last - first) / first) * 100
-    const val = balances?.ETH ? balances.ETH * last : 0
+    
+    // Calculate actual portfolio value from balances
+    let portfolioValue = 0
+    if (balances && prices) {
+      Object.entries(balances).forEach(([token, balance]) => {
+        const tokenPrice = prices[token] || 0
+        portfolioValue += balance * tokenPrice
+      })
+    }
+    
     return {
-      value: `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `$${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       change: `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%`,
     }
-  }, [history, balances])
+  }, [history, balances, prices])
 
   return (
     <div style={{
@@ -110,7 +143,7 @@ export default function PortfolioChart({ balances }) {
             fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: "0.3px"
-          }}>ETH Performance</p>
+          }}>Portfolio Performance</p>
           <div style={{
             display: "flex",
             alignItems: "baseline",

@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getStakingPoolInfo, getProtocolContract } from '../utils/dwallet'
 import { ethers } from 'ethers'
 
 const APY = 12.5
 const MIN_STAKE = 100
-const DWT_PRICE = 0.001
+const DWT_PRICE = 3.50
 
 export default function DWTStakingPanel() {
   const { chainBalances } = useWallet()
@@ -32,6 +32,34 @@ export default function DWTStakingPanel() {
   const [msg, setMsg] = useState(null)
   const dwtBal = chainBalances['DWT'] || 0
   const [protocolStaked, setProtocolStaked] = useState('0')
+  const [totalRewardsEarned, setTotalRewardsEarned] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('dwallet_dwt_staking') || '{}')
+      return s.totalRewards || 0
+    } catch (e) {
+      return 0
+    }
+  })
+  const [stakingStartTime, setStakingStartTime] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('dwallet_dwt_staking') || '{}')
+      return s.stakingStartTime || null
+    } catch (e) {
+      return null
+    }
+  })
+
+  // Simulate reward accumulation in real-time
+  useEffect(() => {
+    if (staked <= 0) return
+    
+    const interval = setInterval(() => {
+      const rewardsPerSecond = (staked * APY / 100 / 365 / 24 / 60 / 60) * 0.00001 // ETH per second
+      setReward(prev => prev + rewardsPerSecond)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [staked])
 
   useEffect(() => {
     // Fetch real contract data
@@ -50,7 +78,12 @@ export default function DWTStakingPanel() {
   const save = (st, rw) => {
     localStorage.setItem(
       'dwallet_dwt_staking',
-      JSON.stringify({ staked: st, reward: rw }),
+      JSON.stringify({ 
+        staked: st, 
+        reward: rw,
+        totalRewards: totalRewardsEarned,
+        stakingStartTime: stakingStartTime
+      }),
     )
   }
 
@@ -68,6 +101,7 @@ export default function DWTStakingPanel() {
     await new Promise(r => setTimeout(r, 1500))
     const ns = staked + amt
     setStaked(ns)
+    if (!stakingStartTime) setStakingStartTime(Date.now())
     save(ns, reward)
     setStakeInput('')
     notify('success', '✓ Staked ' + amt.toFixed(0) + ' DWT')
@@ -91,17 +125,28 @@ export default function DWTStakingPanel() {
     if (reward <= 0) return notify('error', 'No rewards to claim')
     setLoading(true)
     await new Promise(r => setTimeout(r, 1200))
-    notify('success', '✓ Claimed ' + reward.toFixed(6) + ' ETH')
+    const claimedAmount = reward
+    setTotalRewardsEarned(prev => prev + claimedAmount)
+    notify('success', '✓ Claimed ' + claimedAmount.toFixed(6) + ' ETH')
     setReward(0)
     save(staked, 0)
     setLoading(false)
   }
 
   const proj = amt => ({
-    daily: (((amt * APY) / 100 / 365) * DWT_PRICE).toFixed(5),
-    monthly: (((amt * APY) / 100 / 12) * DWT_PRICE).toFixed(5),
-    yearly: (((amt * APY) / 100) * DWT_PRICE).toFixed(4),
+    daily: (((amt * APY) / 100 / 365) * DWT_PRICE).toFixed(2),
+    monthly: (((amt * APY) / 100 / 12) * DWT_PRICE).toFixed(2),
+    yearly: (((amt * APY) / 100) * DWT_PRICE).toFixed(2),
   })
+
+  const getStakingDuration = () => {
+    if (!stakingStartTime) return null
+    const diff = Date.now() - stakingStartTime
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    if (days > 0) return `${days}d ${hours}h`
+    return `${hours}h`
+  }
 
   return (
     <div className="staking-panel">
@@ -128,6 +173,20 @@ export default function DWTStakingPanel() {
           <p className="dwt-stat-value positive">{APY}%</p>
           <p className="dwt-stat-sub">paid in ETH</p>
         </div>
+        {stakingStartTime && (
+          <div className="dwt-stat">
+            <p className="dwt-stat-label">Staking For</p>
+            <p className="dwt-stat-value">{getStakingDuration()}</p>
+            <p className="dwt-stat-sub">Since first stake</p>
+          </div>
+        )}
+        {totalRewardsEarned > 0 && (
+          <div className="dwt-stat">
+            <p className="dwt-stat-label">Total Earned</p>
+            <p className="dwt-stat-value positive">{totalRewardsEarned.toFixed(6)} ETH</p>
+            <p className="dwt-stat-sub">All-time rewards</p>
+          </div>
+        )}
       </div>
 
       {reward > 0 && (

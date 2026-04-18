@@ -1,3 +1,5 @@
+import { sendPriceAlertNotification } from './pushNotifications'
+
 const KEY = 'dwallet_price_alerts'
 
 export function getAlerts() {
@@ -41,6 +43,16 @@ export function checkAlerts(prices, onTrigger) {
     if (hit) {
       alert.triggered = true
       changed = true
+      
+      // Send browser notification
+      sendPriceAlertNotification({
+        symbol: alert.symbol,
+        price,
+        targetPrice: alert.threshold,
+        direction: alert.direction
+      })
+      
+      // Also trigger custom callback if provided
       onTrigger?.(alert, price)
     }
   })
