@@ -1074,10 +1074,9 @@ export default function SettingsView({ onNavigate }) {
             </div>
             <span className="settings-arrow">↗</span>
           </div>
-          {/* Add these platforms when ready:
           <div
             className="settings-item clickable"
-            onClick={() => window.open('https://discord.gg/YOUR_INVITE', '_blank')}
+            onClick={() => window.open('https://discord.com/channels/1495046935185195008/1495046935822864479', '_blank')}
           >
             <div>
               <p className="settings-label">💬 Discord Server</p>
@@ -1097,7 +1096,7 @@ export default function SettingsView({ onNavigate }) {
           </div>
           <div
             className="settings-item clickable"
-            onClick={() => window.open('https://reddit.com/r/dwallet', '_blank')}
+            onClick={() => window.open('https://www.reddit.com/user/Obvious_Tell_648/', '_blank')}
           >
             <div>
               <p className="settings-label">🔴 Reddit Community</p>
@@ -1105,7 +1104,6 @@ export default function SettingsView({ onNavigate }) {
             </div>
             <span className="settings-arrow">↗</span>
           </div>
-          */}
         </div>
         )}
       </section>

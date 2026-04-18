@@ -358,11 +358,9 @@ export default function LandingPage({ onGetStarted }) {
                 <a href="https://t.me/+K4mvZsmo0XgyM2E9" target="_blank" rel="noopener noreferrer" className="social-link" title="Telegram Channel">📢</a>
                 <a href="https://t.me/+ZV9ou3mkhDAzMDQ1" target="_blank" rel="noopener noreferrer" className="social-link" title="Telegram Group">💬</a>
                 <a href="https://whatsapp.com/channel/0029VbCW2xuKQuJIHG2Q5V2k" target="_blank" rel="noopener noreferrer" className="social-link" title="WhatsApp Channel">📱</a>
-                {/* Add these when ready:
-                <a href="https://discord.gg/YOUR_INVITE" target="_blank" rel="noopener noreferrer" className="social-link" title="Discord">💬</a>
-                <a href="https://youtube.com/@dwallet" target="_blank" rel="noopener noreferrer" className="social-link" title="YouTube">▶️</a>
-                <a href="https://reddit.com/r/dwallet" target="_blank" rel="noopener noreferrer" className="social-link" title="Reddit">🔴</a>
-                */}
+                <a href="https://discord.com/channels/1495046935185195008/1495046935822864479" target="_blank" rel="noopener noreferrer" className="social-link" title="Discord Server">💬</a>
+                <a href="https://youtube.com/@dwallet" target="_blank" rel="noopener noreferrer" className="social-link" title="YouTube Channel">▶️</a>
+                <a href="https://www.reddit.com/user/Obvious_Tell_648/" target="_blank" rel="noopener noreferrer" className="social-link" title="Reddit Community">🔴</a>
               </div>
             </div>
             <div className="footer-col">
