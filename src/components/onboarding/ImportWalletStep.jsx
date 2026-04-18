@@ -18,12 +18,17 @@ export function ImportWalletStep({
   const referralCodeInput = typeof window !== 'undefined' ? sessionStorage.getItem('toklo_ref') || '' : ''
   const [referralCode, setReferralCode] = useState(referralCodeInput)
   
+  // Import mode: 'seed' or 'privatekey'
+  const [importMode, setImportMode] = useState('seed')
+  
   const raw = importInput.trim()
   const wordArr = raw.length > 0 ? raw.split(/\s+/) : []
   const wordCount = wordArr.length
   const isValid12 = wordCount === 12
   const isValid24 = wordCount === 24
-  const isValid = isValid12 || isValid24
+  const isValidSeed = isValid12 || isValid24
+  const isValidPrivateKey = /^0x[0-9a-fA-F]{64}$/.test(raw) || /^[0-9a-fA-F]{64}$/.test(raw)
+  const isValid = importMode === 'seed' ? isValidSeed : isValidPrivateKey
   const isOver = wordCount > 24
   const pctFill12 = Math.min((wordCount / 12) * 100, 100)
   const pctFill24 = Math.min((wordCount / 24) * 100, 100)
@@ -68,22 +73,32 @@ export function ImportWalletStep({
           Import your wallet
         </h2>
         <p className="step-sub" style={{ margin: 0 }}>
-          Enter your 12 or 24-word recovery phrase to restore access.
+          {importMode === 'seed' 
+            ? 'Enter your 12 or 24-word recovery phrase to restore access.'
+            : 'Enter your 64-character private key (with or without 0x prefix).'}
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[12, 24].map(n => (
-          <div
-            key={n}
+      {/* Import Mode Toggle */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {[
+          { mode: 'seed', label: '🔑 Seed Phrase', desc: '12 or 24 words' },
+          { mode: 'privatekey', label: '🔐 Private Key', desc: '64 hex chars' },
+        ].map(({ mode, label, desc }) => (
+          <button
+            key={mode}
+            onClick={() => {
+              setImportMode(mode)
+              setImportInput('')
+            }}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '10px 12px',
               borderRadius: 'var(--radius-sm)',
-              border: `1px solid ${wordCount === n ? 'var(--accent)' : 'var(--border)'}`,
-              background:
-                wordCount === n ? 'var(--accent-light)' : 'var(--bg3)',
-              textAlign: 'center',
+              border: `2px solid ${importMode === mode ? 'var(--accent)' : 'var(--border)'}`,
+              background: importMode === mode ? 'var(--accent-light)' : 'var(--bg3)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
               transition: 'all 0.2s',
             }}
           >
@@ -92,59 +107,61 @@ export function ImportWalletStep({
                 fontSize: 13,
                 fontWeight: 700,
                 margin: 0,
-                color: wordCount === n ? 'var(--accent)' : 'var(--text3)',
+                color: importMode === mode ? 'var(--accent)' : 'var(--text3)',
               }}
             >
-              {n} words
+              {label}
             </p>
             <p
               style={{
                 fontSize: 10,
                 margin: '2px 0 0',
-                color: wordCount === n ? 'var(--accent)' : 'var(--text3)',
+                color: importMode === mode ? 'var(--accent)' : 'var(--text3)',
               }}
             >
-              {n === 12 ? 'Standard' : 'Extended'}
+              {desc}
             </p>
-          </div>
+          </button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'var(--text2)',
-          }}
-        >
-          Recovery phrase
-        </label>
-        <textarea
-          className="field textarea"
-          placeholder="Enter words separated by spaces: word1 word2 word3..."
-          value={importInput}
-          onChange={e => setImportInput(e.target.value.toLowerCase())}
-          rows={4}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            lineHeight: 1.8,
-            resize: 'none',
-            borderColor:
-              raw.length > 0
-                ? isValid
-                  ? 'rgba(16,185,129,0.6)'
-                  : isOver
-                    ? 'rgba(239,68,68,0.5)'
-                    : 'var(--border)'
-                : undefined,
-          }}
-        />
+      {importMode === 'seed' ? (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text2)',
+              }}
+            >
+              Recovery phrase
+            </label>
+            <textarea
+              className="field textarea"
+              placeholder="Enter words separated by spaces: word1 word2 word3..."
+              value={importInput}
+              onChange={e => setImportInput(e.target.value.toLowerCase())}
+              rows={4}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 13,
+                lineHeight: 1.8,
+                resize: 'none',
+                borderColor:
+                  raw.length > 0
+                    ? isValid
+                      ? 'rgba(16,185,129,0.6)'
+                      : isOver
+                        ? 'rgba(239,68,68,0.5)'
+                        : 'var(--border)'
+                    : undefined,
+              }}
+            />
         {raw.length > 0 && (
           <div
             style={{
@@ -283,6 +300,80 @@ export function ImportWalletStep({
           </div>
         )}
       </div>
+      </>
+    ) : (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--text2)',
+          }}
+        >
+          Private Key
+        </label>
+        <input
+          className="field"
+          type="password"
+          placeholder="Enter private key (0x...)"
+          value={importInput}
+          onChange={e => setImportInput(e.target.value)}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 13,
+            borderColor:
+              raw.length > 0
+                ? isValidPrivateKey
+                  ? 'rgba(16,185,129,0.6)'
+                  : 'rgba(239,68,68,0.5)'
+                : undefined,
+          }}
+        />
+        {raw.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+              {raw.length} characters
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: isValidPrivateKey ? 'var(--green)' : 'var(--red)',
+              }}
+            >
+              {isValidPrivateKey ? '✓ Valid private key' : '✗ Invalid format (need 64 hex chars)'}
+            </span>
+          </div>
+        )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '10px 12px',
+            background: 'rgba(245,158,11,0.06)',
+            border: '1px solid rgba(245,158,11,0.2)',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+          <p
+            style={{
+              fontSize: 11,
+              color: 'var(--text3)',
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
+            Never share your private key! This gives full access to your wallet. Only import on trusted devices.
+          </p>
+        </div>
+      </div>
+    )}
 
       <div
         style={{
