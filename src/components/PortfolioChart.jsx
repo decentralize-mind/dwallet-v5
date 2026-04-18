@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { fetchPriceHistory } from '../utils/prices'
+import { trackFeatureView } from '../utils/analytics'
 
 const PERIODS = [
   { label: '24H', days: 1 },
@@ -13,6 +14,11 @@ export default function PortfolioChart({ balances, prices }) {
   const [period, setPeriod] = useState('7D')
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Track feature view
+  useEffect(() => {
+    trackFeatureView('portfolio')
+  }, [])
 
   useEffect(() => {
     const days = PERIODS.find(p => p.label === period)?.days || 7

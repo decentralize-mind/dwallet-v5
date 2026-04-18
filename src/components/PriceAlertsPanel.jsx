@@ -7,6 +7,7 @@ import {
   checkAlerts,
 } from '../utils/priceAlerts'
 import { fetchMarketData } from '../utils/market'
+import { trackFeatureView, trackFeatureAction } from '../utils/analytics'
 
 const COINS = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿' },
@@ -37,6 +38,11 @@ export default function PriceAlertsPanel() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Track feature view
+  useEffect(() => {
+    trackFeatureView('priceAlerts')
+  }, [])
 
   // Load live prices
   useEffect(() => {
@@ -96,6 +102,7 @@ export default function PriceAlertsPanel() {
       `Alert set — you will be notified when ${symbol} goes ${direction} $${val.toLocaleString()}`,
     )
     setTimeout(() => setSuccess(''), 4000)
+    trackFeatureAction('priceAlerts', 'alertsCreated')
     setSaving(false)
   }
 

@@ -389,6 +389,7 @@ export default function SettingsView({ onNavigate }) {
             ['Address Book', 'Save contacts', 'addressbook'],
             ['Price Alerts', 'Get notified on price moves', 'alerts'],
             ['Gas Tracker', 'Monitor gas prices', 'gas'],
+            ['Analytics', 'View usage metrics', 'analytics'],
             ['Import Token', 'Add any ERC-20 token', 'tokenimport'],
           ].map(([label, sub, view]) => (
             <div

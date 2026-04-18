@@ -11,6 +11,7 @@ import LandingPage from './components/LandingPage'
 import LockScreen from './components/LockScreen'
 import MainWallet from './components/MainWallet'
 import { registerServiceWorker } from './utils/pushNotifications'
+import { initializeSessionTracking } from './utils/analytics'
 import './index.css'
 
 function AppContent() {
@@ -24,6 +25,11 @@ function AppContent() {
         console.log('✅ Push notification service worker ready')
       }
     })
+  }, [])
+
+  // Initialize session tracking
+  useEffect(() => {
+    initializeSessionTracking()
   }, [])
 
   // Wait until session check is done to avoid flashing unlock screen

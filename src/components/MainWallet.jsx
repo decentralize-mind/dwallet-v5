@@ -16,6 +16,7 @@ import AddressBook from './AddressBook'
 import PriceAlertsPanel from './PriceAlertsPanel'
 import GasTracker from './GasTracker'
 import TokenImport from './TokenImport'
+import AnalyticsDashboard from './AnalyticsDashboard'
 import PendingReferralHandler from './PendingReferralHandler'
 import { CHAINS } from '../data/chains'
 import { formatAddress } from '../utils/crypto'
@@ -85,6 +86,7 @@ export default function MainWallet() {
     if (subView === 'addressbook') return <AddressBook onSelect={null} />
     if (subView === 'alerts') return <PriceAlertsPanel />
     if (subView === 'gas') return <GasTracker />
+    if (subView === 'analytics') return <AnalyticsDashboard />
     if (subView === 'tokenimport')
       return (
         <TokenImport

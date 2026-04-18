@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getStakingPoolInfo, getProtocolContract } from '../utils/dwallet'
+import { trackFeatureView, trackFeatureAction } from '../utils/analytics'
 import { ethers } from 'ethers'
 
 const APY = 12.5
@@ -48,6 +49,11 @@ export default function DWTStakingPanel() {
       return null
     }
   })
+
+  // Track feature view
+  useEffect(() => {
+    trackFeatureView('staking')
+  }, [])
 
   // Simulate reward accumulation in real-time
   useEffect(() => {
@@ -105,6 +111,7 @@ export default function DWTStakingPanel() {
     save(ns, reward)
     setStakeInput('')
     notify('success', '✓ Staked ' + amt.toFixed(0) + ' DWT')
+    trackFeatureAction('staking', 'stakes')
     setLoading(false)
   }
 
@@ -118,6 +125,7 @@ export default function DWTStakingPanel() {
     save(ns, reward)
     setUnstakeIn('')
     notify('success', '✓ Unstaked ' + amt.toFixed(0) + ' DWT')
+    trackFeatureAction('staking', 'unstakes')
     setLoading(false)
   }
 
@@ -128,6 +136,7 @@ export default function DWTStakingPanel() {
     const claimedAmount = reward
     setTotalRewardsEarned(prev => prev + claimedAmount)
     notify('success', '✓ Claimed ' + claimedAmount.toFixed(6) + ' ETH')
+    trackFeatureAction('staking', 'claims')
     setReward(0)
     save(staked, 0)
     setLoading(false)
