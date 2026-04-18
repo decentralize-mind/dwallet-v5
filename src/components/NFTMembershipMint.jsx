@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useWallet } from '../hooks/useWallet'
+import { useWallet } from '../context/WalletContext'
 import { ethers } from 'ethers'
 import { NFT_MEMBERSHIP_ABI } from '../contracts/layer9-abis'
 
@@ -36,7 +36,7 @@ const TIER_CONFIG = [
 ]
 
 export default function NFTMembershipMint() {
-  const { wallet, currentAddress } = useWallet()
+  const { wallet, currentAddress, sendTransaction } = useWallet()
   const [selectedTier, setSelectedTier] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('ETH')
   const [loading, setLoading] = useState(false)
@@ -58,6 +58,9 @@ export default function NFTMembershipMint() {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const NFT_MEMBERSHIP_ADDRESS = import.meta.env.VITE_NFT_MEMBERSHIP_ADDRESS || ''
+  
+  // Create contract instance for encoding function calls
+  const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI)
 
   // Fetch user's current tier, balance, owned passes, and revenue
   const fetchUserData = async () => {
@@ -69,7 +72,9 @@ export default function NFTMembershipMint() {
     try {
       console.log('🔄 fetchUserData: Starting fetch...', { currentAddress, NFT_MEMBERSHIP_ADDRESS })
       setIsRefreshing(true)
-      const provider = new ethers.BrowserProvider(window.ethereum)
+      
+      // Use JsonRpcProvider instead of BrowserProvider for dWallet
+      const provider = new ethers.JsonRpcProvider('https://sepolia.base.org')
       const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, provider)
 
       // Get highest tier
@@ -149,8 +154,12 @@ export default function NFTMembershipMint() {
 
   // Auto-refresh every 15 seconds
   useEffect(() => {
-    if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) return
+    if (!currentAddress || !NFT_MEMBERSHIP_ADDRESS) {
+      console.log('⏸️ Auto-refresh paused: missing address or contract')
+      return
+    }
 
+    console.log('✅ Auto-refresh active for:', currentAddress)
     // Initial fetch
     fetchUserData()
 
@@ -182,37 +191,80 @@ export default function NFTMembershipMint() {
     setMinting(true)
 
     try {
-      const signer = await window.ethereum.request({ method: 'eth_requestAccounts' })
-        .then(accounts => new ethers.BrowserProvider(window.ethereum).getSigner())
+      console.log('🚀 Starting mint process...', { 
+        tier: selectedTier, 
+        paymentMethod,
+        walletAddress: currentAddress 
+      })
 
-      const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, signer)
-
-      let tx
       if (paymentMethod === 'ETH') {
+        // Mint with ETH
         const ethPrice = tierConfigs[selectedTier].ethPrice
-        tx = await contract.mintWithETH(selectedTier, {
-          value: ethers.parseEther(ethPrice.toString()),
-        })
-      } else {
-        const dwtAddress = await contract.dwtToken()
-        const dwtContract = new ethers.Contract(dwtAddress, [
-          'function approve(address spender, uint256 amount) returns (bool)',
-        ], signer)
-
-        const dwtPrice = tierConfigs[selectedTier].dwtPrice
-        await dwtContract.approve(NFT_MEMBERSHIP_ADDRESS, ethers.parseUnits(dwtPrice.toString(), 18))
+        console.log('💰 Minting with ETH:', ethPrice)
         
-        tx = await contract.mintWithDWT(selectedTier)
+        const tx = await sendTransaction({
+          to: NFT_MEMBERSHIP_ADDRESS,
+          value: ethers.parseEther(ethPrice.toString()),
+          data: contract.interface.encodeFunctionData('mintWithETH', [selectedTier]),
+          chain: 'baseSepolia',
+          description: `Mint ${TIER_CONFIG[selectedTier].name} NFT Membership Pass`,
+        })
+
+        setSuccess('Minting transaction submitted...')
+        await tx.wait()
+        
+        setSuccess(`Successfully minted ${TIER_CONFIG[selectedTier].name} membership!`)
+        setShowMintModal(false)
+        setSelectedTier(null)
+        
+        // Refresh data
+        setTimeout(() => {
+          fetchUserData()
+        }, 2000)
+        
+      } else {
+        // Mint with DWT - Need to approve first, then mint
+        const dwtPrice = tierConfigs[selectedTier].dwtPrice
+        const dwtAddress = '0x3A4B1a7aD971be03dEe83A7B61d575304C9C0b0f'
+        
+        console.log('🪙 Minting with DWT:', dwtPrice)
+        
+        // Step 1: Approve DWT spending
+        setSuccess('Approving DWT spending...')
+        const approveTx = await sendTransaction({
+          to: dwtAddress,
+          data: contract.interface.encodeFunctionData('approve', [
+            NFT_MEMBERSHIP_ADDRESS,
+            ethers.parseUnits(dwtPrice.toString(), 18)
+          ]),
+          chain: 'baseSepolia',
+          description: `Approve ${dwtPrice} DWT for NFT Membership`,
+        })
+        
+        await approveTx.wait()
+        console.log('✅ DWT approved')
+        
+        // Step 2: Mint with DWT
+        setSuccess('Minting NFT...')
+        const mintTx = await sendTransaction({
+          to: NFT_MEMBERSHIP_ADDRESS,
+          data: contract.interface.encodeFunctionData('mintWithDWT', [selectedTier]),
+          chain: 'baseSepolia',
+          description: `Mint ${TIER_CONFIG[selectedTier].name} NFT Membership Pass`,
+        })
+        
+        await mintTx.wait()
+        console.log('✅ NFT minted')
+        
+        setSuccess(`Successfully minted ${TIER_CONFIG[selectedTier].name} membership!`)
+        setShowMintModal(false)
+        setSelectedTier(null)
+        
+        // Refresh data
+        setTimeout(() => {
+          fetchUserData()
+        }, 2000)
       }
-
-      setSuccess('Minting transaction submitted...')
-      await tx.wait()
-      
-      setSuccess(`Successfully minted ${TIER_CONFIG[selectedTier].name} membership!`)
-      setShowMintModal(false)
-      setSelectedTier(null)
-
-      window.location.reload()
     } catch (err) {
       console.error('Minting failed:', err)
       setError(err.reason || err.message || 'Minting failed')
