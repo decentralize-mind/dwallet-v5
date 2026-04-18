@@ -17,6 +17,10 @@ export function getReferralStats() {
   }
 }
 
+export function getReferralRewardAmount() {
+  return 10 // 10 DWT per referral
+}
+
 export function checkIncomingReferral() {
   try {
     const params = new URLSearchParams(window.location.search)

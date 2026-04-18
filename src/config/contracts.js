@@ -67,6 +67,7 @@ export const CONTRACT_ADDRESSES = {
     FeeRouter: '0x6552d7c4628e9e71c2E3cBEaB9f17CF67Bee1D89',
     Stablecoin: '0x83852A1C0A6C13fa8aCD950e51A2A594A7D7Ec29',
     SimpleAirdrop: '0xb1af2B0A54787bd6Fa0223E7b9e53C02127cB7db', // Deployed 2026-04-17
+    ReferralPool: '0x20B1a2C4d9230d183614FF4dB20ff205069bB6F2', // Referral reward pool
     
     // Legacy (old addresses - keeping for backward compatibility)
     WalletImpl: '0x044b0a70598F787BD4Eb470DEe4b5fdCc49A22Bf',

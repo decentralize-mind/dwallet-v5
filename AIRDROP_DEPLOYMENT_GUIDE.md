@@ -301,3 +301,50 @@ For questions or issues:
 
 **Last Updated**: April 17, 2026  
 **Status**: ✅ Deployed, ⏳ Pending Funding, 🎨 Frontend Ready
+
+I'll check all the addresses that have received DWT tokens and create a comprehensive list.
+
+
+Now let me run this scan and then create the DWT-receivers.md file:
+
+
+Perfect! As expected, no addresses have DWT yet. Now let me create the comprehensive DWT-receivers.md file with all the allocated addresses:
+
+
+Perfect! I've created the comprehensive [DWT-receivers.md](file:///Users/macbookpri/Downloads/dwallet-v5/DWT-receivers.md) file with all the information you requested.
+
+## 📋 Summary
+
+I've created a complete list of **all 28 DWT token receivers** organized by category:
+
+### Key Findings:
+
+1. **Total Receivers**: 28 addresses
+2. **Total Allocated**: 70,064,045 DWT (56.97% of max supply)
+3. **Current Status**: ❌ **NONE have received DWT yet** - all balances are 0
+
+### Breakdown by Category:
+
+| Category | # of Receivers | Allocated DWT |
+|----------|----------------|---------------|
+| 👥 Founders | 3 | 10,500,000 |
+| 👨‍💻 Team Members | 11 | 7,000,000 |
+| 💼 Investors | 1 | 8,400,000 |
+| 🏛️ DAO Treasury | 1 | 14,000,000 |
+| 🎁 Community Rewards | 1 | 10,500,000 |
+| 🎯 Airdrop Pool | 2 | 2,100,000 |
+| 📢 Marketing | 3 | 1,464,045 |
+| 💧 Liquidity & DEX | 1 | 12,600,000 |
+| 👔 Advisors | 5 | 3,500,000 |
+
+### The Document Includes:
+
+✅ Complete address list with names  
+✅ Expected allocation amounts  
+✅ Current distribution status  
+✅ Category subtotals  
+✅ Token ownership information  
+✅ Next steps for distribution  
+✅ Links to related documents  
+
+The file is ready at: [DWT-receivers.md](file:///Users/macbookpri/Downloads/dwallet-v5/DWT-receivers.md) 📄

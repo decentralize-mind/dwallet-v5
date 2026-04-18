@@ -16,6 +16,7 @@ import AddressBook from './AddressBook'
 import PriceAlertsPanel from './PriceAlertsPanel'
 import GasTracker from './GasTracker'
 import TokenImport from './TokenImport'
+import PendingReferralHandler from './PendingReferralHandler'
 import { CHAINS } from '../data/chains'
 import { formatAddress } from '../utils/crypto'
 
@@ -189,6 +190,9 @@ export default function MainWallet() {
       {showAccountSelector && (
         <AccountSelector onClose={() => setShowAccountSelector(false)} />
       )}
+      
+      {/* Process pending referrals in the background */}
+      <PendingReferralHandler />
     </div>
   )
 }

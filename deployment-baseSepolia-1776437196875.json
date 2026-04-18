@@ -1,0 +1,278 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-04-17T14:46:36.874Z",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "governance": {
+    "timelock": "0x1A8AEe3E1B69959DCfF9E4A0bd0757e8451a49c4",
+    "governor": "0xD1779aD62De0bEeD47Fe60d481593BF5EA0f1c21",
+    "votingDelay": "7200 blocks",
+    "votingPeriod": "50400 blocks",
+    "proposalThreshold": "100000.0 DWT",
+    "quorum": "4%",
+    "timelockDelay": "48 hours"
+  },
+  "token": {
+    "address": "0xe3ac0Bb319ee50DE87656B6e1fe3B999F9b114c9",
+    "owner": "0x1A8AEe3E1B69959DCfF9E4A0bd0757e8451a49c4",
+    "ownerIsTimelock": true,
+    "totalMinted": "45564045.0",
+    "maxSupply": "123000000"
+  },
+  "security": {
+    "lockEngine": "0xb961B0164251A86cdA96992Fad8E8c17E9D04E01",
+    "invariantChecker": "0x827eAd683BCee11701408Bc6E5856ab1663E99ED",
+    "securityController": "0xBc864c087E89607F7A7fF2fE993Bbe5d7d05D8eC",
+    "rateLimiter": "0xe619317dE0CF667e2ce29Db0372f64007fa2A56e"
+  },
+  "vesting": {
+    "founders": [
+      {
+        "beneficiary": "0x20B2bD1fefBF0632AEf2654eB981c4192d618A21",
+        "vestingWallet": "0x84E3d0F1E45Dac928cd8d5290FDb93f493Fe19C6",
+        "index": 1
+      },
+      {
+        "beneficiary": "0xf18e59291febf91b0BAa57E10AD26711337ba722",
+        "vestingWallet": "0x8B5eEC5F715F8f8489416ff07E85b6570402200B",
+        "index": 2
+      },
+      {
+        "beneficiary": "0xEaB8448c9398EA78F2EeF044a4eE961b5E302cd5",
+        "vestingWallet": "0x69882986d9e4672782d43b8C752cD501aA5EebFd",
+        "index": 3
+      }
+    ],
+    "team": [
+      {
+        "beneficiary": "0x2EC22ebD64f79283877e1AD8B9D13F89A76B45A0",
+        "vestingWallet": "0x449B0bFe07a9E88EE14d4aD216FCd39e37e6edDD",
+        "index": 1
+      },
+      {
+        "beneficiary": "0x899b5138Bb2EEeBB1821B8D819ACeF91995Bab20",
+        "vestingWallet": "0x68d56479aD5B1cb05c03fC992B13C1dDD4FfC5bd",
+        "index": 2
+      },
+      {
+        "beneficiary": "0x263a72260e4F08931119522260E4AC578F7e980C",
+        "vestingWallet": "0xF680196bA0Fd4460f64713c963b2a1E14314341D",
+        "index": 3
+      },
+      {
+        "beneficiary": "0x9756c9520030fc50625abe9f2ed706c4dBC21128",
+        "vestingWallet": "0x921cd809C8089Ea7049a4e35aE6018460df3972a",
+        "index": 4
+      },
+      {
+        "beneficiary": "0xBA27D9FB9dd2C664eFdA4d7e01d4D871BD3A5fCB",
+        "vestingWallet": "0x5eebC34d4CCffAa9E3DCE808adCD391a9b567C16",
+        "index": 5
+      },
+      {
+        "beneficiary": "0x20b9a63f1e98A84292245bD8eA6d329B30ccB5c9",
+        "vestingWallet": "0xFf73e2520A2E4C0a4012fCbC61404B784Db0383E",
+        "index": 6
+      },
+      {
+        "beneficiary": "0xa97d7dB42A89a005dA23E5BDFc7BE7A65Bf00a19",
+        "vestingWallet": "0xc6990366DD831E81d1f6Cf053c65427b05759405",
+        "index": 7
+      },
+      {
+        "beneficiary": "0x3fcEDd6B24eE6E636C066aDebcF5F1E06C6fC901",
+        "vestingWallet": "0x4f1EaB9259Dc0657543146a2f4cA52a417469168",
+        "index": 8
+      },
+      {
+        "beneficiary": "0xA7c3A20cAc20c72D070B32eb68046fB387e6Ed93",
+        "vestingWallet": "0x56eDfFe0b45F4a70282E929B162d65D3a8f3FcAb",
+        "index": 9
+      },
+      {
+        "beneficiary": "0xe060f01075CE7674dD8dB67a9cC3F03e25eD5B62",
+        "vestingWallet": "0x2a4f88C5Ae4181fe6F649645BF073f17B4FA0588",
+        "index": 10
+      },
+      {
+        "beneficiary": "0x15fCca58E34e5070f3985428a4Bf24ACD0756b48",
+        "vestingWallet": "0xd8EDA6506D03bd29CbDe78A6465f1EFB44016F88",
+        "index": 11
+      }
+    ],
+    "investors": [
+      {
+        "beneficiary": "0xcEB9E5A352CCE1A983198bB2bF654Ef245E7679E",
+        "vestingWallet": "0x5442b4AcC8542C2F90b2242744eF45131D025ea5",
+        "index": 1
+      }
+    ]
+  },
+  "distribution": {
+    "recipients": 25,
+    "allocations": [
+      {
+        "address": "0x84E3d0F1E45Dac928cd8d5290FDb93f493Fe19C6",
+        "amount": "3500000",
+        "label": "Founder 1 (vesting)"
+      },
+      {
+        "address": "0x8B5eEC5F715F8f8489416ff07E85b6570402200B",
+        "amount": "3500000",
+        "label": "Founder 2 (vesting)"
+      },
+      {
+        "address": "0x69882986d9e4672782d43b8C752cD501aA5EebFd",
+        "amount": "3500000",
+        "label": "Founder 3 (vesting)"
+      },
+      {
+        "address": "0x449B0bFe07a9E88EE14d4aD216FCd39e37e6edDD",
+        "amount": "636364",
+        "label": "Team 1 (vesting)"
+      },
+      {
+        "address": "0x68d56479aD5B1cb05c03fC992B13C1dDD4FfC5bd",
+        "amount": "636364",
+        "label": "Team 2 (vesting)"
+      },
+      {
+        "address": "0xF680196bA0Fd4460f64713c963b2a1E14314341D",
+        "amount": "636364",
+        "label": "Team 3 (vesting)"
+      },
+      {
+        "address": "0x921cd809C8089Ea7049a4e35aE6018460df3972a",
+        "amount": "636364",
+        "label": "Team 4 (vesting)"
+      },
+      {
+        "address": "0x5eebC34d4CCffAa9E3DCE808adCD391a9b567C16",
+        "amount": "636364",
+        "label": "Team 5 (vesting)"
+      },
+      {
+        "address": "0xFf73e2520A2E4C0a4012fCbC61404B784Db0383E",
+        "amount": "636364",
+        "label": "Team 6 (vesting)"
+      },
+      {
+        "address": "0xc6990366DD831E81d1f6Cf053c65427b05759405",
+        "amount": "636364",
+        "label": "Team 7 (vesting)"
+      },
+      {
+        "address": "0x4f1EaB9259Dc0657543146a2f4cA52a417469168",
+        "amount": "636364",
+        "label": "Team 8 (vesting)"
+      },
+      {
+        "address": "0x56eDfFe0b45F4a70282E929B162d65D3a8f3FcAb",
+        "amount": "636364",
+        "label": "Team 9 (vesting)"
+      },
+      {
+        "address": "0x2a4f88C5Ae4181fe6F649645BF073f17B4FA0588",
+        "amount": "636364",
+        "label": "Team 10 (vesting)"
+      },
+      {
+        "address": "0xd8EDA6506D03bd29CbDe78A6465f1EFB44016F88",
+        "amount": "636360",
+        "label": "Team 11 (vesting)"
+      },
+      {
+        "address": "0x5442b4AcC8542C2F90b2242744eF45131D025ea5",
+        "amount": "8400000",
+        "label": "Investor 1 (vesting)"
+      },
+      {
+        "address": "0x830E4DF895f967Ff2A29d1705DeB40CFc6d30b88",
+        "amount": "700000",
+        "label": "Advisor 1"
+      },
+      {
+        "address": "0x81ac6b27625582F5a453fa9E3955A9bbbD2AE14E",
+        "amount": "700000",
+        "label": "Advisor 2"
+      },
+      {
+        "address": "0x6dc977e84Dc9D35430bc7d8f8533Af4d870bCf3D",
+        "amount": "700000",
+        "label": "Advisor 3"
+      },
+      {
+        "address": "0x649795F2b3fB180fe575B15476ad3c046e1F142F",
+        "amount": "700000",
+        "label": "Advisor 4"
+      },
+      {
+        "address": "0xBdB89500560E26ea2e597Ea755969cf92d169495",
+        "amount": "700000",
+        "label": "Advisor 5"
+      },
+      {
+        "address": "0xb5096c6c915d1d46766AaDAc60a226F156611263",
+        "amount": "1400000",
+        "label": "Marketing 1"
+      },
+      {
+        "address": "0xD73A1298C8Bc404d1F9ac1ccd1ec8455d158ec96",
+        "amount": "32022",
+        "label": "Marketing 2"
+      },
+      {
+        "address": "0x2656f902c4d404e90673931857761483A33541aa",
+        "amount": "32023",
+        "label": "Marketing 3"
+      },
+      {
+        "address": "0xaF261434cEad26E9C32c8a1d2DbaFa82c2593e67",
+        "amount": "2100000",
+        "label": "Airdrop Pool"
+      },
+      {
+        "address": "0x6259648010922027A7ED105b3196FB63Dd4Beb9d",
+        "amount": "12600000",
+        "label": "Liquidity & DEX"
+      }
+    ]
+  },
+  "airdrop": {
+    "contract": "0x40d38dFDF8823473266b362eC15FE9930EaB4710",
+    "pool": "0xaF261434cEad26E9C32c8a1d2DbaFa82c2593e67",
+    "totalAmount": "2100000",
+    "claimPerUser": "5 DWT"
+  },
+  "gnosis": {
+    "status": "not_configured",
+    "owners": [],
+    "threshold": "2",
+    "instructions": "https://app.safe.global"
+  },
+  "allAddresses": {
+    "lockEngine": "0xb961B0164251A86cdA96992Fad8E8c17E9D04E01",
+    "invariantChecker": "0x827eAd683BCee11701408Bc6E5856ab1663E99ED",
+    "securityController": "0xBc864c087E89607F7A7fF2fE993Bbe5d7d05D8eC",
+    "rateLimiter": "0xe619317dE0CF667e2ce29Db0372f64007fa2A56e",
+    "timelock": "0x1A8AEe3E1B69959DCfF9E4A0bd0757e8451a49c4",
+    "dwtToken": "0xe3ac0Bb319ee50DE87656B6e1fe3B999F9b114c9",
+    "governor": "0xD1779aD62De0bEeD47Fe60d481593BF5EA0f1c21",
+    "founderVesting1": "0x84E3d0F1E45Dac928cd8d5290FDb93f493Fe19C6",
+    "founderVesting2": "0x8B5eEC5F715F8f8489416ff07E85b6570402200B",
+    "founderVesting3": "0x69882986d9e4672782d43b8C752cD501aA5EebFd",
+    "teamVesting1": "0x449B0bFe07a9E88EE14d4aD216FCd39e37e6edDD",
+    "teamVesting2": "0x68d56479aD5B1cb05c03fC992B13C1dDD4FfC5bd",
+    "teamVesting3": "0xF680196bA0Fd4460f64713c963b2a1E14314341D",
+    "teamVesting4": "0x921cd809C8089Ea7049a4e35aE6018460df3972a",
+    "teamVesting5": "0x5eebC34d4CCffAa9E3DCE808adCD391a9b567C16",
+    "teamVesting6": "0xFf73e2520A2E4C0a4012fCbC61404B784Db0383E",
+    "teamVesting7": "0xc6990366DD831E81d1f6Cf053c65427b05759405",
+    "teamVesting8": "0x4f1EaB9259Dc0657543146a2f4cA52a417469168",
+    "teamVesting9": "0x56eDfFe0b45F4a70282E929B162d65D3a8f3FcAb",
+    "teamVesting10": "0x2a4f88C5Ae4181fe6F649645BF073f17B4FA0588",
+    "teamVesting11": "0xd8EDA6506D03bd29CbDe78A6465f1EFB44016F88",
+    "investorVesting1": "0x5442b4AcC8542C2F90b2242744eF45131D025ea5",
+    "simpleAirdrop": "0x40d38dFDF8823473266b362eC15FE9930EaB4710"
+  }
+}

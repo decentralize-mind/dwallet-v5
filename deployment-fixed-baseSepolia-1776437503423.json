@@ -1,0 +1,177 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-04-17T14:51:43.423Z",
+  "deployer": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+  "fixedDeployment": true,
+  "token": {
+    "address": "0x36F1427DfD662e4509c26AB403e702A7E9dAbce4",
+    "owner": "0x4C0B7314441dfE8E61267C0d87Fc1A657611dCf5",
+    "ownerIsTimelock": false,
+    "totalMinted": "45564045.0",
+    "maxSupply": "123000000",
+    "mintSuccessRate": "3/25"
+  },
+  "governance": {
+    "timelock": "0x1A8AEe3E1B69959DCfF9E4A0bd0757e8451a49c4",
+    "governor": "0xD1779aD62De0bEeD47Fe60d481593BF5EA0f1c21",
+    "timelockDelay": "48 hours"
+  },
+  "vesting": {
+    "founder1": "0x2A78bB78925CD8aD74aB0CbF770A862c243499B4",
+    "founder2": "0xBA81697f3589C1D56d71746eb4CAe87029D1B657",
+    "founder3": "0x7d7231bB0A584670bB630FaC645E295b14Fcde77",
+    "team1": "0xC6593446D2faF6bB6B6C3ce8409F5E32013cf5BE",
+    "team2": "0xccF3ddf294bE9cecAb3707d54DaDa85299eE6dcB",
+    "team3": "0xbc9Be44786c4c801944Fc39A15cfE1d37D7d9552",
+    "team4": "0x2c5554926Ec1D3A8DdcE1bD7b6076C996E2687c7",
+    "team5": "0x6D0EB6b7e96aC73B94B597A40773294d8663eCaf",
+    "team6": "0x835b1eF671bFe82071f43C0CcD5EAB85a504A84f",
+    "team7": "0xFD1a2E75F57FF609AaC55DB4570e243CBEfe36C5",
+    "team8": "0x7692ca52D59d8915153363Cd797dbcDBE04225A3",
+    "team9": "0x8878d27d5CBEeA269a6376A79a045075C1Ac6D60",
+    "team10": "0xb3531B33496C4b0C8FC5Db8DCFB6C52ffd79CE6B",
+    "team11": "0xcF5e36f514D528c2ABe93022faB8d5a1e79A7a4d",
+    "investor1": "0x8398Ee906d0dcF5546Ba1560f165FA77192e5AC6"
+  },
+  "airdrop": {
+    "contract": "0x02580cE39c2963e582bC899638f047771C14B5d5",
+    "pool": "0xaF261434cEad26E9C32c8a1d2DbaFa82c2593e67",
+    "totalAmount": "2100000",
+    "claimPerUser": "5 DWT"
+  },
+  "allocations": [
+    {
+      "address": "0x2A78bB78925CD8aD74aB0CbF770A862c243499B4",
+      "amount": "3500000",
+      "label": "Founder 1 (vesting)"
+    },
+    {
+      "address": "0xBA81697f3589C1D56d71746eb4CAe87029D1B657",
+      "amount": "3500000",
+      "label": "Founder 2 (vesting)"
+    },
+    {
+      "address": "0x7d7231bB0A584670bB630FaC645E295b14Fcde77",
+      "amount": "3500000",
+      "label": "Founder 3 (vesting)"
+    },
+    {
+      "address": "0xC6593446D2faF6bB6B6C3ce8409F5E32013cf5BE",
+      "amount": "636364",
+      "label": "Team 1 (vesting)"
+    },
+    {
+      "address": "0xccF3ddf294bE9cecAb3707d54DaDa85299eE6dcB",
+      "amount": "636364",
+      "label": "Team 2 (vesting)"
+    },
+    {
+      "address": "0xbc9Be44786c4c801944Fc39A15cfE1d37D7d9552",
+      "amount": "636364",
+      "label": "Team 3 (vesting)"
+    },
+    {
+      "address": "0x2c5554926Ec1D3A8DdcE1bD7b6076C996E2687c7",
+      "amount": "636364",
+      "label": "Team 4 (vesting)"
+    },
+    {
+      "address": "0x6D0EB6b7e96aC73B94B597A40773294d8663eCaf",
+      "amount": "636364",
+      "label": "Team 5 (vesting)"
+    },
+    {
+      "address": "0x835b1eF671bFe82071f43C0CcD5EAB85a504A84f",
+      "amount": "636364",
+      "label": "Team 6 (vesting)"
+    },
+    {
+      "address": "0xFD1a2E75F57FF609AaC55DB4570e243CBEfe36C5",
+      "amount": "636364",
+      "label": "Team 7 (vesting)"
+    },
+    {
+      "address": "0x7692ca52D59d8915153363Cd797dbcDBE04225A3",
+      "amount": "636364",
+      "label": "Team 8 (vesting)"
+    },
+    {
+      "address": "0x8878d27d5CBEeA269a6376A79a045075C1Ac6D60",
+      "amount": "636364",
+      "label": "Team 9 (vesting)"
+    },
+    {
+      "address": "0xb3531B33496C4b0C8FC5Db8DCFB6C52ffd79CE6B",
+      "amount": "636364",
+      "label": "Team 10 (vesting)"
+    },
+    {
+      "address": "0xcF5e36f514D528c2ABe93022faB8d5a1e79A7a4d",
+      "amount": "636360",
+      "label": "Team 11 (vesting)"
+    },
+    {
+      "address": "0x8398Ee906d0dcF5546Ba1560f165FA77192e5AC6",
+      "amount": "8400000",
+      "label": "Investor 1 (vesting)"
+    },
+    {
+      "address": "0x830E4DF895f967Ff2A29d1705DeB40CFc6d30b88",
+      "amount": "700000",
+      "label": "Advisor 1"
+    },
+    {
+      "address": "0x81ac6b27625582F5a453fa9E3955A9bbbD2AE14E",
+      "amount": "700000",
+      "label": "Advisor 2"
+    },
+    {
+      "address": "0x6dc977e84Dc9D35430bc7d8f8533Af4d870bCf3D",
+      "amount": "700000",
+      "label": "Advisor 3"
+    },
+    {
+      "address": "0x649795F2b3fB180fe575B15476ad3c046e1F142F",
+      "amount": "700000",
+      "label": "Advisor 4"
+    },
+    {
+      "address": "0xBdB89500560E26ea2e597Ea755969cf92d169495",
+      "amount": "700000",
+      "label": "Advisor 5"
+    },
+    {
+      "address": "0xb5096c6c915d1d46766AaDAc60a226F156611263",
+      "amount": "1400000",
+      "label": "Marketing 1"
+    },
+    {
+      "address": "0xD73A1298C8Bc404d1F9ac1ccd1ec8455d158ec96",
+      "amount": "32022",
+      "label": "Marketing 2"
+    },
+    {
+      "address": "0x2656f902c4d404e90673931857761483A33541aa",
+      "amount": "32023",
+      "label": "Marketing 3"
+    },
+    {
+      "address": "0xaF261434cEad26E9C32c8a1d2DbaFa82c2593e67",
+      "amount": "2100000",
+      "label": "Airdrop Pool"
+    },
+    {
+      "address": "0x6259648010922027A7ED105b3196FB63Dd4Beb9d",
+      "amount": "12600000",
+      "label": "Liquidity & DEX"
+    }
+  ],
+  "nextSteps": [
+    "1. Fund SimpleAirdrop contract with AIRDROP_AMOUNT DWT",
+    "2. Verify contracts on BaseScan",
+    "3. Delegate voting power to activate governance",
+    "4. Add DEX liquidity if needed",
+    "5. Create Gnosis Safe for multisig treasury"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "network": "baseSepolia",
+  "token": "0x75A884C401A69481d4377F79dc1918b3D18e2aE8",
+  "timelock": "0x52F274444c198DC3824C3C18009C7D9A1cB4bBAb",
+  "airdrop": "0x11aE2b13FfB98D8Ba47a5CDAdD898CA85CA21b84",
+  "totalMinted": "45564045.0",
+  "recipients": 25,
+  "deployedAt": "2026-04-18T02:30:54.579Z"
+}

@@ -719,7 +719,7 @@ export default function SettingsView({ onNavigate }) {
           >
             <div>
               <p className="settings-label">Your referral link</p>
-              <p className="settings-sub">Share and earn 50 DWT per signup</p>
+              <p className="settings-sub">Share and earn 10 DWT per signup</p>
             </div>
             <div
               style={{

@@ -80,15 +80,8 @@ module.exports = {
   },
 
   etherscan: {
-    apiKey: {
-      mainnet: ETHERSCAN_KEY,
-      sepolia: ETHERSCAN_KEY,
-      base: BASESCAN_KEY,
-      baseSepolia: BASESCAN_KEY,
-      'base-sepolia': BASESCAN_KEY,
-      arbitrumOne: process.env.ARBISCAN_KEY || '',
-      polygon: process.env.POLYGONSCAN_KEY || '',
-    },
+    // Etherscan V2 API - single key for all networks
+    apiKey: process.env.ETHERSCAN_KEY || '',
   },
 
   sourcify: { enabled: false },

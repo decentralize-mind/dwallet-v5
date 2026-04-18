@@ -1,10 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useWallet } from '../../hooks/useWallet'
+import { useReferralPool } from '../../hooks/useReferralPool'
+import { checkIncomingReferral, getReferralCode } from '../../utils/referral'
+import { ethers } from 'ethers'
 
 export function CompleteStep({ flow }) {
   const { wallet } = useWallet()
+  const { claimReferralReward, cacheReferralAddress } = useReferralPool()
+  const [referralProcessed, setReferralProcessed] = useState(false)
+  const [referralError, setReferralError] = useState(null)
 
-  // Monitor wallet state to ensure it's properly set
+  // Monitor wallet state and process referral
   useEffect(() => {
     console.log('CompleteStep mounted, wallet state:', wallet ? 'SET' : 'NOT SET')
     console.log('Wallet details:', {
@@ -16,8 +22,63 @@ export function CompleteStep({ flow }) {
     
     if (!wallet) {
       console.error('⚠️ WARNING: CompleteStep shown but wallet is not set!')
+      return
     }
-  }, [wallet])
+
+    // Cache this user's referral code for future referrals
+    const userAddress = wallet.accounts[wallet.activeAccount]?.address
+    if (userAddress) {
+      cacheReferralAddress(userAddress)
+    }
+
+    // Check if this user came from a referral link
+    const processReferral = async () => {
+      try {
+        const refCode = checkIncomingReferral()
+        if (!refCode) {
+          console.log('No referral code found')
+          setReferralProcessed(true)
+          return
+        }
+
+        console.log('Processing referral code:', refCode)
+        
+        // Resolve the referral code to an address
+        // For now, we'll try to match it from the cache
+        const referralCache = JSON.parse(localStorage.getItem('referral_address_cache') || '{}')
+        const referrerAddress = referralCache[refCode]
+        
+        if (!referrerAddress) {
+          console.log('Referrer address not found for code:', refCode)
+          setReferralProcessed(true)
+          return
+        }
+
+        console.log('Found referrer address:', referrerAddress)
+
+        // Get the signer from the wallet
+        // Note: This requires the wallet to be connected to a provider
+        // For now, we'll store the referral info and process it when the user makes their first transaction
+        localStorage.setItem('pending_referral', JSON.stringify({
+          referrer: referrerAddress,
+          referee: userAddress,
+          code: refCode,
+          timestamp: Date.now()
+        }))
+
+        console.log('Referral registered (will be processed on-chain later)')
+        setReferralProcessed(true)
+      } catch (err) {
+        console.error('Error processing referral:', err)
+        setReferralError(err.message)
+        setReferralProcessed(true) // Don't block the user
+      }
+    }
+
+    if (!referralProcessed) {
+      processReferral()
+    }
+  }, [wallet, referralProcessed, cacheReferralAddress])
 
   return (
     <div
@@ -119,7 +180,7 @@ export function CompleteStep({ flow }) {
             lineHeight: 1.5,
           }}
         >
-          Share your referral link from Settings and earn 50 DWT for every friend
+          Share your referral link from Settings and earn 10 DWT for every friend
           who creates a wallet.
         </p>
       </div>
