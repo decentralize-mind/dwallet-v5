@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet'
 import { exportTransactionsCSV } from '../utils/csvExport'
 import { getReferralStats, getReferralLink, getReferralRewardAmount } from '../utils/referral'
 import { useReferralPool } from '../hooks/useReferralPool'
+import { trackRetentionEvent } from '../utils/retentionTracking'
 
 // Removed local getReferralLink - now using imported version from utils/referral
 
@@ -386,6 +387,7 @@ export default function SettingsView({ onNavigate }) {
         {expandedSections.tools && (
         <div className="settings-list">
           {[
+            ['Referral Campaign', 'Earn DWT by inviting friends', 'referral'],
             ['Address Book', 'Save contacts', 'addressbook'],
             ['Price Alerts', 'Get notified on price moves', 'alerts'],
             ['Gas Tracker', 'Monitor gas prices', 'gas'],

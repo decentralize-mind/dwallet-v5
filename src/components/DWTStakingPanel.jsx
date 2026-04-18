@@ -243,6 +243,38 @@ export default function DWTStakingPanel() {
         </p>
       )}
 
+      {/* Staking Promotion Banner */}
+      {staked === 0 && (
+        <div style={{
+          padding: '16px',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(99,102,241,0.1) 100%)',
+          border: '1px solid rgba(16,185,129,0.3)',
+          borderRadius: '12px',
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}>
+          <p style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 8px', color: 'var(--green)' }}>
+            🎉 Limited: Earn 12.5% APY on DWT!
+          </p>
+          <p style={{ fontSize: '12px', margin: '0 0 12px', color: 'var(--text2)' }}>
+            Stake your DWT and earn ETH rewards every second. No lock-up period.
+          </p>
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            justifyContent: 'center',
+            fontSize: '11px',
+            color: 'var(--text3)'
+          }}>
+            <span>✅ Instant Unstaking</span>
+            <span>•</span>
+            <span>✅ Daily Rewards</span>
+            <span>•</span>
+            <span>✅ No Fees</span>
+          </div>
+        </div>
+      )}
+
       {tab === 'stake' && (
         <div className="staking-form">
           <div className="amount-input-row">

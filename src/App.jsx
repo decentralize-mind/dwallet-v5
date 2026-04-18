@@ -12,6 +12,7 @@ import LockScreen from './components/LockScreen'
 import MainWallet from './components/MainWallet'
 import { registerServiceWorker } from './utils/pushNotifications'
 import { initializeSessionTracking } from './utils/analytics'
+import { trackRetentionEvent } from './utils/retentionTracking'
 import './index.css'
 
 function AppContent() {
@@ -30,6 +31,12 @@ function AppContent() {
   // Initialize session tracking
   useEffect(() => {
     initializeSessionTracking()
+  }, [])
+
+  // Track retention on app load
+  useEffect(() => {
+    const retention = trackRetentionEvent()
+    console.log('📊 Retention tracking:', retention)
   }, [])
 
   // Wait until session check is done to avoid flashing unlock screen
