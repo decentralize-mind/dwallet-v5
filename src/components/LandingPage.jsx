@@ -16,6 +16,8 @@ export default function LandingPage({ onGetStarted }) {
   const [showWalletCreation, setShowWalletCreation] = useState(false)
   const [walletCreationStep, setWalletCreationStep] = useState('') // 'generating', 'encrypting', 'complete'
   const [recentWallets, setRecentWallets] = useState([])
+  const [liveWalletFeed, setLiveWalletFeed] = useState([])
+  const [totalWalletsCreated, setTotalWalletsCreated] = useState(12847) // Simulated counter
 
   // Redirect to wallet if already created
   useEffect(() => {
@@ -28,8 +30,45 @@ export default function LandingPage({ onGetStarted }) {
         createdAt: new Date().toISOString(),
       }
       setRecentWallets(prev => [walletInfo, ...prev.slice(0, 2)]) // Keep last 3
+      
+      // Add to live feed
+      const newWalletEntry = {
+        address: walletInfo.address,
+        name: walletInfo.name,
+        time: 'Just now',
+        timestamp: Date.now(),
+      }
+      setLiveWalletFeed(prev => [newWalletEntry, ...prev.slice(0, 11)]) // Keep last 12
+      setTotalWalletsCreated(prev => prev + 1)
     }
   }, [wallet])
+  
+  // Simulate live wallet creation for demo purposes
+  useEffect(() => {
+    const demoWallets = [
+      { address: '0x742d35Cc6634C0532925a3b844Bc9e7595f5eE2B', name: 'Alice' },
+      { address: '0x53d284357ec70cE289D6D6a13C5a88987B7c5e1D', name: 'Bob' },
+      { address: '0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5', name: 'Charlie' },
+      { address: '0x1234567890abcdef1234567890abcdef12345678', name: 'Diana' },
+      { address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd', name: 'Eve' },
+      { address: '0x9876543210fedcba9876543210fedcba98765432', name: 'Frank' },
+    ]
+    
+    let index = 0
+    const interval = setInterval(() => {
+      const demoWallet = demoWallets[index % demoWallets.length]
+      const newEntry = {
+        ...demoWallet,
+        time: `${Math.floor(Math.random() * 59) + 1}s ago`,
+        timestamp: Date.now(),
+      }
+      setLiveWalletFeed(prev => [newEntry, ...prev.slice(0, 11)])
+      setTotalWalletsCreated(prev => prev + 1)
+      index++
+    }, 8000) // New wallet every 8 seconds for demo
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // Auto-rotate feature showcase
   useEffect(() => {
@@ -112,29 +151,6 @@ export default function LandingPage({ onGetStarted }) {
               </div>
             )}
             
-            {/* Recent Wallets Display */}
-            {recentWallets.length > 0 && !showWalletCreation && (
-              <div className="recent-wallets-banner">
-                <h3 className="recent-wallets-title">Recently Created Wallets</h3>
-                <div className="recent-wallets-list">
-                  {recentWallets.map((w, idx) => (
-                    <div key={idx} className="recent-wallet-item">
-                      <div className="wallet-icon">◈</div>
-                      <div className="wallet-details">
-                        <div className="wallet-name">{w.name}</div>
-                        <div className="wallet-address">
-                          {w.address?.slice(0, 6)}...{w.address?.slice(-4)}
-                        </div>
-                      </div>
-                      <div className="wallet-time">
-                        {new Date(w.createdAt).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
             <div className="hero-badge">🔐 Non-Custodial & Secure</div>
             <h1 className="hero-title">
               The Future of <span className="gradient-text">DeFi</span> Starts Here
@@ -158,37 +174,45 @@ export default function LandingPage({ onGetStarted }) {
             </div>
           </div>
           <div className="hero-visual">
-            <div className="wallet-preview-card">
-              <div className="preview-header">
-                <div className="preview-dots">
-                  <span></span><span></span><span></span>
+            {/* Live Wallet Feed - Right Side Display */}
+            <div className="live-wallet-feed-container">
+              <div className="feed-header">
+                <div className="feed-title">
+                  <span className="live-indicator">●</span>
+                  <h3>Live Wallet Creation</h3>
                 </div>
-                <span className="preview-title">Toklo Wallet</span>
-              </div>
-              <div className="preview-balance">
-                <div className="balance-label">Total Balance</div>
-                <div className="balance-amount">$12,847.53</div>
-                <div className="balance-change positive">+5.23% (24h)</div>
-              </div>
-              <div className="preview-actions">
-                <div className="preview-action-btn">Send</div>
-                <div className="preview-action-btn">Receive</div>
-                <div className="preview-action-btn">Swap</div>
-              </div>
-              <div className="preview-tokens">
-                <div className="preview-token">
-                  <div className="token-icon eth">Ξ</div>
-                  <div className="token-info">
-                    <div className="token-name">Ethereum</div>
-                    <div className="token-balance">2.45 ETH</div>
-                  </div>
+                <div className="feed-counter">
+                  <span className="counter-number">{totalWalletsCreated.toLocaleString()}</span>
+                  <span className="counter-label">wallets created</span>
                 </div>
-                <div className="preview-token">
-                  <div className="token-icon btc">₿</div>
-                  <div className="token-info">
-                    <div className="token-name">Bitcoin</div>
-                    <div className="token-balance">0.085 BTC</div>
+              </div>
+              
+              <div className="wallet-feed-grid">
+                {liveWalletFeed.slice(0, 6).map((wallet, idx) => (
+                  <div 
+                    key={`${wallet.address}-${wallet.timestamp}`} 
+                    className={`wallet-feed-card ${idx === 0 ? 'new-wallet' : ''}`}
+                    style={{ animationDelay: `${idx * 0.1}s` }}
+                  >
+                    <div className="feed-wallet-icon">
+                      <span className="icon-symbol">◈</span>
+                      {idx === 0 && <span className="new-badge">NEW</span>}
+                    </div>
+                    <div className="feed-wallet-info">
+                      <div className="feed-wallet-name">{wallet.name}</div>
+                      <div className="feed-wallet-address">
+                        {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                      </div>
+                    </div>
+                    <div className="feed-wallet-time">{wallet.time}</div>
                   </div>
+                ))}
+              </div>
+              
+              <div className="feed-footer">
+                <div className="growth-indicator">
+                  <span className="growth-arrow">↑</span>
+                  <span className="growth-text">Growing +{Math.floor(Math.random() * 50) + 10} today</span>
                 </div>
               </div>
             </div>
