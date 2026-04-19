@@ -73,8 +73,39 @@ export default function NFTMembershipMint() {
       console.log('🔄 fetchUserData: Starting fetch...', { currentAddress, NFT_MEMBERSHIP_ADDRESS })
       setIsRefreshing(true)
       
-      // Use JsonRpcProvider instead of BrowserProvider for dWallet
-      const provider = new ethers.JsonRpcProvider('https://sepolia.base.org')
+      // Use environment variable for RPC URL with fallbacks
+      const rpcUrls = [
+        import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || 'https://base-sepolia-rpc.publicnode.com',
+        'https://base-sepolia-rpc.publicnode.com',
+        'https://rpc.ankr.com/base_sepolia',
+        'https://sepolia.base.org',
+      ]
+      
+      let provider = null
+      let lastError = null
+      
+      // Try each RPC URL until one works
+      for (const rpcUrl of rpcUrls) {
+        try {
+          console.log(`🔌 Trying RPC: ${rpcUrl}`)
+          provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+            staticNetwork: true,
+          })
+          // Test the connection
+          await provider.getBlockNumber()
+          console.log(`✅ Connected to RPC: ${rpcUrl}`)
+          break
+        } catch (err) {
+          console.warn(`⚠️ Failed to connect to ${rpcUrl}:`, err.message)
+          lastError = err
+          provider = null
+        }
+      }
+      
+      if (!provider) {
+        throw new Error(`All RPC endpoints failed. Last error: ${lastError?.message}`)
+      }
+      
       const contract = new ethers.Contract(NFT_MEMBERSHIP_ADDRESS, NFT_MEMBERSHIP_ABI, provider)
 
       // Get highest tier
