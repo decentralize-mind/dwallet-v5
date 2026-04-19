@@ -17,8 +17,65 @@ export function CreateWalletStep({
   // Referral code state
   const referralCodeInput = typeof window !== 'undefined' ? sessionStorage.getItem('toklo_ref') || '' : ''
   const [referralCode, setReferralCode] = useState(referralCodeInput)
+  
+  // Calculate rewards based on password strength
+  const getRewardLevel = () => {
+    if (pwdStrong >= 4 && password === confirmPwd && confirmPwd) {
+      return { level: 'LEGENDARY', color: '#f59e0b', emoji: '👑', bonus: '25 DWT' }
+    } else if (pwdStrong >= 3) {
+      return { level: 'STRONG', color: '#10b981', emoji: '🛡️', bonus: '15 DWT' }
+    } else if (pwdStrong >= 2) {
+      return { level: 'GOOD', color: '#3b82f6', emoji: '🔒', bonus: '10 DWT' }
+    } else {
+      return { level: 'WEAK', color: '#ef4444', emoji: '⚠️', bonus: '5 DWT' }
+    }
+  }
+  
+  const reward = getRewardLevel()
+  const allChecksPassed = pwdChecks.every(c => c.ok)
+  
   return (
     <div className="step-content">
+      {/* Progress Indicator */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+          padding: '0 4px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>
+            Step 4 of 4
+          </span>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>
+            100%
+          </span>
+        </div>
+        <div style={{ flex: 1, marginLeft: 12 }}>
+          <div
+            style={{
+              height: 4,
+              background: '#e2e8f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, #6366f1, #a78bfa)',
+                borderRadius: 2,
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       <div style={{ textAlign: 'center', marginBottom: 4 }}>
         <div
           style={{
@@ -46,6 +103,49 @@ export function CreateWalletStep({
           This encrypts your wallet on this device only.
         </p>
       </div>
+
+      {/* Rewards Preview - Gamification */}
+      <div
+        style={{
+          padding: '14px 16px',
+          background: `linear-gradient(135deg, ${reward.color}15, ${reward.color}08)`,
+          border: `2px solid ${reward.color}40`,
+          borderRadius: 12,
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 32 }}>{reward.emoji}</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 2px', color: reward.color, textTransform: 'uppercase' }}>
+              {reward.level} Security
+            </p>
+            <p style={{ fontSize: 12, margin: 0, color: 'var(--text)', fontWeight: 600 }}>
+              Unlock {reward.bonus} welcome bonus!
+            </p>
+          </div>
+        </div>
+        {allChecksPassed && password === confirmPwd && (
+          <div
+            style={{
+              padding: '6px 12px',
+              background: '#10b981',
+              borderRadius: 20,
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'white',
+              animation: 'pulse 2s ease infinite',
+            }}
+          >
+            ✓ READY
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label
           style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}
@@ -71,7 +171,7 @@ export function CreateWalletStep({
         </div>
       </div>
       {password.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div
             style={{
               display: 'flex',
@@ -99,13 +199,13 @@ export function CreateWalletStep({
               {['', 'Weak', 'Fair', 'Good', 'Strong'][pwdStrong]}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 4, height: 6 }}>
+          <div style={{ display: 'flex', gap: 4, height: 8 }}>
             {[1, 2, 3, 4].map(seg => (
               <div
                 key={seg}
                 style={{
                   flex: 1,
-                  borderRadius: 3,
+                  borderRadius: 4,
                   transition: 'background 0.3s',
                   background:
                     pwdStrong >= seg
@@ -117,10 +217,36 @@ export function CreateWalletStep({
                             ? '#3b82f6'
                             : 'var(--green)'
                       : 'var(--bg4)',
+                  boxShadow: pwdStrong >= seg ? `0 2px 8px ${
+                    pwdStrong === 1 ? 'rgba(239,68,68,0.3)' :
+                    pwdStrong === 2 ? 'rgba(245,158,11,0.3)' :
+                    pwdStrong === 3 ? 'rgba(59,130,246,0.3)' :
+                    'rgba(16,185,129,0.3)'
+                  }` : 'none',
                 }}
               />
             ))}
           </div>
+          {/* Achievement Badge */}
+          {pwdStrong >= 3 && (
+            <div
+              style={{
+                padding: '8px 12px',
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.2)',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                animation: 'slideInRight 0.5s ease',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🏆</span>
+              <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+                Achievement Unlocked: Strong Password! +5 DWT bonus
+              </span>
+            </div>
+          )}
         </div>
       )}
       <div
@@ -254,26 +380,29 @@ export function CreateWalletStep({
       </div>
       {error && <p className="error-msg">{error}</p>}
       
-      {/* Referral Code Input */}
+      {/* Referral Code Input - Enhanced with Rewards */}
       <div style={{ 
-        marginTop: 12,
-        padding: '12px',
-        background: 'var(--bg3)',
+        marginTop: 16,
+        padding: '14px',
+        background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(251,191,36,0.04))',
         borderRadius: 'var(--radius-sm)',
-        border: '1px solid var(--border)',
+        border: '2px solid rgba(245,158,11,0.2)',
       }}>
-        <label style={{ 
-          fontSize: 12, 
-          fontWeight: 600, 
-          color: 'var(--text2)',
-          display: 'block',
-          marginBottom: 6,
-        }}>
-          🎁 Referral Code (optional)
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 18 }}>🎁</span>
+          <label style={{ 
+            fontSize: 13, 
+            fontWeight: 700, 
+            color: '#f59e0b',
+            display: 'block',
+            margin: 0,
+          }}>
+            Surprise Bonus!
+          </label>
+        </div>
         <input
           type="text"
-          placeholder="Enter code (e.g., DW69DA59)"
+          placeholder="Enter referral code (optional)"
           value={referralCode}
           onChange={(e) => {
             const code = e.target.value.toUpperCase()
@@ -287,7 +416,7 @@ export function CreateWalletStep({
           }}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '10px 12px',
             background: 'var(--bg)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius-sm)',
@@ -295,16 +424,21 @@ export function CreateWalletStep({
             fontSize: 13,
             fontFamily: 'var(--font-mono)',
             boxSizing: 'border-box',
+            marginBottom: 8,
           }}
         />
-        <p style={{ 
-          fontSize: 11, 
-          color: 'var(--text3)', 
-          margin: '6px 0 0',
-          lineHeight: 1.4,
-        }}>
-          Have a referral code? Enter it above to both receive 10 DWT rewards!
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 14 }}>💰</span>
+          <p style={{ 
+            fontSize: 11, 
+            color: '#f59e0b', 
+            margin: 0,
+            lineHeight: 1.4,
+            fontWeight: 600,
+          }}>
+            Enter a code to both receive <strong>10 DWT</strong> rewards!
+          </p>
+        </div>
       </div>
 
       <button
@@ -325,6 +459,7 @@ export function CreateWalletStep({
               ? 1
               : 0.45,
           transition: 'opacity 0.2s',
+          marginTop: 8,
         }}
       >
         {loading ? (
@@ -348,6 +483,14 @@ export function CreateWalletStep({
               }}
             />
             Creating your wallet...
+          </span>
+        ) : pwdStrong >= 4 && password === confirmPwd ? (
+          <span>
+            👑 Create Wallet & Claim {reward.bonus} →
+          </span>
+        ) : pwdStrong >= 3 ? (
+          <span>
+            🛡️ Create Wallet & Claim {reward.bonus} →
           </span>
         ) : (
           'Create wallet →'
