@@ -13,11 +13,21 @@ export default function LandingPage({ onGetStarted }) {
   const [activeFaq, setActiveFaq] = useState(null)
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const [showWalletCreation, setShowWalletCreation] = useState(false)
+  const [walletCreationStep, setWalletCreationStep] = useState('') // 'generating', 'encrypting', 'complete'
+  const [recentWallets, setRecentWallets] = useState([])
 
   // Redirect to wallet if already created
   useEffect(() => {
     if (wallet) {
       console.log('Wallet exists, but showing landing page')
+      // Track recently created wallet
+      const walletInfo = {
+        address: wallet.accounts?.[wallet.activeAccount]?.address,
+        name: wallet.accounts?.[wallet.activeAccount]?.name || 'Wallet',
+        createdAt: new Date().toISOString(),
+      }
+      setRecentWallets(prev => [walletInfo, ...prev.slice(0, 2)]) // Keep last 3
     }
   }, [wallet])
 
@@ -46,12 +56,85 @@ export default function LandingPage({ onGetStarted }) {
     }
   }
 
+  const handleCreateWalletWithAnimation = () => {
+    setShowWalletCreation(true)
+    setWalletCreationStep('generating')
+    
+    // Simulate wallet creation steps
+    setTimeout(() => {
+      setWalletCreationStep('encrypting')
+    }, 1500)
+    
+    setTimeout(() => {
+      setWalletCreationStep('complete')
+    }, 3000)
+    
+    setTimeout(() => {
+      setShowWalletCreation(false)
+      handleGetStarted()
+    }, 4000)
+  }
+
   return (
     <div className="landing-page">
       {/* ── HERO SECTION ─────────────────────────────────────────── */}
       <section className="landing-hero">
         <div className="landing-container">
           <div className="hero-content">
+            {/* Wallet Creation Status Display */}
+            {showWalletCreation && (
+              <div className="wallet-creation-banner">
+                <div className="creation-animation">
+                  {walletCreationStep === 'generating' && (
+                    <>
+                      <div className="spinner"></div>
+                      <span>Generating your secure wallet...</span>
+                    </>
+                  )}
+                  {walletCreationStep === 'encrypting' && (
+                    <>
+                      <div className="spinner"></div>
+                      <span>Encrypting with AES-256-GCM...</span>
+                    </>
+                  )}
+                  {walletCreationStep === 'complete' && (
+                    <>
+                      <span className="checkmark">✓</span>
+                      <span>Wallet created successfully!</span>
+                    </>
+                  )}
+                </div>
+                <div className="creation-progress">
+                  <div className={`progress-bar ${walletCreationStep === 'generating' ? 'active' : walletCreationStep === 'encrypting' || walletCreationStep === 'complete' ? 'completed' : ''}`}></div>
+                  <div className={`progress-bar ${walletCreationStep === 'encrypting' ? 'active' : walletCreationStep === 'complete' ? 'completed' : ''}`}></div>
+                  <div className={`progress-bar ${walletCreationStep === 'complete' ? 'active' : ''}`}></div>
+                </div>
+              </div>
+            )}
+            
+            {/* Recent Wallets Display */}
+            {recentWallets.length > 0 && !showWalletCreation && (
+              <div className="recent-wallets-banner">
+                <h3 className="recent-wallets-title">Recently Created Wallets</h3>
+                <div className="recent-wallets-list">
+                  {recentWallets.map((w, idx) => (
+                    <div key={idx} className="recent-wallet-item">
+                      <div className="wallet-icon">◈</div>
+                      <div className="wallet-details">
+                        <div className="wallet-name">{w.name}</div>
+                        <div className="wallet-address">
+                          {w.address?.slice(0, 6)}...{w.address?.slice(-4)}
+                        </div>
+                      </div>
+                      <div className="wallet-time">
+                        {new Date(w.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="hero-badge">🔐 Non-Custodial & Secure</div>
             <h1 className="hero-title">
               The Future of <span className="gradient-text">DeFi</span> Starts Here
@@ -61,7 +144,7 @@ export default function LandingPage({ onGetStarted }) {
               Your keys, your crypto, your control.
             </p>
             <div className="hero-actions">
-              <button className="btn-primary btn-large" onClick={handleGetStarted}>
+              <button className="btn-primary btn-large" onClick={handleCreateWalletWithAnimation}>
                 Create Wallet →
               </button>
               <button className="btn-secondary btn-large" onClick={handleGetStarted}>
