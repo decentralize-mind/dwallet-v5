@@ -57,6 +57,10 @@ import {
   logSessionSecurityEvent
 } from '../utils/sessionSecurity'
 import {
+  chainIdToKey,
+  detectBrowserWalletNetwork
+} from '../utils/networkDetection'
+import {
   maskPrivateKey,
   sanitizeError,
   logKeyUsage,
@@ -235,6 +239,7 @@ export function WalletProvider({ children }) {
   const [wallets, setWallets] = useState([]) // Array of wallet metadata
   const [activeWalletIndex, setActiveWalletIndex] = useState(0)
   const [activeChain, setActiveChainRaw] = useState('ethereum')
+  const [autoNetworkDetectEnabled, setAutoNetworkDetectEnabled] = useState(true)
   const [balances, setBalances] = useState({})
   const [transactions, setTransactions] = useState([])
   const [isLocked, setIsLocked] = useState(false)
@@ -903,6 +908,45 @@ export function WalletProvider({ children }) {
   }
 
   const setActiveChain = chain => setActiveChainRaw(chain)
+
+  // Auto-detect network from browser wallet on initialization
+  useEffect(() => {
+    if (!autoNetworkDetectEnabled || !window.ethereum) return
+
+    const detectNetwork = async () => {
+      try {
+        const result = await detectBrowserWalletNetwork()
+        
+        if (result) {
+          console.log('🌐 Auto-detected network:', result.chainKey, '(Chain ID:', result.chainId, ')')
+          setActiveChainRaw(result.chainKey)
+        }
+      } catch (err) {
+        console.warn('⚠️ Network auto-detection failed:', err)
+      }
+    }
+
+    detectNetwork()
+
+    // Listen for network changes
+    const handleChainChanged = (chainId) => {
+      const chainKey = chainIdToKey(chainId)
+      
+      if (chainKey) {
+        const chainIdNumber = typeof chainId === 'string' 
+          ? parseInt(chainId, 16) 
+          : chainId
+        console.log('🔄 Network changed to:', chainKey, '(Chain ID:', chainIdNumber, ')')
+        setActiveChainRaw(chainKey)
+      }
+    }
+
+    window.ethereum.on('chainChanged', handleChainChanged)
+
+    return () => {
+      window.ethereum.removeListener('chainChanged', handleChainChanged)
+    }
+  }, [autoNetworkDetectEnabled])
 
   const sendTransaction = async (to, amount, token, chainId) => {
     // Check transaction rate limit

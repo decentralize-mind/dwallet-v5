@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
+import { useNetworkDetection } from '../hooks/useNetworkDetection'
 import Dashboard from './Dashboard'
 import SendModal from './SendModal'
 import ReceiveModal from './ReceiveModal'
@@ -34,6 +35,11 @@ const NAV_ITEMS = [
 
 export default function MainWallet() {
   const { wallet, currentAddress, activeChain, lockWallet } = useWallet()
+  const {
+    detectedChain,
+    autoDetectEnabled,
+    hasEthereumWallet,
+  } = useNetworkDetection()
   
   // Load saved tab from localStorage, default to 'dashboard'
   const [activeTab, setActiveTab] = useState(() => {
@@ -144,10 +150,29 @@ export default function MainWallet() {
           <button
             className="chain-badge"
             onClick={() => setShowChainSelector(true)}
+            style={{
+              position: 'relative',
+            }}
           >
             <span className="chain-dot" style={{ background: chain.color }} />
             {chain.name}
             <span className="chevron">▾</span>
+            {/* Auto-detection indicator */}
+            {hasEthereumWallet && autoDetectEnabled && detectedChain === activeChain && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  width: '8px',
+                  height: '8px',
+                  background: '#10b981',
+                  borderRadius: '50%',
+                  border: '2px solid var(--bg, #0d0f14)',
+                }}
+                title="Auto-detected network"
+              />
+            )}
           </button>
         </div>
         <div className="topbar-right">
