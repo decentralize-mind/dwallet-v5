@@ -5,8 +5,8 @@
  * Perfect for localhost development and production
  */
 
-const Sentry = require('@sentry/node');
-const { nodeProfilingIntegration } = require('@sentry/profiling-node');
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 // Sentry DSN from environment variable
 const SENTRY_DSN = process.env.SENTRY_DSN;
@@ -70,4 +70,4 @@ if (SENTRY_DSN) {
 }
 
 // Export configured Sentry instance
-module.exports = Sentry;
+export default Sentry;

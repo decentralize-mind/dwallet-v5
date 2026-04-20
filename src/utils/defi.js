@@ -261,7 +261,12 @@ export async function aaveSupply({ asset, amount, privateKey }) {
     }
 
     const pool = new ethers.Contract(AAVE_V3.pool, AAVE_POOL_ABI, signer)
-    const tx = await pool.supply(token.address, amountParsed, address, 0)
+    // AAVE referral program is currently inactive (as of 2026-04-20)
+    // Pass 0 for now. When activated, replace with your numeric referral code (uint16: 0-65535)
+    // Your AAVE app referral code: C8A785 (this is for the frontend, not smart contract)
+    // To get a smart contract referral code, submit proposal to Aave Governance
+    const AAVE_REFERRAL_CODE = 0 // Replace with your uint16 referral code when program activates
+    const tx = await pool.supply(token.address, amountParsed, address, AAVE_REFERRAL_CODE)
     return tx
   } catch (error) {
     throw new Error(sanitizeError(error))
