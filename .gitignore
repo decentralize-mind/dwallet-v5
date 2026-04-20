@@ -28,14 +28,14 @@ deployed-*.json
 Thumbs.db
 .vscode/
 .idea/
-
+*setup-enterprise.sh
 # Project-Specific Archives
 *.zip
 *.rar
 *.docx
 # Allow important documentation files (ignore only draft/temporary docs)
 # *.md  # REMOVED - too broad, now using specific exclusions below
-
+*setup-admin.sh
 # Private Documentation & Drafts
 deploy-to-base-network-config.md
 ONBOARDING.md
@@ -68,3 +68,16 @@ ultime-protection.md
 .qoder
 .vercel
 .env*.local
+
+# Admin Dashboard Security Files
+server/admin-server.js
+server/admin-*.js
+data/
+db/
+*.sqlite
+logs/
+*.log
+audit-logs/
+*.key
+*.pem
+admin-private-keys/
