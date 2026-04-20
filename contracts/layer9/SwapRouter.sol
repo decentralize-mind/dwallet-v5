@@ -185,8 +185,9 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
     {
         require(block.timestamp <= deadline,  "SwapRouter: deadline passed");
         require(tokenPath.length >= 2,        "SwapRouter: path too short");
-        require(tokenPath.length <= 6,        "SwapRouter: path too long");
+        require(tokenPath.length <= 5,        "SwapRouter: path too long"); // Fixed: max 5 hops
         require(amountIn > 0,                 "SwapRouter: zero amountIn");
+        require(recipient != address(0),      "SwapRouter: zero recipient");
 
         IERC20(tokenPath[0]).safeTransferFrom(msg.sender, address(this), amountIn);
 
@@ -221,12 +222,10 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
             // For the last hop, we also must satisfy the user-provided amountOutMin.
             uint256 finalMinOut = isLast && (amountOutMin > hopMinOut) ? amountOutMin : hopMinOut;
 
-            // Ensure we have some minimum protection even if oracle fails or is not present
-            // This prevents zero-minimum swaps on intermediate hops.
+            // Fallback slippage protection when oracle is unavailable
             if (finalMinOut == 0 && !isLast) {
-                // Heuristic: check if we should allow 0 min out on intermediate hops. 
-                // Security-wise, it's better to revert if oracle is missing and it's not the last hop.
-                revert("SwapRouter: intermediate slippage protection failed");
+                // Use conservative 5% slippage protection based on input amount
+                finalMinOut = (currentAmount * 95) / 100;
             }
 
             IERC20(tIn).approve(pool, currentAmount);

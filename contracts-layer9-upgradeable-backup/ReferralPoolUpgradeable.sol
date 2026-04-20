@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "../layer7/SecurityGated.sol";
 
 /**
- * @title ReferralPool
- * @notice On-chain referral reward distribution contract
+ * @title ReferralPool - Upgradeable Version
+ * @notice On-chain referral reward distribution contract with proxy support
  * @dev Distributes 10 DWT tokens to users who invite friends to the platform
  * 
  * Architecture:
@@ -27,13 +27,13 @@ import "../layer7/SecurityGated.sol";
  *   - Protocol-wide pause via SecurityGated (Layer 7)
  *   - Sybil attack prevention (cooldown + reserve protection)
  */
-contract ReferralPool is Ownable, ReentrancyGuard, SecurityGated {
+contract ReferralPoolUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable, SecurityGated {
     using SafeERC20 for IERC20;
     
     // ─── State Variables ─────────────────────────────────────────────────────
     
     /// @notice DWT token contract
-    IERC20 public immutable dwtToken;
+    IERC20 public dwtToken;
     
     /// @notice Amount of DWT tokens per referral reward (10 DWT)
     uint256 public constant REWARD_AMOUNT = 10 * 1e18;
@@ -57,14 +57,14 @@ contract ReferralPool is Ownable, ReentrancyGuard, SecurityGated {
     bool public paused;
     
     /// @notice Minimum time between referrals per referrer (Sybil prevention)
-    uint256 public referralCooldown = 1 hours;
+    uint256 public referralCooldown;
     
     /// @notice Track last referral timestamp per referrer
     mapping(address => uint256) public lastReferralTime;
     
     /// @notice Minimum reserve to protect pending rewards (prevent owner draining)
-    uint256 public minReserve = 1000 * 1e18; // 1000 DWT reserve
-    
+    uint256 public minReserve;
+
     // ─── Events ───────────────────────────────────────────────────────────────
     
     event ReferralRegistered(address referee, address referrer, uint256 timestamp);
@@ -88,20 +88,30 @@ contract ReferralPool is Ownable, ReentrancyGuard, SecurityGated {
     
     // ─── Constructor ─────────────────────────────────────────────────────────
     
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initialize the ReferralPool contract
      * @param _dwtToken Address of the DWT token contract
      * @param _securityController Address of the security controller
      * @param _owner Address of the contract owner
      */
-    constructor(address _dwtToken, address _securityController, address _owner) 
-        Ownable(_owner) 
-        SecurityGated(_securityController) 
+    function initialize(address _dwtToken, address _securityController, address _owner) 
+        external initializer
     {
         if (_dwtToken == address(0)) revert ZeroAddress();
         if (_owner == address(0)) revert ZeroAddress();
         
+        __Ownable_init(_owner);
+        __ReentrancyGuard_init();
+        __SecurityGated_init(_securityController);
+        
         dwtToken = IERC20(_dwtToken);
+        referralCooldown = 1 hours;
+        minReserve = 1000 * 1e18; // 1000 DWT reserve
     }
     
     // ─── Modifiers ────────────────────────────────────────────────────────────

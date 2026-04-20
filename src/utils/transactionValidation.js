@@ -9,9 +9,11 @@
  * - Gas price validation
  * - Transaction simulation
  * - Risk scoring
+ * - Network matching validation
  */
 
 import { calculateThreatScore } from './threatIntelligence.js'
+import { validateNetworkMatch } from './networkValidation.js'
 
 // ─────────────────────────────────────────────────────────────────────
 //  TRANSACTION LIMITS
@@ -87,6 +89,7 @@ export async function validateTransaction(params) {
     gasInfo,
     price,
     transactionHistory = [],
+    recipientChain,
   } = params
   
   const errors = []
@@ -145,12 +148,27 @@ export async function validateTransaction(params) {
     warnings.push(...gasValidation.warnings)
   }
   
-  // 5. Check for suspicious patterns
+  // 5. Network matching validation
+  if (recipientChain) {
+    const networkValidation = validateNetworkMatch({
+      fromChain: chain,
+      toChain: recipientChain,
+      recipientAddress: to,
+      transactionHistory,
+    })
+    
+    if (!networkValidation.valid) {
+      errors.push(...networkValidation.errors)
+    }
+    warnings.push(...networkValidation.warnings)
+  }
+  
+  // 6. Check for suspicious patterns
   const patternCheck = checkSuspiciousPatterns(params, transactionHistory)
   warnings.push(...patternCheck.warnings)
   riskFactors.push(...patternCheck.riskFactors)
   
-  // 6. Calculate risk score
+  // 7. Calculate risk score
   const riskScore = calculateTransactionRisk({
     errors: errors.length,
     warnings: warnings.length,

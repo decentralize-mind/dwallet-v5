@@ -6,6 +6,7 @@ import { getPrice } from '../utils/prices'
 import { getContacts, isWhitelisted, isNewAddress, getAddressWarningLevel } from '../utils/addressBook'
 import { DWT } from '../utils/dwt'
 import TransactionSimulation from './TransactionSimulation'
+import { validateNetworkMatch, detectRecipientNetwork, getBridgeRecommendation, getNetworkInfo, formatNetworkWarning } from '../utils/networkValidation'
 
 const CHAIN_TOKENS = {
   ethereum: ['ETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'UNI', 'LINK', 'DWT'],
@@ -28,7 +29,7 @@ const EXPLORERS = {
 }
 
 export default function SendModal({ onClose }) {
-  const { sendTransaction, chainBalances, activeChain, gasInfo, wallet } = useWallet()
+  const { sendTransaction, chainBalances, activeChain, gasInfo, wallet, transactions } = useWallet()
   const tokens = CHAIN_TOKENS[activeChain] || ['ETH']
   
   // Define native token symbols for each chain (used throughout component)
@@ -59,6 +60,9 @@ export default function SendModal({ onClose }) {
   const [addressVerified, setAddressVerified] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
   const [showSimulation, setShowSimulation] = useState(false)
+  const [networkValidation, setNetworkValidation] = useState(null)
+  const [recipientNetwork, setRecipientNetwork] = useState(null)
+  const [showNetworkDetails, setShowNetworkDetails] = useState(false)
   const confirmTimerRef = useRef(null)
 
   const contacts = getContacts()
@@ -144,6 +148,33 @@ export default function SendModal({ onClose }) {
     return () => clearTimeout(t)
   }, [recipient])
 
+  // Network validation when recipient changes
+  useEffect(() => {
+    if (!finalAddr) {
+      setNetworkValidation(null)
+      setRecipientNetwork(null)
+      return
+    }
+
+    // Detect recipient's likely network from history
+    const detected = detectRecipientNetwork(finalAddr, transactions)
+    setRecipientNetwork(detected)
+
+    // If we detected a likely network, validate match
+    if (detected.detected && detected.likelyChain) {
+      const validation = validateNetworkMatch({
+        fromChain: activeChain,
+        toChain: detected.likelyChain,
+        recipientAddress: finalAddr,
+        transactionHistory: transactions,
+      })
+      setNetworkValidation(validation)
+    } else {
+      // No history - validate assuming same network
+      setNetworkValidation(null)
+    }
+  }, [finalAddr, activeChain, transactions])
+
   const validate = () => {
     const amountNum = parseFloat(amount)
     
@@ -169,6 +200,13 @@ export default function SendModal({ onClose }) {
     if (amountNum > balance) {
       console.error('❌ Balance check failed:', { amount: amountNum, balance })
       setError('Insufficient balance')
+      return false
+    }
+    
+    // Network validation check
+    if (networkValidation && !networkValidation.valid) {
+      const warning = formatNetworkWarning(networkValidation)
+      setError(warning || 'Network validation failed')
       return false
     }
     
@@ -806,6 +844,134 @@ export default function SendModal({ onClose }) {
                 <span>Network</span>
                 <span>{activeChain}</span>
               </div>
+              
+              {/* Network validation warning */}
+              {networkValidation && networkValidation.warnings.length > 0 && (
+                <div 
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: networkValidation.severity.level === 'compatible' 
+                      ? 'rgba(245,158,11,0.08)' 
+                      : 'rgba(239,68,68,0.08)',
+                    border: `1px solid ${
+                      networkValidation.severity.level === 'compatible'
+                        ? 'rgba(245,158,11,0.3)'
+                        : 'rgba(239,68,68,0.3)'
+                    }`,
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>
+                      {networkValidation.severity.icon}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '600', 
+                        margin: '0 0 6px 0',
+                        color: networkValidation.severity.color 
+                      }}>
+                        Network Warning
+                      </p>
+                      {networkValidation.warnings.map((warning, idx) => (
+                        <p key={idx} style={{ 
+                          fontSize: '11px', 
+                          margin: '0 0 4px 0',
+                          color: 'var(--text2)',
+                          lineHeight: '1.5'
+                        }}>
+                          • {warning}
+                        </p>
+                      ))}
+                      {networkValidation.suggestions.length > 0 && (
+                        <div style={{ marginTop: '8px' }}>
+                          {networkValidation.suggestions.map((suggestion, idx) => (
+                            <p key={idx} style={{ 
+                              fontSize: '11px', 
+                              margin: '0 0 4px 0',
+                              color: 'var(--accent)',
+                              lineHeight: '1.5',
+                              fontWeight: '500'
+                            }}>
+                              💡 {suggestion}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Bridge recommendation */}
+                      {recipientNetwork?.detected && recipientNetwork.likelyChain && (
+                        <button
+                          onClick={() => {
+                            const bridge = getBridgeRecommendation(activeChain, recipientNetwork.likelyChain)
+                            if (bridge) {
+                              window.open(bridge.url, '_blank')
+                            }
+                          }}
+                          style={{
+                            marginTop: '8px',
+                            padding: '6px 12px',
+                            background: 'rgba(99,102,241,0.15)',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: 'var(--accent)',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font)'
+                          }}
+                        >
+                          🔗 Use Bridge (Recommended)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Recipient network detection info */}
+              {recipientNetwork?.detected && (
+                <div 
+                  style={{
+                    marginTop: '8px',
+                    padding: '10px',
+                    background: 'rgba(99,102,241,0.06)',
+                    border: '1px solid rgba(99,102,241,0.15)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setShowNetworkDetails(!showNetworkDetails)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>ℹ️</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: '500' }}>
+                        Recipient Network Detected
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '10px', color: 'var(--text3)' }}>
+                      {showNetworkDetails ? '▲' : '▼'}
+                    </span>
+                  </div>
+                  
+                  {showNetworkDetails && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text3)' }}>
+                      <p style={{ margin: '0 0 4px 0' }}>
+                        <strong>Network:</strong> {getNetworkInfo(recipientNetwork.likelyChain).name}
+                      </p>
+                      <p style={{ margin: '0 0 4px 0' }}>
+                        <strong>Confidence:</strong> {recipientNetwork.confidence.toFixed(0)}%
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        <strong>History:</strong> {recipientNetwork.transactionCount} transactions
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="confirm-row">
                 <span>Gas</span>
                 <span>

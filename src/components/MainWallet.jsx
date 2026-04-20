@@ -9,7 +9,7 @@ import NFTsView from './NFTsView'
 import NFTMembershipMint from './NFTMembershipMint'
 import DAppsView from './DAppsView'
 import SettingsView from './SettingsView'
-import TransactionHistory from './TransactionHistory'
+import DEXTrading from './DEXTrading'
 import ChainSelector from './ChainSelector'
 import AccountSelector from './AccountSelector'
 import DefiView from './DefiView'
@@ -25,9 +25,9 @@ import { formatAddress } from '../utils/crypto'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Home', icon: '⊞' },
+  { id: 'dex', label: 'DEX Trading', icon: '📊' },
   { id: 'defi', label: 'DeFi', icon: '◈' },
   { id: 'membership', label: 'Membership', icon: '🎫' },
-  { id: 'history', label: 'Activity', icon: '↕' },
   { id: 'nfts', label: 'NFTs', icon: '◇' },
   { id: 'dapps', label: 'dApps', icon: '⬡' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
@@ -105,12 +105,12 @@ export default function MainWallet() {
       )
 
     switch (activeTab) {
+      case 'dex':
+        return <DEXTrading />
       case 'defi':
         return <DefiView />
       case 'membership':
         return <NFTMembershipMint />
-      case 'history':
-        return <TransactionHistory />
       case 'nfts':
         return <NFTsView />
       case 'dapps':

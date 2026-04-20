@@ -30,6 +30,11 @@ abstract contract SecurityGated {
         securityController = ILayer7Security(_securityController);
     }
 
+    /// @dev Initialize function for upgradeable contracts
+    function __SecurityGated_init(address _securityController) internal {
+        securityController = ILayer7Security(_securityController);
+    }
+
     /**
      * @notice Initialize the LockEngine and InvariantChecker.
      */
@@ -96,7 +101,7 @@ abstract contract SecurityGated {
 
     // --- LAYER 7 BACKWARD COMPATIBILITY ---
 
-    modifier whenProtocolNotPaused() {
+    modifier whenProtocolNotPaused() virtual {
         if (securityController.paused()) revert SecurityLayerPaused();
         if (securityController.circuitBroken()) revert SecurityLayerCircuitBroken();
         _;

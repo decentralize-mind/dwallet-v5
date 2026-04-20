@@ -1406,6 +1406,261 @@ select.field {
   color: var(--red);
 }
 
+/* ─── Crypto Exchange Styles ───────────────────────────────────── */
+.exchange-mode-toggle {
+  display: flex;
+  gap: 8px;
+  background: var(--bg3);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.mode-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+.exchange-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.exchange-input-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color 0.2s;
+}
+
+.exchange-input-box:focus-within {
+  border-color: var(--accent);
+}
+
+.exchange-input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.exchange-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+.max-btn {
+  padding: 4px 10px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+
+.max-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.exchange-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.exchange-amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  font-family: var(--font);
+}
+
+.exchange-amount-input::placeholder {
+  color: var(--text3);
+}
+
+.exchange-token-select {
+  padding: 8px 12px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  font-family: var(--font);
+  min-width: 120px;
+}
+
+.exchange-token-select:focus {
+  border-color: var(--accent);
+}
+
+.exchange-balance {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.swap-direction-btn {
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  font-size: 20px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swap-direction-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  transform: rotate(180deg);
+}
+
+.exchange-details {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.detail-row span:first-child {
+  color: var(--text3);
+}
+
+.detail-row span:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.detail-row .positive {
+  color: var(--green);
+}
+
+.detail-row .warning {
+  color: var(--amber);
+}
+
+.detail-row .negative {
+  color: var(--red);
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.loading-text .spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+.error-message {
+  background: var(--red-light);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.success-message {
+  background: var(--green-light);
+  border: 1px solid var(--green);
+  color: var(--green);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.security-notice {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text3);
+  padding: 8px;
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.filter-icon {
+  margin-right: 4px;
+}
+
+.tx-expanded {
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tx-expanded {
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .tx-expanded {
   background: var(--bg3);
   border-top: 1px solid var(--border);
@@ -6710,4 +6965,645 @@ select.field {
   .ip-table td {
     padding: 8px;
   }
+}
+
+/* ─── DEX Trading Component ─────────────────────────────────────── */
+.dex-trading-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.dex-input-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color 0.2s;
+}
+
+.dex-input-box:focus-within {
+  border-color: var(--accent);
+}
+
+.dex-input-box--out {
+  background: var(--bg4);
+}
+
+.dex-input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dex-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.dex-max-btn {
+  padding: 4px 12px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dex-max-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.dex-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dex-amount-input {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font);
+  outline: none;
+}
+
+.dex-amount-input:focus {
+  border-color: var(--accent);
+}
+
+.dex-token-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dex-token-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.05);
+}
+
+.token-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 14px;
+}
+
+.token-symbol {
+  font-weight: 700;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.dex-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.dex-balance {
+  color: var(--text3);
+}
+
+.dex-usd {
+  color: var(--text2);
+  font-weight: 600;
+}
+
+.dex-loading {
+  font-size: 11px;
+  color: var(--amber);
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dex-swap-arrow-btn {
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  background: var(--accent);
+  border: 3px solid var(--bg2);
+  border-radius: 12px;
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: -8px 0;
+  z-index: 10;
+}
+
+.dex-swap-arrow-btn:hover {
+  transform: rotate(180deg) scale(1.1);
+  background: var(--accent-hover);
+}
+
+.dex-settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.dex-settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.dex-slippage-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.dex-slippage-btn {
+  padding: 6px 12px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dex-slippage-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.dex-quote-details {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dex-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.dex-detail-row span:first-child {
+  color: var(--text3);
+}
+
+.dex-detail-row span:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dex-positive {
+  color: var(--green) !important;
+}
+
+.dex-warning {
+  color: var(--amber) !important;
+}
+
+.dex-negative {
+  color: var(--red) !important;
+}
+
+.dex-route-toggle {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dex-route-toggle:hover {
+  background: var(--accent-light);
+}
+
+.dex-route-comparison {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dex-route-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  margin: 0 0 4px 0;
+}
+
+.dex-route-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.dex-route-best {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+
+.dex-route-dex {
+  font-weight: 700;
+  color: var(--text);
+  min-width: 80px;
+}
+
+.dex-route-amount {
+  flex: 1;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+
+.dex-route-badge {
+  padding: 2px 6px;
+  background: var(--green);
+  color: white;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.dex-error {
+  padding: 12px;
+  background: var(--red-light);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.dex-success {
+  padding: 12px;
+  background: var(--green-light);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.dex-trade-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.dex-trade-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.dex-trade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dex-loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dex-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dex-security-notice {
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.dex-recent-trades {
+  margin-top: 16px;
+}
+
+.dex-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px 0;
+}
+
+.dex-trade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.dex-trade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dex-trade-type {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dex-trade-time {
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.dex-trade-amount {
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+/* Limit Orders & History */
+.dex-limit-orders,
+.dex-history {
+  padding: 40px 20px;
+  min-height: 400px;
+}
+
+.dex-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.dex-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.dex-empty-state h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px 0;
+}
+
+.dex-empty-state p {
+  font-size: 13px;
+  color: var(--text3);
+  margin: 0 0 24px 0;
+}
+
+.dex-coming-soon-btn {
+  padding: 12px 24px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: not-allowed;
+}
+
+.dex-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dex-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.dex-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dex-history-status {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.dex-history-status--confirmed {
+  color: var(--green);
+}
+
+.dex-history-status--pending {
+  color: var(--amber);
+}
+
+.dex-history-status--failed {
+  color: var(--red);
+}
+
+.dex-history-date {
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.dex-history-amount {
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* Token Selector Modal */
+.dex-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.dex-modal {
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dex-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dex-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.dex-modal-close {
+  padding: 6px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text3);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.dex-modal-close:hover {
+  color: var(--text);
+}
+
+.dex-search-input {
+  margin: 12px 16px;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font);
+  outline: none;
+}
+
+.dex-search-input:focus {
+  border-color: var(--accent);
+}
+
+.dex-token-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.dex-token-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.dex-token-item:hover {
+  background: var(--bg3);
+}
+
+.dex-token-item .token-icon {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.dex-token-name {
+  flex: 1;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.dex-token-balance {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--font-mono);
 }

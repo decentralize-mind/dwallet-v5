@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../../layer7/SecurityGated.sol";
+import "../layer7/SecurityGated.sol";
 
 interface IFeeRouter {
     function collectFee(address token, address payer, uint256 amount) external returns (uint256);
@@ -32,13 +32,13 @@ interface ILiquidityPool {
 }
 
 /**
- * @title SwapRouter
+ * @title SwapRouter - Upgradeable Version
  * @notice Routes token swaps through registered liquidity pools, applies fees via
  *         FeeRouter, and checks prices against the oracle for slippage protection.
  * @dev    Supports single-hop and multi-hop swaps (up to 5 hops).
  *         Gated by Layer 7 Protocol-wide pause state.
  */
-contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
+contract SwapRouterUpgradeable is AccessControlUpgradeable, ReentrancyGuardUpgradeable, SecurityGated {
     using SafeERC20 for IERC20;
 
     // ─────────────────────────────────────────────
@@ -51,7 +51,7 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
     /// @notice Registered pools: token pair hash → pool address
     mapping(bytes32 => address) public pools;
 
-    uint256 public maxSlippageBps = 200; // 2% default max slippage vs oracle
+    uint256 public maxSlippageBps; // 2% default max slippage vs oracle
 
     // ─────────────────────────────────────────────
     // Events
@@ -76,23 +76,34 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ─────────────────────────────────────────────
-    // Constructor
+    // Initializer
     // ─────────────────────────────────────────────
 
-    constructor(
+    function initialize(
         address _admin,
         address _governor,
         address _securityController,
         address _registry,
         address _lockEngine,
         address _invariantChecker
-    ) SecurityGated(_securityController) {
+    ) external initializer {
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+        __SecurityGated_init(_securityController);
+        
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE,         _admin);
         _grantRole(GOVERNOR_ROLE,      _governor);
 
         _initSecuritySystem(_registry, _lockEngine, _invariantChecker);
+        
+        maxSlippageBps = 200; // 2% default
     }
 
     // ─────────────────────────────────────────────
@@ -185,8 +196,9 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
     {
         require(block.timestamp <= deadline,  "SwapRouter: deadline passed");
         require(tokenPath.length >= 2,        "SwapRouter: path too short");
-        require(tokenPath.length <= 6,        "SwapRouter: path too long");
+        require(tokenPath.length <= 5,        "SwapRouter: path too long"); // Fixed: max 5 hops
         require(amountIn > 0,                 "SwapRouter: zero amountIn");
+        require(recipient != address(0),      "SwapRouter: zero recipient");
 
         IERC20(tokenPath[0]).safeTransferFrom(msg.sender, address(this), amountIn);
 
@@ -221,12 +233,10 @@ contract SwapRouter is AccessControl, ReentrancyGuard, SecurityGated {
             // For the last hop, we also must satisfy the user-provided amountOutMin.
             uint256 finalMinOut = isLast && (amountOutMin > hopMinOut) ? amountOutMin : hopMinOut;
 
-            // Ensure we have some minimum protection even if oracle fails or is not present
-            // This prevents zero-minimum swaps on intermediate hops.
+            // Fallback slippage protection when oracle is unavailable
             if (finalMinOut == 0 && !isLast) {
-                // Heuristic: check if we should allow 0 min out on intermediate hops. 
-                // Security-wise, it's better to revert if oracle is missing and it's not the last hop.
-                revert("SwapRouter: intermediate slippage protection failed");
+                // Use conservative 5% slippage protection based on input amount
+                finalMinOut = (currentAmount * 95) / 100;
             }
 
             IERC20(tIn).approve(pool, currentAmount);

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { DWT } from '../utils/dwt'
+import { getNetworkInfo } from '../utils/networkValidation'
 
 const NETWORK_LABELS = {
   ethereum: {
@@ -300,6 +301,59 @@ export default function ReceiveModal({ onClose }) {
               {isTestnet
                 ? '⚠️ Testnet — tokens have no real value'
                 : `⚠️ ${net.warning}`}
+            </p>
+          </div>
+          
+          {/* Network matching warning */}
+          <div
+            style={{
+              marginTop: 8,
+              padding: '10px 12px',
+              background: 'rgba(99,102,241,0.06)',
+              border: '1px solid rgba(99,102,241,0.15)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                margin: '0 0 6px 0',
+                color: 'var(--accent)',
+                fontWeight: 600,
+                lineHeight: 1.5,
+              }}
+            >
+              🔒 Network Matching Protection
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                margin: '0 0 4px 0',
+                color: 'var(--text2)',
+                lineHeight: 1.5,
+              }}
+            >
+              • Only send tokens on <strong>{net.name}</strong> to this address
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                margin: '0 0 4px 0',
+                color: 'var(--text2)',
+                lineHeight: 1.5,
+              }}
+            >
+              • Sending from other networks may result in permanent loss
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                margin: 0,
+                color: 'var(--text2)',
+                lineHeight: 1.5,
+              }}
+            >
+              • Use official bridges for cross-chain transfers
             </p>
           </div>
         </div>

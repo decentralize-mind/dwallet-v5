@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 /**
- * @title  NFTMembership
- * @notice Tiered NFT Access Passes
+ * @title  NFTMembership - Upgradeable Version
+ * @notice Tiered NFT Access Passes with proxy support
  *
  *         Four tiers (configurable):
  *           0 — Bronze   (lowest, cheapest)
@@ -22,17 +22,17 @@ pragma solidity ^0.8.24;
  *         Expiry: optional per-token expiry timestamp (0 = non-expiring).
  */
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "../layer7/SecurityGated.sol";
 
-contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, SecurityGated {
+contract NFTMembershipUpgradeable is ERC721EnumerableUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, SecurityGated {
     using SafeERC20 for IERC20;
     using Strings  for uint256;
 
@@ -47,6 +47,10 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     error ZeroAddress();
     error WithdrawFailed();
     error TierNotEnabled();
+    error NotTokenOwner();
+    error InvalidWithdrawalAddress();
+    error MintCooldownActive();
+    error MaxMintsReached();
 
     // ── Events ────────────────────────────────────────────────────────────────
     event TierConfigured(uint8 tier, uint256 ethPrice, uint256 dwtPrice, uint256 maxSupply, bool soulbound);
@@ -54,6 +58,10 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     event PassUpgraded(uint256 indexed tokenId, uint8 oldTier, uint8 newTier);
     event ExpiryExtended(uint256 indexed tokenId, uint256 newExpiry);
     event AccessChecked(address indexed user, uint8 minTier, bool granted);
+    event FreeMintWhitelistUpdated(address indexed user, bool status);
+    event HighestTierUpdated(address indexed user, uint8 oldTier, uint8 newTier);
+    event MintCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
+    event MaxMintsPerUserUpdated(uint256 oldMax, uint256 newMax);
 
     // ── Constants ─────────────────────────────────────────────────────────────
     uint8 public constant TIER_COUNT = 4;
@@ -77,23 +85,42 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
-    IERC20 public immutable dwtToken;
+    IERC20 public dwtToken;
 
     mapping(uint8  => TierConfig) public tierConfigs;
     mapping(uint256 => TokenData) public tokenData;
     mapping(address => uint8)     public highestTier; // user → highest tier owned (1-indexed, 0=none)
     mapping(address => bool)      public freeMintWhitelist;
+    mapping(address => uint256)   public lastMintTime; // Rate limiting: tracks last mint timestamp per user
 
-    uint256 private _nextTokenId = 1;
+    uint256 private _nextTokenId;
+    
+    // Rate limiting configuration
+    uint256 public mintCooldown; // Minimum time between mints per user
+    uint256 public maxMintsPerUser; // Maximum NFTs a user can hold
 
-    // ── Constructor ───────────────────────────────────────────────────────────
-    constructor(address _dwtToken, address _securityController)
-        ERC721("DWT Membership Pass", "DWTPASS")
-        Ownable(msg.sender)
-        SecurityGated(_securityController)
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    // ── Initializer ───────────────────────────────────────────────────────────
+    function initialize(address _dwtToken, address _securityController)
+        external initializer
     {
         if (_dwtToken == address(0)) revert ZeroAddress();
+        
+        __ERC721_init("DWT Membership Pass", "DWTPASS");
+        __ERC721Enumerable_init();
+        __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        __SecurityGated_init(_securityController);
+        
         dwtToken = IERC20(_dwtToken);
+        _nextTokenId = 1;
+        mintCooldown = 1 hours;
+        maxMintsPerUser = 10;
 
         // Default tier configurations
         _configureTier(0, 0.05 ether,  100e18,  0,       1000, 365 days, "", false, true);  // Bronze
@@ -143,12 +170,36 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     }
 
     function setFreeMintWhitelist(address[] calldata users, bool status) external onlyOwner whenProtocolNotPaused {
-        for (uint256 i; i < users.length; ++i) freeMintWhitelist[users[i]] = status;
+        for (uint256 i; i < users.length; ++i) {
+            freeMintWhitelist[users[i]] = status;
+            emit FreeMintWhitelistUpdated(users[i], status);
+        }
     }
 
     function setTierBaseURI(uint8 tier, string calldata uri) external onlyOwner whenProtocolNotPaused {
         if (tier >= TIER_COUNT) revert InvalidTier();
         tierConfigs[tier].baseURI = uri;
+    }
+
+    /**
+     * @notice Set the mint cooldown period
+     * @param newCooldown New cooldown period in seconds
+     */
+    function setMintCooldown(uint256 newCooldown) external onlyOwner whenProtocolNotPaused {
+        uint256 oldCooldown = mintCooldown;
+        mintCooldown = newCooldown;
+        emit MintCooldownUpdated(oldCooldown, newCooldown);
+    }
+
+    /**
+     * @notice Set the maximum number of mints per user
+     * @param newMax New maximum number of NFTs per user
+     */
+    function setMaxMintsPerUser(uint256 newMax) external onlyOwner whenProtocolNotPaused {
+        require(newMax > 0, "Max mints must be > 0");
+        uint256 oldMax = maxMintsPerUser;
+        maxMintsPerUser = newMax;
+        emit MaxMintsPerUserUpdated(oldMax, newMax);
     }
 
     function pause()   external onlyOwner { _pause(); }
@@ -207,6 +258,16 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     }
 
     function _mintPass(address to, uint8 tier, TierConfig storage tc) internal {
+        // Rate limiting: Check cooldown
+        if (lastMintTime[to] > 0 && block.timestamp < lastMintTime[to] + mintCooldown) {
+            revert MintCooldownActive();
+        }
+        
+        // Check max mints per user
+        if (balanceOf(to) >= maxMintsPerUser) {
+            revert MaxMintsReached();
+        }
+        
         uint256 tokenId = _nextTokenId++;
         uint256 expiry  = tc.durationSeconds > 0
             ? block.timestamp + tc.durationSeconds
@@ -216,7 +277,10 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
         tokenData[tokenId] = TokenData({ tier: tier, expiry: expiry });
 
         // Track highest tier (tier is 0-indexed; add 1 so 0 = "no pass")
-        if (highestTier[to] < tier + 1) highestTier[to] = tier + 1;
+        _updateHighestTier(to, tier);
+        
+        // Update last mint time
+        lastMintTime[to] = block.timestamp;
 
         _safeMint(to, tokenId);
         emit PassMinted(to, tokenId, tier, expiry);
@@ -247,7 +311,9 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
         if (!newTc.enabled) revert TierNotEnabled();
         if (newTc.maxSupply > 0 && newTc.currentSupply >= newTc.maxSupply) revert TierCapReached();
 
-        uint256 delta = newTc.ethPrice - tierConfigs[td.tier].ethPrice;
+        uint256 oldPrice = tierConfigs[td.tier].ethPrice;
+        if (newTc.ethPrice < oldPrice) revert InsufficientPayment(); // Prevent underflow
+        uint256 delta = newTc.ethPrice - oldPrice;
         if (msg.value < delta) revert InsufficientPayment();
 
         uint8 oldTier = td.tier;
@@ -255,7 +321,7 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
         newTc.currentSupply++;
         td.tier = newTier;
 
-        if (highestTier[msg.sender] < newTier + 1) highestTier[msg.sender] = newTier + 1;
+        _updateHighestTier(msg.sender, newTier);
 
         emit PassUpgraded(tokenId, oldTier, newTier);
     }
@@ -285,37 +351,65 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
     /**
      * @notice Returns true if `user` holds an active pass at or above `minTier`.
      *         Also validates DWT holding requirement of the tier.
+     *         Optimized: Uses highestTier cache for quick rejection, only loops if DWT check needed.
      * @param user    Address to check
      * @param minTier Minimum tier required (0–3)
      */
     function hasAccess(address user, uint8 minTier) external view returns (bool) {
         if (minTier >= TIER_COUNT) return false;
+        
+        // Quick rejection using cached highestTier (1-indexed, so minTier+1)
+        if (highestTier[user] < minTier + 1) return false;
+        
+        // User has a high enough tier cached, but we need to verify:
+        // 1. The token isn't expired
+        // 2. DWT holding requirement is met
+        
         uint256 balance = balanceOf(user);
         for (uint256 i; i < balance; ++i) {
             uint256 tokenId = tokenOfOwnerByIndex(user, i);
             TokenData storage td = tokenData[tokenId];
+            
+            // Skip if tier is too low
             if (td.tier < minTier) continue;
+            
+            // Skip if expired
             if (td.expiry > 0 && block.timestamp > td.expiry) continue;
+            
             // Check DWT holding requirement
             uint256 holdReq = tierConfigs[td.tier].dwtHoldRequirement;
             if (holdReq > 0 && dwtToken.balanceOf(user) < holdReq) continue;
+            
+            // All checks passed
             return true;
         }
+        
+        // No valid pass found (all expired or DWT requirement not met)
         return false;
     }
 
     /**
      * @notice Returns the highest active tier index of a user (255 = none).
+     *         Optimized: Uses highestTier cache, validates expiry.
      */
     function activeTier(address user) external view returns (uint8) {
+        // Quick return if no passes
+        if (highestTier[user] == 0) return type(uint8).max;
+        
         uint256 balance = balanceOf(user);
         uint8   best    = type(uint8).max;
+        
         for (uint256 i; i < balance; ++i) {
             uint256 tokenId = tokenOfOwnerByIndex(user, i);
             TokenData storage td = tokenData[tokenId];
+            
+            // Skip expired tokens
             if (td.expiry > 0 && block.timestamp > td.expiry) continue;
+            
+            // Update best tier
             if (best == type(uint8).max || td.tier > best) best = td.tier;
         }
+        
         return best;
     }
 
@@ -331,6 +425,13 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
         if (from != address(0) && to != address(0)) {
             if (tierConfigs[tokenData[tokenId].tier].soulbound) revert Soulbound();
         }
+        // Update highestTier when tokens are burned or transferred
+        if (from != address(0)) {
+            _recalculateHighestTier(from);
+        }
+        if (to != address(0)) {
+            _updateHighestTier(to, tokenData[tokenId].tier);
+        }
         return from;
     }
 
@@ -344,16 +445,51 @@ contract NFTMembership is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable, 
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function _checkOwner(uint256 tokenId) internal view {
-        if (ownerOf(tokenId) != msg.sender) revert ZeroAddress(); // reuse
+        if (ownerOf(tokenId) != msg.sender) revert NotTokenOwner();
+    }
+
+    function _updateHighestTier(address user, uint8 tier) internal {
+        uint8 newTier = tier + 1; // Convert to 1-indexed
+        if (highestTier[user] < newTier) {
+            uint8 oldTier = highestTier[user];
+            highestTier[user] = newTier;
+            emit HighestTierUpdated(user, oldTier, newTier);
+        }
+    }
+
+    function _recalculateHighestTier(address user) internal {
+        uint256 balance = balanceOf(user);
+        uint8 highest = 0;
+        
+        for (uint256 i; i < balance; ++i) {
+            uint256 tokenId = tokenOfOwnerByIndex(user, i);
+            TokenData storage td = tokenData[tokenId];
+            // Only count non-expired tokens
+            if (td.expiry == 0 || block.timestamp <= td.expiry) {
+                uint8 tierValue = td.tier + 1;
+                if (tierValue > highest) {
+                    highest = tierValue;
+                }
+            }
+        }
+        
+        if (highestTier[user] != highest) {
+            uint8 oldTier = highestTier[user];
+            highestTier[user] = highest;
+            emit HighestTierUpdated(user, oldTier, highest);
+        }
     }
 
     // ── Withdrawals ───────────────────────────────────────────────────────────
     function withdrawETH(address payable to) external onlyOwner whenProtocolNotPaused {
-        (bool ok,) = to.call{value: address(this).balance}("");
+        if (to == address(0)) revert InvalidWithdrawalAddress();
+        uint256 balance = address(this).balance;
+        (bool ok,) = to.call{value: balance}("");
         if (!ok) revert WithdrawFailed();
     }
 
     function withdrawDWT(address to, uint256 amount) external onlyOwner whenProtocolNotPaused {
+        if (to == address(0)) revert InvalidWithdrawalAddress();
         dwtToken.safeTransfer(to, amount);
     }
 

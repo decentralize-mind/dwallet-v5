@@ -493,24 +493,57 @@ export function WalletProvider({ children }) {
     })
   }
 
-  const importWallet = async (mnemonic, pwd) => {
-    const words = mnemonic.trim().split(/\s+/)
-    if (words.length !== 12 && words.length !== 24)
-      throw new Error('Seed phrase must be 12 or 24 words')
-    const seed = mnemonicToSeedSync(mnemonic.trim())
-    const derived = deriveWalletFromSeed(seed, 0)
-    const data = {
-      mnemonic: mnemonic.trim(),
-      accounts: [
-        {
-          name: 'Account 1',
-          address: derived.address,
-          privateKey: derived.privateKey,
-          index: 0,
-        },
-      ],
-      activeAccount: 0,
-      createdAt: Date.now(),
+  const importWallet = async (input, pwd) => {
+    const raw = input.trim()
+    let data
+    
+    // Check if input is a private key (64 hex chars, with or without 0x)
+    const isPrivateKey = /^0x[0-9a-fA-F]{64}$/.test(raw) || /^[0-9a-fA-F]{64}$/.test(raw)
+    
+    if (isPrivateKey) {
+      // Private key import
+      const privateKey = raw.startsWith('0x') ? raw : '0x' + raw
+      const { ethers } = await import('ethers')
+      const wallet = new ethers.Wallet(privateKey)
+      
+      data = {
+        mnemonic: null, // No mnemonic for private key imports
+        accounts: [
+          {
+            name: 'Account 1',
+            address: wallet.address,
+            privateKey: privateKey,
+            index: 0,
+          },
+        ],
+        activeAccount: 0,
+        createdAt: Date.now(),
+        imported: true,
+        importedVia: 'privatekey',
+      }
+    } else {
+      // Seed phrase import
+      const words = raw.split(/\s+/)
+      if (words.length !== 12 && words.length !== 24)
+        throw new Error('Seed phrase must be 12 or 24 words')
+      const seed = mnemonicToSeedSync(raw)
+      const derived = deriveWalletFromSeed(seed, 0)
+      
+      data = {
+        mnemonic: raw,
+        accounts: [
+          {
+            name: 'Account 1',
+            address: derived.address,
+            privateKey: derived.privateKey,
+            index: 0,
+          },
+        ],
+        activeAccount: 0,
+        createdAt: Date.now(),
+        imported: true,
+        importedVia: 'seed',
+      }
     }
     
     // Save encrypted wallet to localStorage
@@ -521,7 +554,8 @@ export function WalletProvider({ children }) {
       storageKey: STORAGE_KEY,
       encryptedLength: encrypted.length,
       address: data.accounts[0]?.address,
-      canRetrieve: !!localStorage.getItem(STORAGE_KEY)
+      canRetrieve: !!localStorage.getItem(STORAGE_KEY),
+      importedVia: data.importedVia
     })
     
     setPassword(pwd)
@@ -533,13 +567,15 @@ export function WalletProvider({ children }) {
     // Regenerate CSRF token after authentication (prevent session fixation)
     storeCSRFToken()
     logSessionSecurityEvent('wallet_imported', {
-      address: data.accounts[0]?.address
+      address: data.accounts[0]?.address,
+      importedVia: data.importedVia
     })
     
     // Log wallet import
     logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
       address: data.accounts[0]?.address,
-      imported: true
+      imported: true,
+      importedVia: data.importedVia
     })
   }
 
