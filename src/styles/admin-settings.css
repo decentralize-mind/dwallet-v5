@@ -3,7 +3,132 @@
    Enterprise-grade UI components for backend management
    ═══════════════════════════════════════════════════════ */
 
-/* ─── Settings Panel Container ───────────────────────── */
+/* ─── Loading & Error States ─────────────────────────── */
+.admin-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text2);
+}
+
+.admin-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.admin-alert-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.admin-alert-success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+/* ─── Modal Variants ─────────────────────────────────── */
+.admin-modal--large {
+  max-width: 900px;
+  width: 90%;
+}
+
+.admin-modal-header.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border-bottom-color: rgba(245, 158, 11, 0.3);
+}
+
+.admin-modal-header.warning h3 {
+  color: #f59e0b;
+}
+
+/* ─── Empty State ────────────────────────────────────── */
+.admin-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text2);
+}
+
+.admin-empty-state h4 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.admin-empty-state ul {
+  list-style: none;
+  padding: 0;
+}
+
+.admin-empty-state ul li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-empty-state ul li:last-child {
+  border-bottom: none;
+}
+
+/* ─── Form Info Box ──────────────────────────────────── */
+.admin-form-info {
+  padding: 12px 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 12px;
+}
+
+.admin-form-warning.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+/* ─── Token Action Cards ─────────────────────────────── */
 .admin-panel {
   background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
   border: 1px solid var(--border);

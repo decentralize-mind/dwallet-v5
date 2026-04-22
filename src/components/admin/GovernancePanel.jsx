@@ -1,92 +1,322 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { ethers } from 'ethers'
+import { CONTRACT_ADDRESSES } from '../../config/contracts'
+import { DWTToken_ABI, DWTGovernor_ABI, GovernanceHub_ABI } from '../../config/abis'
 import '../../styles/admin-settings.css'
 
 export default function GovernancePanel() {
   const [activeTab, setActiveTab] = useState('proposals')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  
+  // Real blockchain data
+  const [treasury, setTreasury] = useState(null)
+  const [proposals, setProposals] = useState([])
+  const [timelockQueue, setTimelockQueue] = useState([])
+  const [topVoters, setTopVoters] = useState([])
+  const [userVotingPower, setUserVotingPower] = useState('0')
+  const [dwtPrice, setDwtPrice] = useState(0)
+  
+  // Network state
+  const [network, setNetwork] = useState('baseSepolia')
+  const [provider, setProvider] = useState(null)
+  const [signer, setSigner] = useState(null)
+  const [userAddress, setUserAddress] = useState(null)
 
-  // Layer 1: Governance Proposals
-  const proposals = [
-    {
-      id: 1,
-      title: 'Increase Staking Rewards by 2%',
-      status: 'active',
-      votes: { for: 245000, against: 32000, abstain: 15000 },
-      endTime: '2024-01-27 15:00',
-      proposer: '0x742d...bEb',
-      description: 'Proposal to increase DWT staking rewards from 5% to 7% APY'
-    },
-    {
-      id: 2,
-      title: 'Treasury Fund Allocation for Marketing',
-      status: 'active',
-      votes: { for: 180000, against: 45000, abstain: 8000 },
-      endTime: '2024-01-28 12:00',
-      proposer: '0x5aAe...Aed',
-      description: 'Allocate 500,000 DWT from treasury for Q1 marketing campaign'
-    },
-    {
-      id: 3,
-      title: 'Deploy Layer 10 Advanced DeFi',
-      status: 'passed',
-      votes: { for: 520000, against: 12000, abstain: 5000 },
-      endTime: '2024-01-15 18:00',
-      proposer: '0xfB69...d359',
-      description: 'Approve deployment of options and perpetuals contracts'
-    },
-    {
-      id: 4,
-      title: 'Reduce Transaction Fees by 15%',
-      status: 'rejected',
-      votes: { for: 85000, against: 310000, abstain: 22000 },
-      endTime: '2024-01-10 09:00',
-      proposer: '0x1234...5678',
-      description: 'Proposal to reduce DEX transaction fees from 0.3% to 0.255%'
+  useEffect(() => {
+    initializeBlockchain()
+  }, [])
+
+  const initializeBlockchain = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      if (!window.ethereum) {
+        setError('MetaMask not detected. Please install MetaMask to view governance data.')
+        setLoading(false)
+        return
+      }
+
+      const ethProvider = new ethers.BrowserProvider(window.ethereum)
+      const ethSigner = await ethProvider.getSigner()
+      const address = await ethSigner.getAddress()
+      const net = await ethProvider.getNetwork()
+      
+      setProvider(ethProvider)
+      setSigner(ethSigner)
+      setUserAddress(address)
+      
+      // Determine network
+      const chainId = Number(net.chainId)
+      const networkName = chainId === 84532 ? 'baseSepolia' : chainId === 8453 ? 'base' : 'sepolia'
+      setNetwork(networkName)
+
+      // Fetch all data in parallel
+      await Promise.all([
+        fetchTreasuryData(ethProvider, networkName),
+        fetchProposals(ethProvider, networkName),
+        fetchTimelockQueue(ethProvider, networkName),
+        fetchTopVoters(ethProvider, networkName),
+        fetchUserVotingPower(ethSigner, networkName),
+        fetchDWTPrice()
+      ])
+
+      setLoading(false)
+    } catch (err) {
+      console.error('Failed to initialize blockchain:', err)
+      setError(`Failed to connect: ${err.message}`)
+      setLoading(false)
     }
-  ]
+  }
 
-  // Layer 1: Timelock Queue
-  const timelockQueue = [
-    {
-      id: 1,
-      action: 'Update Staking Rewards',
-      scheduledTime: '2024-01-22 15:00',
-      proposalId: 3,
-      status: 'ready',
-      eta: '2 hours'
-    },
-    {
-      id: 2,
-      action: 'Deploy New Liquidity Pool',
-      scheduledTime: '2024-01-23 10:00',
-      proposalId: 5,
-      status: 'queued',
-      eta: '20 hours'
+  const fetchTreasuryData = async (ethProvider, networkName) => {
+    try {
+      const addresses = CONTRACT_ADDRESSES[networkName]
+      if (!addresses) return
+
+      // Get DWT token balance of treasury
+      const dwtContract = new ethers.Contract(addresses.DWT, DWTToken_ABI, ethProvider)
+      const treasuryAddress = process.env.DAO_TREASURY_ADDRESS || addresses.Treasury || '0x0000000000000000000000000000000000000000'
+      
+      const treasuryBalance = await dwtContract.balanceOf(treasuryAddress)
+      const totalSupply = await dwtContract.totalSupply()
+      
+      // Get token price (fallback to mock if API fails)
+      const price = dwtPrice || 3.50 // $3.50 per DWT
+      
+      const balanceFormatted = Number(ethers.formatEther(treasuryBalance))
+      const totalSupplyFormatted = Number(ethers.formatEther(totalSupply))
+      
+      // Mock allocation data (can be fetched from treasury contract if deployed)
+      const allocations = [
+        { category: 'Development', amount: Math.floor(balanceFormatted * 0.427), percentage: 42.7 },
+        { category: 'Marketing', amount: Math.floor(balanceFormatted * 0.256), percentage: 25.6 },
+        { category: 'Liquidity', amount: Math.floor(balanceFormatted * 0.22), percentage: 22.0 },
+        { category: 'Reserve', amount: Math.floor(balanceFormatted * 0.097), percentage: 9.7 }
+      ]
+
+      const allocated = allocations.reduce((sum, a) => sum + a.amount, 0)
+      const available = balanceFormatted - allocated
+      const monthlyBudget = Math.floor(balanceFormatted * 0.04) // 4% monthly
+
+      setTreasury({
+        totalBalance: `${balanceFormatted.toLocaleString()} DWT`,
+        usdValue: `$${(balanceFormatted * price).toLocaleString(undefined, { maximumFractionDigits: 2 })}M`,
+        allocated: `${allocated.toLocaleString()} DWT`,
+        available: `${available.toLocaleString()} DWT`,
+        monthlyBudget: `${monthlyBudget.toLocaleString()} DWT`,
+        allocations
+      })
+    } catch (err) {
+      console.error('Failed to fetch treasury data:', err)
     }
-  ]
+  }
 
-  // Layer 5: veDWT Voting Power
-  const topVoters = [
-    { rank: 1, address: '0x742d...bEb', votingPower: '1,250,000', lockEnd: '2025-06-15', gauge: 'DWT-ETH Pool' },
-    { rank: 2, address: '0x5aAe...Aed', votingPower: '890,000', lockEnd: '2025-03-20', gauge: 'Staking Rewards' },
-    { rank: 3, address: '0xfB69...d359', votingPower: '654,000', lockEnd: '2024-12-30', gauge: 'Treasury Allocation' },
-    { rank: 4, address: '0x9876...dcba', votingPower: '432,000', lockEnd: '2025-01-15', gauge: 'DWT-USDC Pool' },
-    { rank: 5, address: '0x1234...5678', votingPower: '321,000', lockEnd: '2024-11-28', gauge: 'Insurance Fund' }
-  ]
+  const fetchProposals = async (ethProvider, networkName) => {
+    try {
+      const addresses = CONTRACT_ADDRESSES[networkName]
+      if (!addresses?.Governance) return
 
-  // Layer 1, 6: DAO Treasury
-  const treasury = {
-    totalBalance: '12,500,000 DWT',
-    usdValue: '$43.75M',
-    allocated: '8,200,000 DWT',
-    available: '4,300,000 DWT',
-    monthlyBudget: '500,000 DWT',
-    allocations: [
-      { category: 'Development', amount: '3,500,000', percentage: 42.7 },
-      { category: 'Marketing', amount: '2,100,000', percentage: 25.6 },
-      { category: 'Liquidity', amount: '1,800,000', percentage: 22.0 },
-      { category: 'Reserve', amount: '800,000', percentage: 9.7 }
-    ]
+      const governanceContract = new ethers.Contract(addresses.Governance, DWTGovernor_ABI, ethProvider)
+      
+      // Get proposal count (proposalCounter)
+      let proposalCount = 0
+      try {
+        proposalCount = await governanceContract.proposalCounter()
+      } catch {
+        // Fallback: try proposalCount
+        try {
+          proposalCount = await governanceContract.proposalCount()
+        } catch {
+          console.warn('Could not fetch proposal count')
+          return
+        }
+      }
+
+      const proposalList = []
+      
+      // Fetch last 10 proposals (or all if less)
+      const startIndex = Math.max(1, Number(proposalCount) - 9)
+      
+      for (let i = Number(proposalCount); i >= startIndex; i--) {
+        try {
+          const proposal = await governanceContract.proposals(i)
+          const state = await governanceContract.state(i)
+          const votes = await governanceContract.proposalVotes(i)
+          
+          // Map state: 0=Pending, 1=Active, 2=Canceled, 3=Defeated, 4=Succeeded, 5=Queued, 6=Expired, 7=Executed
+          const statusMap = {
+            0: 'pending',
+            1: 'active',
+            2: 'cancelled',
+            3: 'rejected',
+            4: 'passed',
+            5: 'queued',
+            6: 'expired',
+            7: 'executed'
+          }
+          
+          // Extract description from targets[0] calldata or use placeholder
+          let title = `Proposal #${i}`
+          let description = 'Governance proposal'
+          
+          try {
+            const descriptionHash = proposal.description
+            // In real implementation, parse IPFS hash or metadata
+            title = `Proposal #${i}: ${proposal.proposer.slice(0, 6)}...`
+            description = `On-chain governance proposal`
+          } catch {
+            // Use default
+          }
+
+          const forVotes = Number(ethers.formatEther(votes.forVotes))
+          const againstVotes = Number(ethers.formatEther(votes.againstVotes))
+          const abstainVotes = Number(ethers.formatEther(votes.abstainVotes))
+
+          proposalList.push({
+            id: i,
+            title,
+            status: statusMap[state] || 'unknown',
+            votes: {
+              for: forVotes,
+              against: againstVotes,
+              abstain: abstainVotes
+            },
+            endTime: new Date(Number(proposal.endTimestamp) * 1000).toLocaleString(),
+            proposer: `${proposal.proposer.slice(0, 6)}...${proposal.proposer.slice(-4)}`,
+            description
+          })
+        } catch (err) {
+          console.warn(`Failed to fetch proposal ${i}:`, err)
+        }
+      }
+
+      setProposals(proposalList)
+    } catch (err) {
+      console.error('Failed to fetch proposals:', err)
+    }
+  }
+
+  const fetchTimelockQueue = async (ethProvider, networkName) => {
+    try {
+      const addresses = CONTRACT_ADDRESSES[networkName]
+      if (!addresses?.Timelock) return
+
+      const timelockContract = new ethers.Contract(addresses.Timelock, GovernanceHub_ABI, ethProvider)
+      
+      // Get queued transactions (this depends on your timelock implementation)
+      // This is a simplified version - adapt based on your actual timelock ABI
+      const queue = []
+      
+      try {
+        // Example: get queued proposal IDs
+        const queueLength = await timelockQueue.getLength?.() || 0
+        
+        for (let i = 0; i < Math.min(queueLength, 5); i++) {
+          const item = await timelockContract.getQueueItem?.(i)
+          if (item) {
+            const executeAfter = Number(item.executeAfter)
+            const now = Math.floor(Date.now() / 1000)
+            const eta = executeAfter - now
+            
+            queue.push({
+              id: i + 1,
+              action: `Execute Proposal #${item.proposalId || 'Unknown'}`,
+              scheduledTime: new Date(executeAfter * 1000).toLocaleString(),
+              proposalId: item.proposalId || i + 1,
+              status: eta <= 0 ? 'ready' : 'queued',
+              eta: eta > 0 ? `${Math.floor(eta / 3600)} hours` : 'Ready'
+            })
+          }
+        }
+      } catch {
+        console.warn('Could not fetch timelock queue - using fallback')
+      }
+
+      setTimelockQueue(queue)
+    } catch (err) {
+      console.error('Failed to fetch timelock queue:', err)
+    }
+  }
+
+  const fetchTopVoters = async (ethProvider, networkName) => {
+    try {
+      const addresses = CONTRACT_ADDRESSES[networkName]
+      if (!addresses?.VeDWT && !addresses?.DWT) return
+
+      // Use DWT token with voting extension
+      const dwtContract = new ethers.Contract(addresses.DWT, DWTToken_ABI, ethProvider)
+      
+      // Get top voters by checking balances of known addresses
+      // In production, you'd query The Graph or use indexer
+      const sampleAddresses = [
+        '0x742d35Cc6634C0532925a3b844Bc9e7595f5bEb',
+        '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+        '0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359',
+        '0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB',
+        '0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDB'
+      ]
+
+      const voters = []
+      
+      for (const addr of sampleAddresses) {
+        try {
+          const votingPower = await dwtContract.getVotes?.(addr) || 
+                             await dwtContract.balanceOf(addr)
+          
+          const formattedPower = Number(ethers.formatEther(votingPower))
+          
+          if (formattedPower > 0) {
+            voters.push({
+              address: `${addr.slice(0, 6)}...${addr.slice(-4)}`,
+              votingPower: formattedPower.toLocaleString(),
+              lockEnd: '2025-12-31', // Get from VeDWT contract
+              gauge: 'Staking Rewards'
+            })
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch voter ${addr}:`, err)
+        }
+      }
+
+      // Sort by voting power and add rank
+      voters.sort((a, b) => Number(b.votingPower.replace(/,/g, '')) - Number(a.votingPower.replace(/,/g, '')))
+      voters.forEach((v, i) => v.rank = i + 1)
+
+      setTopVoters(voters.slice(0, 10))
+    } catch (err) {
+      console.error('Failed to fetch top voters:', err)
+    }
+  }
+
+  const fetchUserVotingPower = async (ethSigner, networkName) => {
+    try {
+      const addresses = CONTRACT_ADDRESSES[networkName]
+      if (!addresses?.DWT) return
+
+      const dwtContract = new ethers.Contract(addresses.DWT, DWTToken_ABI, ethSigner)
+      const userAddr = await ethSigner.getAddress()
+      
+      const votingPower = await dwtContract.getVotes?.(userAddr) || 
+                         await dwtContract.balanceOf(userAddr)
+      
+      setUserVotingPower(ethers.formatEther(votingPower))
+    } catch (err) {
+      console.error('Failed to fetch user voting power:', err)
+    }
+  }
+
+  const fetchDWTPrice = async () => {
+    try {
+      // Try CoinGecko or other price API
+      // For now, use mock price
+      setDwtPrice(3.50)
+    } catch (err) {
+      console.error('Failed to fetch DWT price:', err)
+      setDwtPrice(3.50)
+    }
   }
 
   const getStatusBadge = (status) => {
@@ -96,16 +326,72 @@ export default function GovernancePanel() {
       rejected: 'admin-status-badge danger',
       queued: 'admin-status-badge info',
       ready: 'admin-status-badge success',
-      executed: 'admin-status-badge success'
+      executed: 'admin-status-badge success',
+      pending: 'admin-status-badge info',
+      cancelled: 'admin-status-badge danger',
+      expired: 'admin-status-badge danger'
     }
     return styles[status] || 'admin-status-badge'
   }
 
   const formatVotes = (votes) => {
     const total = votes.for + votes.against + votes.abstain
+    if (total === 0) return { forPercent: '0.0', againstPercent: '0.0', total: 0 }
+    
     const forPercent = ((votes.for / total) * 100).toFixed(1)
     const againstPercent = ((votes.against / total) * 100).toFixed(1)
     return { forPercent, againstPercent, total }
+  }
+
+  if (loading) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-panel-header">
+          <h2 className="admin-panel-title">🏛️ Governance & DAO</h2>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text2)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+          <p>Loading governance data from blockchain...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-panel-header">
+          <h2 className="admin-panel-title">🏛️ Governance & DAO</h2>
+        </div>
+        <div style={{ 
+          background: 'var(--bg2)', 
+          border: '2px solid var(--danger)', 
+          borderRadius: '12px', 
+          padding: '32px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+          <p style={{ color: 'var(--danger)', marginBottom: '16px' }}>{error}</p>
+          <button 
+            className="admin-action-btn primary"
+            onClick={initializeBlockchain}
+          >
+            <span>🔄</span>
+            <span>Retry Connection</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Show treasury banner only if data loaded
+  const treasuryData = treasury || {
+    totalBalance: 'Loading...',
+    usdValue: 'Loading...',
+    allocated: 'Loading...',
+    available: 'Loading...',
+    monthlyBudget: 'Loading...',
+    allocations: []
   }
 
   return (
@@ -113,7 +399,14 @@ export default function GovernancePanel() {
       <div className="admin-panel-header">
         <div>
           <h2 className="admin-panel-title">🏛️ Governance & DAO</h2>
-          <p className="admin-panel-subtitle">Decentralized governance management across all layers</p>
+          <p className="admin-panel-subtitle">
+            Decentralized governance management across all layers
+            {userAddress && (
+              <span style={{ marginLeft: '12px', fontSize: '13px', color: 'var(--success)' }}>
+                ● Connected: {userVotingPower} DWT voting power
+              </span>
+            )}
+          </p>
         </div>
         <button 
           className="admin-action-btn primary"
@@ -125,47 +418,49 @@ export default function GovernancePanel() {
       </div>
 
       {/* Treasury Overview */}
-      <div className="gov-treasury-banner">
-        <div className="gov-treasury-main">
-          <div className="gov-treasury-item">
-            <p className="gov-treasury-label">Total Treasury</p>
-            <p className="gov-treasury-value">{treasury.totalBalance}</p>
-            <p className="gov-treasury-usd">{treasury.usdValue}</p>
-          </div>
-          <div className="gov-treasury-divider"></div>
-          <div className="gov-treasury-item">
-            <p className="gov-treasury-label">Available</p>
-            <p className="gov-treasury-value success">{treasury.available}</p>
-          </div>
-          <div className="gov-treasury-divider"></div>
-          <div className="gov-treasury-item">
-            <p className="gov-treasury-label">Allocated</p>
-            <p className="gov-treasury-value warning">{treasury.allocated}</p>
-          </div>
-          <div className="gov-treasury-divider"></div>
-          <div className="gov-treasury-item">
-            <p className="gov-treasury-label">Monthly Budget</p>
-            <p className="gov-treasury-value">{treasury.monthlyBudget}</p>
-          </div>
-        </div>
-        
-        <div className="gov-allocation-bars">
-          {treasury.allocations.map((alloc, idx) => (
-            <div key={idx} className="gov-allocation-item">
-              <div className="gov-allocation-header">
-                <span className="gov-allocation-name">{alloc.category}</span>
-                <span className="gov-allocation-amount">{alloc.amount} DWT ({alloc.percentage}%)</span>
-              </div>
-              <div className="gov-allocation-bar">
-                <div 
-                  className="gov-allocation-fill" 
-                  style={{ width: `${alloc.percentage}%` }}
-                ></div>
-              </div>
+      {treasury && (
+        <div className="gov-treasury-banner">
+          <div className="gov-treasury-main">
+            <div className="gov-treasury-item">
+              <p className="gov-treasury-label">Total Treasury</p>
+              <p className="gov-treasury-value">{treasury.totalBalance}</p>
+              <p className="gov-treasury-usd">{treasury.usdValue}</p>
             </div>
-          ))}
+            <div className="gov-treasury-divider"></div>
+            <div className="gov-treasury-item">
+              <p className="gov-treasury-label">Available</p>
+              <p className="gov-treasury-value success">{treasury.available}</p>
+            </div>
+            <div className="gov-treasury-divider"></div>
+            <div className="gov-treasury-item">
+              <p className="gov-treasury-label">Allocated</p>
+              <p className="gov-treasury-value warning">{treasury.allocated}</p>
+            </div>
+            <div className="gov-treasury-divider"></div>
+            <div className="gov-treasury-item">
+              <p className="gov-treasury-label">Monthly Budget</p>
+              <p className="gov-treasury-value">{treasury.monthlyBudget}</p>
+            </div>
+          </div>
+          
+          <div className="gov-allocation-bars">
+            {treasury.allocations.map((alloc, idx) => (
+              <div key={idx} className="gov-allocation-item">
+                <div className="gov-allocation-header">
+                  <span className="gov-allocation-name">{alloc.category}</span>
+                  <span className="gov-allocation-amount">{alloc.amount.toLocaleString()} DWT ({alloc.percentage}%)</span>
+                </div>
+                <div className="gov-allocation-bar">
+                  <div 
+                    className="gov-allocation-fill" 
+                    style={{ width: `${alloc.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="gov-tabs">
@@ -173,13 +468,13 @@ export default function GovernancePanel() {
           className={`gov-tab ${activeTab === 'proposals' ? 'active' : ''}`}
           onClick={() => setActiveTab('proposals')}
         >
-          📋 Proposals
+          📋 Proposals {proposals.length > 0 && `(${proposals.length})`}
         </button>
         <button 
           className={`gov-tab ${activeTab === 'timelock' ? 'active' : ''}`}
           onClick={() => setActiveTab('timelock')}
         >
-          ⏱️ Timelock Queue
+          ⏱️ Timelock Queue {timelockQueue.length > 0 && `(${timelockQueue.length})`}
         </button>
         <button 
           className={`gov-tab ${activeTab === 'voting' ? 'active' : ''}`}
@@ -193,7 +488,23 @@ export default function GovernancePanel() {
       {activeTab === 'proposals' && (
         <div className="gov-section">
           <h3 className="gov-section-title">Active & Recent Proposals</h3>
-          <div className="gov-proposals-list">
+          {proposals.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: 'var(--text2)',
+              background: 'var(--bg2)',
+              borderRadius: '12px',
+              border: '2px dashed var(--border)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <p>No proposals found</p>
+              <p style={{ fontSize: '13px', marginTop: '8px' }}>
+                Create the first governance proposal to get started
+              </p>
+            </div>
+          ) : (
+            <div className="gov-proposals-list">
             {proposals.map(proposal => {
               const { forPercent, againstPercent, total } = formatVotes(proposal.votes)
               return (
@@ -227,7 +538,8 @@ export default function GovernancePanel() {
                 </div>
               )
             })}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -235,7 +547,20 @@ export default function GovernancePanel() {
       {activeTab === 'timelock' && (
         <div className="gov-section">
           <h3 className="gov-section-title">Timelock Queue</h3>
-          <div className="gov-timelock-list">
+          {timelockQueue.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: 'var(--text2)',
+              background: 'var(--bg2)',
+              borderRadius: '12px',
+              border: '2px dashed var(--border)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏱️</div>
+              <p>No proposals in timelock queue</p>
+            </div>
+          ) : (
+            <div className="gov-timelock-list">
             {timelockQueue.map(item => (
               <div key={item.id} className="gov-timelock-card">
                 <div className="gov-timelock-header">
@@ -264,7 +589,8 @@ export default function GovernancePanel() {
                 )}
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -272,7 +598,23 @@ export default function GovernancePanel() {
       {activeTab === 'voting' && (
         <div className="gov-section">
           <h3 className="gov-section-title">Top veDWT Voters</h3>
-          <div className="gov-table-container">
+          {topVoters.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: 'var(--text2)',
+              background: 'var(--bg2)',
+              borderRadius: '12px',
+              border: '2px dashed var(--border)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗳️</div>
+              <p>No voting data available</p>
+              <p style={{ fontSize: '13px', marginTop: '8px' }}>
+                Vote locking and delegation will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="gov-table-container">
             <table className="gov-table">
               <thead>
                 <tr>
@@ -295,7 +637,8 @@ export default function GovernancePanel() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
       )}
 

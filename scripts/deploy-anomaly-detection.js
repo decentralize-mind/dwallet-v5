@@ -105,8 +105,9 @@ async function main() {
   console.log("═".repeat(60) + "\n");
   
   // Save addresses to file for easy access
+  const networkName = hre.network.name;
   const addresses = {
-    network: "localhost",
+    network: networkName,
     anomalyDetector: adAddress,
     dynamicFeeController: dfAddress,
     layer7Security: l7Address,
@@ -114,11 +115,18 @@ async function main() {
     timestamp: new Date().toISOString()
   };
   
+  const filename = `./deployed-anomaly-${networkName}-${Date.now()}.json`;
   fs.writeFileSync(
-    "./deployed-addresses.json",
+    filename,
     JSON.stringify(addresses, null, 2)
   );
-  console.log("💾 Addresses saved to: deployed-addresses.json");
+  console.log(`💾 Addresses saved to: ${filename}`);
+  
+  // Also update .env.example with the new addresses
+  console.log('\n📝 Add these to your .env file:');
+  console.log(`ANOMALY_DETECTOR_ADDRESS=${adAddress}`);
+  console.log(`DYNAMIC_FEE_CONTROLLER_ADDRESS=${dfAddress}`);
+  console.log(`SECURITY_CONTROLLER_ADDRESS=${l7Address}`);
 }
 
 main()

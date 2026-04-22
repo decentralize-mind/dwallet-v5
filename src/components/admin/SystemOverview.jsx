@@ -15,6 +15,12 @@ export default function SystemOverview() {
     uptime: '99.9%',
     lastUpdate: new Date()
   })
+  const [systemHealth, setSystemHealth] = useState({
+    apiGateway: { status: 'Checking...' },
+    smartContracts: { status: 'Checking...' },
+    database: { status: 'Checking...' },
+    monitoring: { status: 'Checking...' }
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -35,6 +41,17 @@ export default function SystemOverview() {
           lastUpdate: new Date()
         })
       }
+      
+      // Also fetch system health
+      try {
+        const healthResponse = await adminAPI.getSystemHealth()
+        if (healthResponse.success) {
+          setSystemHealth(healthResponse.data)
+        }
+      } catch (healthErr) {
+        console.error('Failed to load system health:', healthErr)
+      }
+      
       setError(null)
     } catch (err) {
       console.error('Failed to load stats:', err)
@@ -181,15 +198,15 @@ export default function SystemOverview() {
                 <span className="admin-health-icon">✓</span>
                 <span className="admin-health-label">API Gateway</span>
               </td>
-              <td className="admin-health-status-cell healthy">
-                Operational
+              <td className={`admin-health-status-cell ${systemHealth.apiGateway.status === 'Operational' ? 'healthy' : 'warning'}`}>
+                {systemHealth.apiGateway.status}
               </td>
               <td className="admin-health-cell">
                 <span className="admin-health-icon">✓</span>
                 <span className="admin-health-label">Smart Contracts</span>
               </td>
-              <td className="admin-health-status-cell healthy">
-                Active
+              <td className={`admin-health-status-cell ${systemHealth.smartContracts.status === 'Active' ? 'healthy' : 'warning'}`}>
+                {systemHealth.smartContracts.status}
               </td>
             </tr>
             <tr>
@@ -197,15 +214,15 @@ export default function SystemOverview() {
                 <span className="admin-health-icon">✓</span>
                 <span className="admin-health-label">Database</span>
               </td>
-              <td className="admin-health-status-cell healthy">
-                Connected
+              <td className={`admin-health-status-cell ${systemHealth.database.status === 'Connected' ? 'healthy' : 'warning'}`}>
+                {systemHealth.database.status}
               </td>
               <td className="admin-health-cell">
                 <span className="admin-health-icon">✓</span>
                 <span className="admin-health-label">Monitoring</span>
               </td>
-              <td className="admin-health-status-cell healthy">
-                Running
+              <td className={`admin-health-status-cell ${systemHealth.monitoring.status === 'Running' ? 'healthy' : 'warning'}`}>
+                {systemHealth.monitoring.status}
               </td>
             </tr>
           </tbody>

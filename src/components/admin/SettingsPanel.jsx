@@ -37,12 +37,39 @@ export default function SettingsPanel() {
   const loadSettings = async () => {
     try {
       setLoading(true)
-      // In production, fetch from backend
-      // const response = await adminAPI.get('/api/admin/settings')
-      // setSettings(response.data)
+      
+      // Check if authenticated first
+      if (!adminAPI.isAuthenticated()) {
+        setError('Please login again to view settings')
+        return
+      }
+      
+      const response = await adminAPI.get('/api/admin/settings')
+      
+      if (response.success) {
+        setSettings({
+          maintenanceMode: response.data.maintenance_mode ?? false,
+          allowNewUsers: response.data.allow_new_users ?? true,
+          maxTransactionLimit: response.data.max_transaction_limit ?? '100000',
+          minTransactionLimit: response.data.min_transaction_limit ?? '1',
+          gasPriceMultiplier: response.data.gas_price_multiplier ?? '1.2',
+          enableNotifications: response.data.enable_notifications ?? true,
+          enableAnalytics: response.data.enable_analytics ?? true,
+          sessionTimeout: response.data.session_timeout ?? '30',
+          maxLoginAttempts: response.data.max_login_attempts ?? '5',
+          apiRateLimit: response.data.api_rate_limit ?? '1000'
+        })
+      }
       setError(null)
     } catch (err) {
       console.error('Failed to load settings:', err)
+      
+      // Better error messages
+      if (err.message.includes('Not authenticated') || err.message.includes('Invalid token')) {
+        setError('⚠️ Session expired. Please logout and login again.')
+      } else {
+        setError('Failed to load settings: ' + err.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -76,12 +103,33 @@ export default function SettingsPanel() {
   const handleSave = async () => {
     try {
       setSaveLoading(true)
-      // In production: save to backend
-      // await adminAPI.put('/api/admin/settings', settings)
       
-      console.log('Saving settings:', settings)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      // Convert frontend state to backend format
+      const settingsData = {
+        maintenance_mode: settings.maintenanceMode,
+        allow_new_users: settings.allowNewUsers,
+        max_transaction_limit: parseFloat(settings.maxTransactionLimit),
+        min_transaction_limit: parseFloat(settings.minTransactionLimit),
+        gas_price_multiplier: parseFloat(settings.gasPriceMultiplier),
+        enable_notifications: settings.enableNotifications,
+        enable_analytics: settings.enableAnalytics,
+        session_timeout: parseInt(settings.sessionTimeout),
+        max_login_attempts: parseInt(settings.maxLoginAttempts),
+        api_rate_limit: parseInt(settings.apiRateLimit)
+      }
+
+      // Save to backend
+      const response = await adminAPI.put('/api/admin/settings', settingsData)
+      
+      if (response.success) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+        
+        // Show blockchain transaction hash if available
+        if (response.blockchainTxHash) {
+          console.log('Blockchain transaction:', response.blockchainTxHash)
+        }
+      }
     } catch (err) {
       console.error('Failed to save settings:', err)
       alert('Failed to save settings: ' + err.message)
@@ -172,8 +220,24 @@ export default function SettingsPanel() {
     <div className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">Settings & Configuration</h2>
-        {saved && <span className="admin-panel-badge success">✓ Saved</span>}
+        <div className="admin-panel-badges">
+          {saved && <span className="admin-panel-badge success">✓ Saved</span>}
+          {loading && <span className="admin-panel-badge">Loading...</span>}
+        </div>
       </div>
+
+      {error && (
+        <div className="admin-error" style={{
+          padding: '12px 16px',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid var(--red)',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          color: 'var(--red)'
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* System Settings */}
       <div className="admin-section">
@@ -511,10 +575,18 @@ export default function SettingsPanel() {
 
       {/* Action Buttons */}
       <div className="admin-actions-footer">
-        <button className="admin-btn primary" onClick={handleSave}>
-          💾 Save All Settings
+        <button 
+          className="admin-btn primary" 
+          onClick={handleSave}
+          disabled={saveLoading || loading}
+        >
+          {saveLoading ? '💾 Saving...' : '💾 Save All Settings'}
         </button>
-        <button className="admin-btn secondary" onClick={handleReset}>
+        <button 
+          className="admin-btn secondary" 
+          onClick={handleReset}
+          disabled={saveLoading || loading}
+        >
           🔄 Reset to Defaults
         </button>
         <button className="admin-btn warning">

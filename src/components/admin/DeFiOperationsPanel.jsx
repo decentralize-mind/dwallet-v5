@@ -1,107 +1,117 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import adminAPI from '../../services/adminAPI'
 import '../../styles/admin-settings.css'
 
 export default function DeFiOperationsPanel() {
   const [activeTab, setActiveTab] = useState('staking')
+  const [defiData, setDefiData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Layer 4: Staking Pools
-  const stakingPools = [
-    {
-      name: 'DWT Auto-Compound',
-      tvl: '15,200,000 DWT',
-      apy: '12.5%',
-      stakers: 1247,
-      status: 'active',
-      lockPeriod: '30 days',
-      rewards: 'DWT'
-    },
-    {
-      name: 'DWT → ETH Rewards',
-      tvl: '8,500,000 DWT',
-      apy: '8.3%',
-      stakers: 892,
-      status: 'active',
-      lockPeriod: '90 days',
-      rewards: 'ETH'
-    },
-    {
-      name: 'veDWT Governance',
-      tvl: '22,000,000 DWT',
-      apy: 'Variable',
-      stakers: 456,
-      status: 'active',
-      lockPeriod: '1-4 years',
-      rewards: 'Voting Power'
-    }
-  ]
+  // Fetch real DeFi data on component mount
+  useEffect(() => {
+    fetchDeFiData()
+  }, [])
 
-  // Layer 2: DEX Pools
-  const dexPools = [
-    { pair: 'DWT/ETH', tvl: '$12.5M', volume24h: '$2.3M', fees24h: '$6,900', apr: '18.5%' },
-    { pair: 'DWT/USDC', tvl: '$8.2M', volume24h: '$1.8M', fees24h: '$5,400', apr: '15.2%' },
-    { pair: 'DWT/DAI', tvl: '$3.1M', volume24h: '$890K', fees24h: '$2,670', apr: '12.8%' },
-    { pair: 'DWT/WBTC', tvl: '$5.6M', volume24h: '$1.2M', fees24h: '$3,600', apr: '21.3%' }
-  ]
-
-  // Layer 9: Lending Market
-  const lendingStats = {
-    totalDeposited: '$45.2M',
-    totalBorrowed: '$28.7M',
-    utilizationRate: '63.5%',
-    markets: [
-      { asset: 'DWT', deposited: '12.5M', borrowed: '7.8M', supplyAPY: '4.2%', borrowAPY: '6.8%' },
-      { asset: 'ETH', deposited: '8,234', borrowed: '5,120', supplyAPY: '2.1%', borrowAPY: '3.9%' },
-      { asset: 'USDC', deposited: '15.2M', borrowed: '9.8M', supplyAPY: '5.5%', borrowAPY: '8.2%' }
-    ]
-  }
-
-  // Layer 10: Advanced DeFi
-  const advancedDeFi = {
-    options: {
-      totalVolume: '$1.2M',
-      openPositions: 234,
-      totalPremiums: '$45,000'
-    },
-    perpetuals: {
-      openInterest: '$8.5M',
-      activeTraders: 567,
-      fundingRate: '0.01%'
-    },
-    predictionMarkets: {
-      activeMarkets: 12,
-      totalLiquidity: '$2.3M',
-      resolvedToday: 5
-    },
-    yieldVaults: {
-      totalTVL: '$18.5M',
-      activeVaults: 8,
-      avgAPY: '15.3%'
+  const fetchDeFiData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await adminAPI.getDeFiStats()
+      
+      if (response.success) {
+        setDefiData(response.data)
+      } else {
+        setError('Failed to fetch DeFi data')
+      }
+    } catch (err) {
+      console.error('Error fetching DeFi data:', err)
+      setError(err.message || 'Failed to load DeFi data')
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Layer 9: NFT Membership
-  const nftMembership = {
-    totalMinted: 5000,
-    activeMembers: 4234,
-    floorPrice: '2.5 ETH',
-    tradingVolume: '12,500 ETH',
-    tiers: [
-      { tier: 'Diamond', holders: 234, benefits: '0% fees, priority support' },
-      { tier: 'Gold', holders: 892, benefits: '25% fee discount' },
-      { tier: 'Silver', holders: 1567, benefits: '10% fee discount' },
-      { tier: 'Bronze', holders: 1541, benefits: 'Early access' }
-    ]
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2 className="admin-panel-title">💰 DeFi Operations</h2>
+            <p className="admin-panel-subtitle">Loading DeFi data...</p>
+          </div>
+        </div>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Fetching real-time DeFi statistics...</p>
+        </div>
+      </div>
+    )
   }
 
-  // Layer 9: Affiliate Rewards
-  const affiliateStats = {
-    totalAffiliates: 2341,
-    totalRewardsPaid: '450,000 DWT',
-    topReferrers: [
-      { address: '0x742d...bEb', referrals: 234, rewards: '45,000 DWT' },
-      { address: '0x5aAe...Aed', referrals: 189, rewards: '38,000 DWT' },
-      { address: '0xfB69...d359', referrals: 156, rewards: '31,000 DWT' }
-    ]
+  // Show error state
+  if (error && !defiData) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h2 className="admin-panel-title">💰 DeFi Operations</h2>
+            <p className="admin-panel-subtitle">Error loading data</p>
+          </div>
+          <button className="admin-action-btn primary" onClick={fetchDeFiData}>
+            🔄 Retry
+          </button>
+        </div>
+        <div className="error-container">
+          <p className="error-message">{error}</p>
+          <button className="admin-action-btn" onClick={fetchDeFiData}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Use real data or fallback
+  const stakingPools = defiData?.stakingPools || []
+  const dexPools = defiData?.dexPools || []
+  const lendingStats = defiData?.lendingStats || {
+    totalDeposited: '$0',
+    totalBorrowed: '$0',
+    utilizationRate: '0%',
+    markets: []
+  }
+
+  // Calculate metrics from real data
+  const totalTVL = defiData?.totalTVL || 0
+  const volume24h = defiData?.volume24h || 0
+  const fees24h = defiData?.fees24h || 0
+  const activeUsers = defiData?.activeUsers || 0
+
+  // Format TVL to USD
+  const formatTVL = (tvl) => {
+    if (tvl >= 1000000) {
+      return `$${(tvl / 1000000).toFixed(1)}M`
+    } else if (tvl >= 1000) {
+      return `$${(tvl / 1000).toFixed(1)}K`
+    }
+    return `$${tvl.toFixed(2)}`
+  }
+
+  // Format volume
+  const formatVolume = (vol) => {
+    if (vol >= 1000000) {
+      return `$${(vol / 1000000).toFixed(1)}M`
+    } else if (vol >= 1000) {
+      return `$${(vol / 1000).toFixed(1)}K`
+    }
+    return `$${vol.toFixed(2)}`
+  }
+
+  // Format fees
+  const formatFees = (fees) => {
+    return `$${fees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (
@@ -119,7 +129,7 @@ export default function DeFiOperationsPanel() {
           <div className="defi-metric-icon">💎</div>
           <div className="defi-metric-content">
             <p className="defi-metric-label">Total TVL</p>
-            <p className="defi-metric-value">$89.5M</p>
+            <p className="defi-metric-value">{formatTVL(totalTVL)}</p>
             <p className="defi-metric-change success">↑ 12.3%</p>
           </div>
         </div>
@@ -128,7 +138,7 @@ export default function DeFiOperationsPanel() {
           <div className="defi-metric-icon">📊</div>
           <div className="defi-metric-content">
             <p className="defi-metric-label">24h Volume</p>
-            <p className="defi-metric-value">$6.2M</p>
+            <p className="defi-metric-value">{formatVolume(volume24h)}</p>
             <p className="defi-metric-change success">↑ 8.7%</p>
           </div>
         </div>
@@ -137,7 +147,7 @@ export default function DeFiOperationsPanel() {
           <div className="defi-metric-icon">💰</div>
           <div className="defi-metric-content">
             <p className="defi-metric-label">24h Fees</p>
-            <p className="defi-metric-value">$18,570</p>
+            <p className="defi-metric-value">{formatFees(fees24h)}</p>
             <p className="defi-metric-change success">↑ 15.2%</p>
           </div>
         </div>
@@ -146,7 +156,7 @@ export default function DeFiOperationsPanel() {
           <div className="defi-metric-icon">👥</div>
           <div className="defi-metric-content">
             <p className="defi-metric-label">Active Users</p>
-            <p className="defi-metric-value">3,847</p>
+            <p className="defi-metric-value">{activeUsers.toLocaleString()}</p>
             <p className="defi-metric-change success">↑ 5.1%</p>
           </div>
         </div>
@@ -200,15 +210,15 @@ export default function DeFiOperationsPanel() {
                 <div className="defi-staking-stats">
                   <div className="defi-staking-stat">
                     <span className="defi-staking-label">TVL</span>
-                    <span className="defi-staking-value">{pool.tvl}</span>
+                    <span className="defi-staking-value">{pool.tvlFormatted || pool.tvl}</span>
                   </div>
                   <div className="defi-staking-stat">
                     <span className="defi-staking-label">APY</span>
-                    <span className="defi-staking-value success">{pool.apy}</span>
+                    <span className="defi-staking-value success">{pool.apy === 'Variable' ? 'Variable' : `${pool.apy}%`}</span>
                   </div>
                   <div className="defi-staking-stat">
                     <span className="defi-staking-label">Stakers</span>
-                    <span className="defi-staking-value">{pool.stakers.toLocaleString()}</span>
+                    <span className="defi-staking-value">{Number(pool.stakers).toLocaleString()}</span>
                   </div>
                   <div className="defi-staking-stat">
                     <span className="defi-staking-label">Lock Period</span>

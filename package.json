@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-3000} --host",
-    "admin:server": "node server/admin-server.js",
+    "admin:server": "node server/enterprise-secure-server.cjs",
+    "cache:test": "node test-redis-caching.js",
+    "cache:stats": "echo 'Use: curl -H \"Authorization: Bearer YOUR_TOKEN\" http://localhost:3001/api/admin/cache/stats'",
+    "cache:clear": "echo 'Use: curl -X POST -H \"Authorization: Bearer YOUR_TOKEN\" -H \"Content-Type: application/json\" -d \"{\\\"pattern\\\":\\\"price:*\\\"}\" http://localhost:3001/api/admin/cache/clear'",
+    "load:test": "node load-test.js",
     "backup": "./scripts/backup-admin.sh full",
     "backup:config": "./scripts/backup-admin.sh config",
     "backup:logs": "./scripts/backup-admin.sh logs",
@@ -83,7 +87,8 @@
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",

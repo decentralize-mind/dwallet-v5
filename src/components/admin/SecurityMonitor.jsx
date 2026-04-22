@@ -9,11 +9,34 @@ export default function SecurityMonitor() {
   const [circuitBreakerStatus, setCircuitBreakerStatus] = useState('Inactive')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Real-time security metrics
+  const [securityMetrics, setSecurityMetrics] = useState({
+    activeMonitors: 0,
+    unresolvedAlerts: 0,
+    blockedThreats: 0,
+    checksLast24h: 0
+  })
+  
+  // Anomaly detection thresholds
+  const [thresholds, setThresholds] = useState({
+    volumeSpike: 5.0,
+    txFrequency: 3.0,
+    priceDeviation: 3,
+    whaleAlert: 100000
+  })
+  const [thresholdsLoading, setThresholdsLoading] = useState(false)
+  const [thresholdsSaving, setThresholdsSaving] = useState(false)
 
   useEffect(() => {
     loadSecurityData()
+    loadSecurityMetrics()
+    loadThresholds()
     // Refresh every 60 seconds
-    const interval = setInterval(loadSecurityData, 60000)
+    const interval = setInterval(() => {
+      loadSecurityData()
+      loadSecurityMetrics()
+    }, 60000)
     return () => clearInterval(interval)
   }, [])
 
@@ -31,6 +54,43 @@ export default function SecurityMonitor() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSecurityMetrics = async () => {
+    try {
+      const metricsRes = await adminAPI.get('/api/admin/security/metrics')
+      
+      if (metricsRes.success) {
+        setSecurityMetrics(metricsRes.data)
+        // Update unresolved alerts from metrics if available
+        if (metricsRes.data.unresolvedAlerts !== undefined) {
+          setAlerts(prev => {
+            const unresolvedCount = prev.filter(a => !a.resolved).length
+            // If API provides count, trust it over local calculation
+            if (unresolvedCount !== metricsRes.data.unresolvedAlerts) {
+              // The count is managed server-side, just update the display
+            }
+          })
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load security metrics:', err)
+    }
+  }
+
+  const loadThresholds = async () => {
+    try {
+      setThresholdsLoading(true)
+      const thresholdsRes = await adminAPI.get('/api/admin/security/thresholds')
+      
+      if (thresholdsRes.success) {
+        setThresholds(thresholdsRes.data)
+      }
+    } catch (err) {
+      console.error('Failed to load thresholds:', err)
+    } finally {
+      setThresholdsLoading(false)
     }
   }
 
@@ -90,6 +150,49 @@ export default function SecurityMonitor() {
         alert('Failed to reset circuit breaker: ' + err.message)
       }
     }
+  }
+
+  const handleSaveThresholds = async () => {
+    try {
+      setThresholdsSaving(true)
+      
+      // Validate thresholds
+      if (thresholds.volumeSpike < 1 || thresholds.volumeSpike > 20) {
+        alert('Volume Spike must be between 1.0 and 20.0')
+        return
+      }
+      if (thresholds.txFrequency < 1 || thresholds.txFrequency > 10) {
+        alert('TX Frequency must be between 1.0 and 10.0')
+        return
+      }
+      if (thresholds.priceDeviation < 1 || thresholds.priceDeviation > 50) {
+        alert('Price Deviation must be between 1% and 50%')
+        return
+      }
+      if (thresholds.whaleAlert < 1000 || thresholds.whaleAlert > 10000000) {
+        alert('Whale Alert must be between $1,000 and $10,000,000')
+        return
+      }
+
+      const result = await adminAPI.post('/api/admin/security/thresholds', thresholds)
+      
+      if (result.success) {
+        alert('✅ Thresholds updated successfully!')
+        loadThresholds() // Reload to confirm
+      }
+    } catch (err) {
+      console.error('Failed to save thresholds:', err)
+      alert('Failed to save thresholds: ' + err.message)
+    } finally {
+      setThresholdsSaving(false)
+    }
+  }
+
+  const handleThresholdChange = (key, value) => {
+    setThresholds(prev => ({
+      ...prev,
+      [key]: parseFloat(value) || 0
+    }))
   }
 
   const threatConfig = getThreatLevelConfig(threatLevel)
@@ -168,14 +271,14 @@ export default function SecurityMonitor() {
               <span className="admin-metric-label">Active Monitors</span>
             </td>
             <td className="admin-metric-value-cell">
-              12
+              {securityMetrics.activeMonitors}
             </td>
             <td className="admin-metric-cell">
               <span className="admin-metric-icon">⚠️</span>
               <span className="admin-metric-label">Unresolved Alerts</span>
             </td>
             <td className="admin-metric-value-cell">
-              {alerts.filter(a => !a.resolved).length}
+              {securityMetrics.unresolvedAlerts}
             </td>
           </tr>
           <tr>
@@ -184,14 +287,14 @@ export default function SecurityMonitor() {
               <span className="admin-metric-label">Blocked Threats</span>
             </td>
             <td className="admin-metric-value-cell">
-              47
+              {securityMetrics.blockedThreats}
             </td>
             <td className="admin-metric-cell">
               <span className="admin-metric-icon">📊</span>
               <span className="admin-metric-label">Checks (24h)</span>
             </td>
             <td className="admin-metric-value-cell">
-              15,234
+              {securityMetrics.checksLast24h.toLocaleString()}
             </td>
           </tr>
         </tbody>
@@ -235,53 +338,74 @@ export default function SecurityMonitor() {
       {/* Anomaly Detection Settings */}
       <div className="admin-section">
         <h3 className="admin-section-title">Anomaly Detection Thresholds</h3>
-        <div className="admin-thresholds-grid">
-          <div className="admin-threshold-item">
-            <label className="admin-threshold-label">Volume Spike</label>
-            <input 
-              type="number" 
-              className="admin-threshold-input"
-              defaultValue="5.0"
-              step="0.5"
-            />
-            <span className="admin-threshold-unit">x baseline</span>
-          </div>
+        {thresholdsLoading ? (
+          <div className="admin-loading">Loading thresholds...</div>
+        ) : (
+          <div className="admin-thresholds-grid">
+            <div className="admin-threshold-item">
+              <label className="admin-threshold-label">Volume Spike</label>
+              <input 
+                type="number" 
+                className="admin-threshold-input"
+                value={thresholds.volumeSpike}
+                onChange={(e) => handleThresholdChange('volumeSpike', e.target.value)}
+                step="0.5"
+                min="1"
+                max="20"
+              />
+              <span className="admin-threshold-unit">x baseline</span>
+            </div>
 
-          <div className="admin-threshold-item">
-            <label className="admin-threshold-label">TX Frequency</label>
-            <input 
-              type="number" 
-              className="admin-threshold-input"
-              defaultValue="3.0"
-              step="0.5"
-            />
-            <span className="admin-threshold-unit">x baseline</span>
-          </div>
+            <div className="admin-threshold-item">
+              <label className="admin-threshold-label">TX Frequency</label>
+              <input 
+                type="number" 
+                className="admin-threshold-input"
+                value={thresholds.txFrequency}
+                onChange={(e) => handleThresholdChange('txFrequency', e.target.value)}
+                step="0.5"
+                min="1"
+                max="10"
+              />
+              <span className="admin-threshold-unit">x baseline</span>
+            </div>
 
-          <div className="admin-threshold-item">
-            <label className="admin-threshold-label">Price Deviation</label>
-            <input 
-              type="number" 
-              className="admin-threshold-input"
-              defaultValue="3"
-              step="1"
-            />
-            <span className="admin-threshold-unit">%</span>
-          </div>
+            <div className="admin-threshold-item">
+              <label className="admin-threshold-label">Price Deviation</label>
+              <input 
+                type="number" 
+                className="admin-threshold-input"
+                value={thresholds.priceDeviation}
+                onChange={(e) => handleThresholdChange('priceDeviation', e.target.value)}
+                step="1"
+                min="1"
+                max="50"
+              />
+              <span className="admin-threshold-unit">%</span>
+            </div>
 
-          <div className="admin-threshold-item">
-            <label className="admin-threshold-label">Whale Alert</label>
-            <input 
-              type="number" 
-              className="admin-threshold-input"
-              defaultValue="100000"
-              step="10000"
-            />
-            <span className="admin-threshold-unit">USD</span>
+            <div className="admin-threshold-item">
+              <label className="admin-threshold-label">Whale Alert</label>
+              <input 
+                type="number" 
+                className="admin-threshold-input"
+                value={thresholds.whaleAlert}
+                onChange={(e) => handleThresholdChange('whaleAlert', e.target.value)}
+                step="10000"
+                min="1000"
+                max="10000000"
+              />
+              <span className="admin-threshold-unit">USD</span>
+            </div>
           </div>
-        </div>
-        <button className="admin-btn primary" style={{ marginTop: '16px' }}>
-          💾 Save Thresholds
+        )}
+        <button 
+          className="admin-btn primary" 
+          style={{ marginTop: '16px' }}
+          onClick={handleSaveThresholds}
+          disabled={thresholdsSaving || thresholdsLoading}
+        >
+          {thresholdsSaving ? '💾 Saving...' : '💾 Save Thresholds'}
         </button>
       </div>
     </div>

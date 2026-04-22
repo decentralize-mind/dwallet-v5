@@ -87,7 +87,7 @@ export default function UserManagement() {
     <div className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">User Management</h2>
-        <span className="admin-panel-badge">{users.length} Users</span>
+        <span className="admin-panel-badge">{loading ? 'Loading...' : `${totalUsers} Users`}</span>
       </div>
 
       {/* Search and Filters */}

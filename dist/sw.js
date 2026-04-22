@@ -84,10 +84,44 @@ self.addEventListener('notificationclose', event => {
 })
 
 // Fetch event - serve from cache when offline
+// IMPORTANT: Do NOT cache API requests or backend calls
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request)
-    })
-  )
+  // Skip API requests - let them go directly to the server
+  const url = new URL(event.request.url)
+  
+  // Don't intercept API calls, backend requests, or WebSocket
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    event.request.url.includes('3001') ||
+    event.request.method !== 'GET'
+  ) {
+    // Let browser handle it normally
+    return
+  }
+
+  // Only cache static assets (CSS, JS, images, fonts)
+  if (event.request.destination === 'document' || 
+      event.request.destination === 'script' ||
+      event.request.destination === 'style' ||
+      event.request.destination === 'image' ||
+      event.request.destination === 'font') {
+    event.respondWith(
+      caches.match(event.request).then(response => {
+        return response || fetch(event.request).then(fetchResponse => {
+          // Only cache successful responses
+          if (!fetchResponse || fetchResponse.status !== 200) {
+            return fetchResponse
+          }
+          // Clone the response (can only consume once)
+          const responseToCache = fetchResponse.clone()
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache)
+          })
+          return fetchResponse
+        })
+      })
+    )
+  }
 })

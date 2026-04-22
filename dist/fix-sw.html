@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Service Worker - dWallet</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        h1 {
+            color: #00d4ff;
+        }
+        .success {
+            background: #1a4d2e;
+            color: #4ade80;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #4d1a1a;
+            color: #f87171;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #00b8d4;
+        }
+        .info {
+            background: #1a3a4d;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            padding: 0;
+        }
+        .steps li {
+            counter-increment: step;
+            margin: 15px 0;
+            padding-left: 40px;
+            position: relative;
+        }
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            background: #00d4ff;
+            color: #000;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Service Worker Fix</h1>
+    
+    <div class="info">
+        <strong>Problem:</strong> The service worker is caching API requests and causing <code>FetchEvent.respondWith</code> errors.
+    </div>
+
+    <h2>Automatic Fix</h2>
+    <p>Click the button below to unregister the service worker:</p>
+    
+    <button onclick="unregisterSW()">🗑️ Unregister Service Worker</button>
+    <button onclick="clearCache()">🧹 Clear All Cache</button>
+    <button onclick="doBoth()">⚡ Do Both (Recommended)</button>
+    
+    <div id="status"></div>
+
+    <h2>Manual Fix (If Automatic Doesn't Work)</h2>
+    <ol class="steps">
+        <li>Open DevTools: <code>Cmd + Option + I</code> (Mac) or <code>F12</code> (Windows)</li>
+        <li>Go to <strong>Application</strong> tab</li>
+        <li>Click <strong>Service Workers</strong> in left sidebar</li>
+        <li>Click <strong>Unregister</strong> on any service workers listed</li>
+        <li>Click <strong>Clear storage</strong> button</li>
+        <li><strong>Hard refresh</strong>: <code>Cmd + Shift + R</code> (Mac) or <code>Ctrl + Shift + R</code> (Windows)</li>
+        <li>Try logging in again with your admin key</li>
+    </ol>
+
+    <h2>After Fixing</h2>
+    <div class="info">
+        <strong>Admin Key:</strong><br>
+        <code>4426de8cded7656fc186228298104e293b7e338bee9ea680058515983abf1987</code><br><br>
+        Go to: <a href="http://localhost:5173" style="color: #00d4ff;">http://localhost:5173</a>
+    </div>
+
+    <script>
+        async function unregisterSW() {
+            const status = document.getElementById('status');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    if (registrations.length === 0) {
+                        status.innerHTML = '<div class="success">✅ No service workers found. You\'re good to go!</div>';
+                        return;
+                    }
+
+                    for (const registration of registrations) {
+                        await registration.unregister();
+                        console.log('[FIX] Service worker unregistered:', registration.scope);
+                    }
+                    
+                    status.innerHTML = '<div class="success">✅ Service worker(s) unregistered successfully!</div>';
+                } catch (error) {
+                    status.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                }
+            } else {
+                status.innerHTML = '<div class="error">❌ Service Workers not supported in this browser</div>';
+            }
+        }
+
+        async function clearCache() {
+            const status = document.getElementById('status');
+            
+            try {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    
+                    if (cacheNames.length === 0) {
+                        status.innerHTML = '<div class="success">✅ No caches found. You\'re good to go!</div>';
+                        return;
+                    }
+
+                    for (const cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('[FIX] Cache deleted:', cacheName);
+                    }
+                    
+                    status.innerHTML = '<div class="success">✅ Cache(s) cleared successfully!</div>';
+                } else {
+                    status.innerHTML = '<div class="error">❌ Cache API not supported</div>';
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function doBoth() {
+            const status = document.getElementById('status');
+            status.innerHTML = '<div class="info">⏳ Unregistering service worker and clearing cache...</div>';
+            
+            await unregisterSW();
+            await clearCache();
+            
+            status.innerHTML += '<div class="success"><strong>✅ Done!</strong><br><br>Now:<br>1. Close this tab<br>2. Go to <a href="http://localhost:5173" style="color: #00d4ff;">http://localhost:5173</a><br>3. Hard refresh: <code>Cmd + Shift + R</code><br>4. Enter your admin key and login!</div>';
+        }
+    </script>
+</body>
+</html>

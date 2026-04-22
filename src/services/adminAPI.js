@@ -9,7 +9,9 @@
  * - Token refresh logic
  */
 
-const API_BASE_URL = import.meta.env.VITE_ADMIN_API_URL || 'http://localhost:3001';
+// Use environment variable if set, otherwise use relative path for Vite proxy
+// This avoids CORS issues in Microsoft Edge during development
+const API_BASE_URL = import.meta.env.VITE_ADMIN_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
 
 class AdminAPIClient {
   constructor() {
@@ -372,6 +374,50 @@ class AdminAPIClient {
     } catch (error) {
       console.error('Health check failed:', error);
       return { status: 'unreachable' };
+    }
+  }
+
+  /**
+   * Get detailed system health status
+   */
+  async getSystemHealth() {
+    return this.get('/api/admin/system-health');
+  }
+
+  /**
+   * Get DeFi statistics
+   */
+  async getDeFiStats() {
+    return this.get('/api/admin/defi/stats');
+  }
+
+  /**
+   * Register a new user (public endpoint - no auth required)
+   */
+  async registerUser(walletAddress, referralCode = null) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          walletAddress,
+          referralCode
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('User registration failed:', data.error);
+        return { success: false, error: data.error };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('User registration error:', error);
+      return { success: false, error: error.message };
     }
   }
 }

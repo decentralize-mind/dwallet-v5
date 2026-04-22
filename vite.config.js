@@ -6,6 +6,17 @@ export default defineConfig({
   // Use relative base path for IPFS deployment
   // This ensures assets load correctly from IPFS gateways
   base: './',
+  server: {
+    // Proxy API requests to backend to avoid CORS issues
+    // This is especially important for Microsoft Edge which has stricter CORS policies
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   define: {
     global: 'globalThis',
     'process.env': '{}',

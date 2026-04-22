@@ -20,7 +20,7 @@ import {
 } from '../utils/blockchain'
 import { fetchPrices, getPrice } from '../utils/prices'
 import { CHAINS } from '../data/chains'
-import { 
+import {
   enableBiometric, 
   authenticateWithBiometric, 
   disableBiometric,
@@ -28,6 +28,7 @@ import {
   isBiometricEnabled,
   getBiometricStatus
 } from '../utils/biometricAuth'
+import adminAPI from '../services/adminAPI'
 import { logSecurityEvent, AUDIT_EVENTS } from '../utils/auditLog'
 import { 
   checkLoginRateLimit,
@@ -491,6 +492,31 @@ export function WalletProvider({ children }) {
     logSecurityEvent(AUDIT_EVENTS.WALLET_CREATED, {
       address: walletData.accounts[0]?.address
     })
+    
+    // Register user in database
+    try {
+      const walletAddress = walletData.accounts[0]?.address
+      if (walletAddress) {
+        // Get referral code from URL or localStorage if available
+        const urlParams = new URLSearchParams(window.location.search)
+        const referralCode = urlParams.get('ref') || localStorage.getItem('referral_code')
+        
+        const registrationResult = await adminAPI.registerUser(walletAddress, referralCode)
+        
+        if (registrationResult.success) {
+          console.log('✅ User registered in database:', registrationResult.data)
+          // Clear referral code from localStorage after use
+          if (referralCode) {
+            localStorage.removeItem('referral_code')
+          }
+        } else {
+          console.warn('⚠️ User registration failed:', registrationResult.error)
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error registering user:', error)
+      // Don't throw - wallet creation should still succeed even if registration fails
+    }
   }
 
   const importWallet = async (input, pwd) => {
@@ -749,6 +775,28 @@ export function WalletProvider({ children }) {
       imported: walletData.imported || false,
       accountsCount: walletData.accounts.length
     })
+    
+    // Register user in database
+    try {
+      const walletAddress = walletData.accounts[0]?.address
+      if (walletAddress) {
+        const urlParams = new URLSearchParams(window.location.search)
+        const referralCode = urlParams.get('ref') || localStorage.getItem('referral_code')
+        
+        const registrationResult = await adminAPI.registerUser(walletAddress, referralCode)
+        
+        if (registrationResult.success) {
+          console.log('✅ User registered in database:', registrationResult.data)
+          if (referralCode) {
+            localStorage.removeItem('referral_code')
+          }
+        } else {
+          console.warn('⚠️ User registration failed:', registrationResult.error)
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error registering user:', error)
+    }
     
     notify(`✓ ${walletMeta.name} added`, 'success')
     return walletMeta

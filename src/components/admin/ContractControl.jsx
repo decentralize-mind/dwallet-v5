@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import { useWallet } from '../../hooks/useWallet'
 import adminAPI from '../../services/adminAPI'
@@ -10,44 +10,124 @@ export default function ContractControl() {
   const [actionLoading, setActionLoading] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
+  const [contracts, setContracts] = useState([])
+  const [recentActions, setRecentActions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const contracts = [
-    {
-      id: 'dwt-token',
-      name: 'DWT Token',
-      address: import.meta.env.VITE_DWT_TOKEN_ADDRESS || '0x...',
-      status: 'Active',
-      functions: ['pause', 'unpause', 'mint', 'burn']
-    },
-    {
-      id: 'dex-router',
-      name: 'DEX Router',
-      address: import.meta.env.VITE_DEX_ROUTER_ADDRESS || '0x...',
-      status: 'Active',
-      functions: ['pause', 'unpause', 'setFee']
-    },
-    {
-      id: 'staking',
-      name: 'Staking Contract',
-      address: import.meta.env.VITE_STAKING_ADDRESS || '0x...',
-      status: 'Active',
-      functions: ['pause', 'unpause', 'setRewardsRate']
-    },
-    {
-      id: 'nft-membership',
-      name: 'NFT Membership',
-      address: import.meta.env.VITE_NFT_MEMBERSHIP_ADDRESS || '0x...',
-      status: 'Active',
-      functions: ['pause', 'unpause', 'setMintPrice']
-    },
-    {
-      id: 'layer7-security',
-      name: 'Layer 7 Security',
-      address: import.meta.env.VITE_LAYER7_SECURITY_ADDRESS || '0x...',
-      status: 'Active',
-      functions: ['tripCircuitBreaker', 'resetCircuitBreaker', 'pause']
+  // Load contract data on mount
+  useEffect(() => {
+    loadContractData()
+    const interval = setInterval(loadContractData, 30000) // Refresh every 30s
+    return () => clearInterval(interval)
+  }, [])
+
+  const loadContractData = async () => {
+    try {
+      setLoading(true)
+      
+      // Check if authenticated first
+      if (!adminAPI.isAuthenticated()) {
+        setError('Please login to admin dashboard to view contract status')
+        setContracts([
+          {
+            id: 'dwt-token',
+            name: 'DWT Token',
+            address: import.meta.env.VITE_DWT_TOKEN_ADDRESS || '0x...',
+            status: 'Active',
+            functions: ['pause', 'unpause', 'mint', 'burn']
+          },
+          {
+            id: 'dex-router',
+            name: 'DEX Router',
+            address: import.meta.env.VITE_DEX_ROUTER_ADDRESS || '0x...',
+            status: 'Active',
+            functions: ['pause', 'unpause', 'setFee']
+          },
+          {
+            id: 'staking',
+            name: 'Staking Contract',
+            address: import.meta.env.VITE_STAKING_ADDRESS || '0x...',
+            status: 'Active',
+            functions: ['pause', 'unpause', 'setRewardsRate']
+          },
+          {
+            id: 'nft-membership',
+            name: 'NFT Membership',
+            address: import.meta.env.VITE_NFT_MEMBERSHIP_ADDRESS || '0x...',
+            status: 'Active',
+            functions: ['pause', 'unpause', 'setMintPrice']
+          },
+          {
+            id: 'layer7-security',
+            name: 'Layer 7 Security',
+            address: import.meta.env.VITE_LAYER7_SECURITY_ADDRESS || '0x...',
+            status: 'Active',
+            functions: ['tripCircuitBreaker', 'resetCircuitBreaker', 'pause']
+          }
+        ])
+        return
+      }
+      
+      const response = await adminAPI.get('/api/admin/contracts/status')
+      
+      if (response.success) {
+        setContracts(response.data.contracts)
+        setRecentActions(response.data.recentActions || [])
+      }
+      setError(null)
+    } catch (err) {
+      console.error('Failed to load contract data:', err)
+      
+      // Better error message
+      if (err.message.includes('Not authenticated') || err.message.includes('Session expired')) {
+        setError('Please login to view contract status')
+      } else {
+        setError(err.message || 'Failed to load contract status')
+      }
+      
+      // Fallback to default contracts
+      setContracts([
+        {
+          id: 'dwt-token',
+          name: 'DWT Token',
+          address: import.meta.env.VITE_DWT_TOKEN_ADDRESS || '0x...',
+          status: 'Active',
+          functions: ['pause', 'unpause', 'mint', 'burn']
+        },
+        {
+          id: 'dex-router',
+          name: 'DEX Router',
+          address: import.meta.env.VITE_DEX_ROUTER_ADDRESS || '0x...',
+          status: 'Active',
+          functions: ['pause', 'unpause', 'setFee']
+        },
+        {
+          id: 'staking',
+          name: 'Staking Contract',
+          address: import.meta.env.VITE_STAKING_ADDRESS || '0x...',
+          status: 'Active',
+          functions: ['pause', 'unpause', 'setRewardsRate']
+        },
+        {
+          id: 'nft-membership',
+          name: 'NFT Membership',
+          address: import.meta.env.VITE_NFT_MEMBERSHIP_ADDRESS || '0x...',
+          status: 'Active',
+          functions: ['pause', 'unpause', 'setMintPrice']
+        },
+        {
+          id: 'layer7-security',
+          name: 'Layer 7 Security',
+          address: import.meta.env.VITE_LAYER7_SECURITY_ADDRESS || '0x...',
+          status: 'Active',
+          functions: ['tripCircuitBreaker', 'resetCircuitBreaker', 'pause']
+        }
+      ])
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const handleContractAction = async (contractId, action) => {
     setPendingAction({ contractId, action })
@@ -98,8 +178,18 @@ export default function ContractControl() {
     <div className="admin-panel">
       <div className="admin-panel-header">
         <h2 className="admin-panel-title">Contract Control</h2>
-        <span className="admin-panel-badge warning">⚠️ Critical Operations</span>
+        <div className="admin-panel-badges">
+          {loading && <span className="admin-panel-badge">Loading...</span>}
+          <span className="admin-panel-badge warning">⚠️ Critical Operations</span>
+        </div>
       </div>
+
+      {error && (
+        <div className="admin-error-banner">
+          ⚠️ {error}
+          <button onClick={loadContractData} className="admin-btn-small">Retry</button>
+        </div>
+      )}
 
       {/* Warning Banner */}
       <div className="admin-warning-banner">
@@ -250,26 +340,26 @@ export default function ContractControl() {
       {/* Action Log */}
       <div className="admin-section">
         <h3 className="admin-section-title">Recent Actions</h3>
-        <div className="admin-log-container">
-          <div className="admin-log-entry">
-            <span className="admin-log-time">2024-01-20 14:32:15</span>
-            <span className="admin-log-action success">✓ Unpause</span>
-            <span className="admin-log-contract">DWT Token</span>
-            <span className="admin-log-user">0x742d...bEb</span>
+        {recentActions.length === 0 ? (
+          <div className="admin-empty-state">
+            <p className="admin-empty-icon">📋</p>
+            <p className="admin-empty-text">No recent actions</p>
+            <p className="admin-empty-subtext">Contract actions will appear here</p>
           </div>
-          <div className="admin-log-entry">
-            <span className="admin-log-time">2024-01-20 12:15:42</span>
-            <span className="admin-log-action warning">⏸ Pause</span>
-            <span className="admin-log-contract">DEX Router</span>
-            <span className="admin-log-user">0x742d...bEb</span>
+        ) : (
+          <div className="admin-log-container">
+            {recentActions.map((action, idx) => (
+              <div key={idx} className="admin-log-entry">
+                <span className="admin-log-time">{action.timestamp}</span>
+                <span className={`admin-log-action ${action.type === 'pause' ? 'warning' : action.type === 'unpause' ? 'success' : 'danger'}`}>
+                  {action.type === 'pause' ? '⏸ Pause' : action.type === 'unpause' ? '✓ Unpause' : '🚨 Circuit Breaker'}
+                </span>
+                <span className="admin-log-contract">{action.contractName}</span>
+                <span className="admin-log-user">{action.user}</span>
+              </div>
+            ))}
           </div>
-          <div className="admin-log-entry">
-            <span className="admin-log-time">2024-01-19 09:45:33</span>
-            <span className="admin-log-action danger">🚨 Circuit Breaker</span>
-            <span className="admin-log-contract">Layer 7 Security</span>
-            <span className="admin-log-user">0x742d...bEb</span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
