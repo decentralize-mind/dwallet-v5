@@ -1,221 +1,208 @@
-# 🚀 NFT Membership Complete Deployment & Launch Guide
+# Deployment Guide - Vercel + IPFS
 
-This guide walks you through the entire process from deployment to revenue generation.
+## Overview
+This guide covers deploying the updated Toklo wallet to:
+1. **Vercel** - For fast, reliable hosting (www.toklo.xyz)
+2. **IPFS** - For decentralized hosting
 
----
-
-## 📋 **Pre-Deployment Checklist**
-
-### ✅ **Required Before Deployment:**
-
-- [ ] Wallet with sufficient ETH for deployment (~0.01-0.05 ETH)
-- [ ] Target network selected (Base Sepolia for testing, Base Mainnet for production)
-- [ ] DWT Token already deployed (or use mock token for testing)
-- [ ] Security Controller deployed (or deploy new one)
-- [ ] `.env.local` file configured with RPC keys
-
-### 📝 **Network Selection:**
-
-| Network | Chain ID | Use Case | Cost |
-|---------|----------|----------|------|
-| **Base Sepolia** | 84532 | Testing | Free (testnet ETH) |
-| **Base Mainnet** | 8453 | Production | ~$10-50 in ETH |
+## Prerequisites
+- ✅ Code is updated with user registration feature
+- ✅ Admin server running on a public URL (not localhost)
+- ✅ Vercel account (free tier is fine)
+- ✅ IPFS Pinata account (free tier is fine)
 
 ---
 
-## 🎯 **Step 1: Deploy the Contract**
+## Part 1: Deploy to Vercel
 
-### **Option A: Quick Deploy (Recommended for Testing)**
-
-This deploys everything automatically (DWT Token + Security + NFTMembership):
-
+### Step 1: Install Vercel CLI
 ```bash
-# Deploy to Base Sepolia testnet
-npx hardhat run scripts/deploy-nft-membership.js --network baseSepolia
+npm install -g vercel
 ```
 
-**What happens:**
-1. ✅ Deploys Mock DWT Token
-2. ✅ Deploys Layer7 Security Controller
-3. ✅ Deploys NFTMembership Contract
-4. ✅ Configures default tier prices
-5. ✅ Saves deployment info to JSON file
-
-### **Option B: Deploy with Existing Contracts**
-
+### Step 2: Login to Vercel
 ```bash
-# Set environment variables
-export DWT_TOKEN_ADDRESS=0xYourDWTTokenAddress
-export SECURITY_CONTROLLER_ADDRESS=0xYourSecurityControllerAddress
-
-# Deploy only NFTMembership
-npx hardhat run scripts/deploy-nft-membership.js --network baseSepolia
+vercel login
 ```
 
-### **Option C: Deploy to Mainnet**
-
-⚠️ **WARNING: This costs real money!**
-
+### Step 3: Build the Project
 ```bash
-# Deploy to Base Mainnet
-npx hardhat run scripts/deploy-nft-membership.js --network base
+npm run build
+```
+
+### Step 4: Deploy to Vercel
+```bash
+vercel --prod
+```
+
+### Step 5: Configure Custom Domain
+```bash
+vercel domains add toklo.xyz
+vercel domains add www.toklo.xyz
+```
+
+Then point your DNS to Vercel:
+- Go to your domain registrar (GoDaddy, Namecheap, etc.)
+- Update nameservers to Vercel's nameservers
+- Or add CNAME record pointing to your Vercel deployment
+
+### Step 6: Set Environment Variables in Vercel
+```bash
+vercel env add VITE_ADMIN_API_URL
+# Enter your production admin server URL (not localhost!)
 ```
 
 ---
 
-## 🔍 **Step 2: Verify Deployment**
+## Part 2: Deploy to IPFS
 
+### Step 1: Install IPFS Pinata CLI
 ```bash
-# For Base Sepolia
-npx hardhat verify --network baseSepolia \
-  <NFT_MEMBERSHIP_ADDRESS> \
-  <DWT_TOKEN_ADDRESS> \
-  <SECURITY_CONTROLLER_ADDRESS>
+npm install -g @pinata/sdk
 ```
 
----
+### Step 2: Get Pinata API Keys
+1. Go to https://app.pinata.cloud
+2. Sign up/login
+3. Go to API Keys section
+4. Create a new API key
+5. Save the API Key and Secret
 
-## 💰 **Step 3: Fund with Initial Liquidity (Optional)**
+### Step 3: Create Deployment Script
 
-```javascript
-// Send ETH to contract
-await wallet.sendTransaction({
-  to: NFT_MEMBERSHIP_ADDRESS,
-  value: ethers.parseEther("1.0") // 1 ETH
-})
+I'll create a script for you to automate this.
 
-// Send DWT tokens to contract (for rewards)
-const dwtContract = new ethers.Contract(DWT_ADDRESS, ERC20_ABI, signer)
-await dwtContract.transfer(NFT_MEMBERSHIP_ADDRESS, ethers.parseEther("10000"))
-```
-
-**Recommended Initial Funding:**
-- **Testnet:** 0.1 ETH + 1,000 DWT (for testing)
-- **Mainnet:** 1-5 ETH + 10,000-50,000 DWT
-
----
-
-## 💵 **Step 4: Withdraw Revenue**
-
+### Step 4: Run IPFS Deployment
 ```bash
-# Withdraw all revenue (ETH + DWT)
-npx hardhat run scripts/withdraw-revenue.js --network baseSepolia
+npm run deploy:ipfs
 ```
-
-This script:
-- ✅ Verifies you're the contract owner
-- ✅ Checks ETH and DWT balances
-- ✅ Withdraws all funds to your wallet
-- ✅ Shows transaction confirmations
 
 ---
 
-## 📊 **Step 5: Monitor Minting**
+## Part 3: Update Admin Server for Production
 
+### Critical: The admin server must be accessible publicly
+
+Currently your `.env` has:
+```
+VITE_ADMIN_API_URL=http://localhost:3001
+```
+
+For production, you need to:
+1. Deploy the admin server to a cloud provider (Heroku, Railway, AWS, etc.)
+2. Update `.env` with the public URL:
+```
+VITE_ADMIN_API_URL=https://your-admin-server.com
+```
+
+### Deploy Admin Server Options:
+
+#### Option A: Railway (Easiest)
 ```bash
-# Start monitoring
-node monitoring/nft-membership-monitoring.js
-```
+# Install Railway CLI
+npm i -g @railway/cli
 
-**Key Commands:**
+# Login
+railway login
 
-```javascript
-// Check total mints
-await nftMembership.totalSupply()
-
-// Check tier supply
-const tier0 = await nftMembership.tierConfigs(0)
-console.log(`Bronze: ${tier0.currentSupply}/${tier0.maxSupply}`)
-
-// Check revenue
-const ethBalance = await provider.getBalance(NFT_ADDRESS)
-console.log(`ETH Revenue: ${ethers.formatEther(ethBalance)} ETH`)
-```
-
----
-
-## 🎛️ **Step 6: Adjust Pricing**
-
-```bash
-# Run pricing adjustment tool
-npx hardhat run scripts/adjust-pricing.js --network baseSepolia
-```
-
-See `scripts/adjust-pricing.js` for detailed pricing management.
-
----
-
-## 📢 **Step 7: Launch Announcements**
-
-### **Twitter/X Template:**
-```
-🚀 DWT Membership Passes are LIVE! 🎫
-
-🥉 Bronze: 0.05 ETH (1,000 spots)
-🥈 Silver: 0.15 ETH (500 spots)
-🥇 Gold: 0.50 ETH (200 spots)
-💎 Platinum: 1.50 ETH (50 spots)
-
-Only 1,750 passes ever. Mint now!
-
-🔗 [YOUR_APP_URL]
-```
-
-### **Discord Template:**
-```
-🎉 **DWT MEMBERSHIP PASSES ARE LIVE!** 🎉
-
-@everyone 
-
-🎫 **MINT NOW:** [YOUR_APP_URL]
-
-📊 **TIERS:**
-🥉 Bronze - 0.05 ETH
-🥈 Silver - 0.15 ETH
-🥇 Gold - 0.50 ETH
-💎 Platinum - 1.50 ETH
-
-First 100 minters get exclusive founder badge! ⚡
-```
-
----
-
-## 🎯 **Quick Command Reference**
-
-```bash
 # Deploy
-npx hardhat run scripts/deploy-nft-membership.js --network baseSepolia
+cd server
+railway init
+railway up
+```
 
-# Verify
-npx hardhat verify --network baseSepolia <ADDRESS> <DWT> <SECURITY>
+#### Option B: Heroku
+```bash
+# Install Heroku CLI
+# Login
+heroku login
 
-# Withdraw Revenue
-npx hardhat run scripts/withdraw-revenue.js --network baseSepolia
+# Deploy
+cd server
+heroku create toklo-admin-server
+git push heroku main
+```
 
-# Adjust Pricing
-npx hardhat run scripts/adjust-pricing.js --network baseSepolia
+#### Option C: Keep on your server with ngrok (for testing)
+```bash
+# Start your admin server
+node server/admin-server.js
 
-# Monitor
-node monitoring/nft-membership-monitoring.js
+# In another terminal, expose it
+ngrok http 3001
+```
+
+Then update `.env` with the ngrok URL.
+
+---
+
+## Part 4: Automated Deployment Scripts
+
+### Build and Deploy to Vercel
+```bash
+npm run deploy:vercel
+```
+
+### Build and Deploy to IPFS
+```bash
+npm run deploy:ipfs
+```
+
+### Full Deployment (Both)
+```bash
+npm run deploy:all
 ```
 
 ---
 
-## ⚠️ **Security Reminders**
+## Part 5: Post-Deployment Checklist
 
-1. ✅ Never commit `.env.local` to Git
-2. ✅ Transfer ownership to multisig after deployment
-3. ✅ Test on testnet first
-4. ✅ Keep private keys secure
-5. ✅ Monitor contract activity regularly
-6. ✅ Set up alerts for critical events
+- [ ] Frontend deployed to Vercel
+- [ ] Frontend pinned to IPFS
+- [ ] Admin server deployed to public URL
+- [ ] `.env` updated with production admin URL
+- [ ] Custom domain (www.toklo.xyz) configured
+- [ ] SSL certificate active (Vercel provides this automatically)
+- [ ] Test wallet creation on production
+- [ ] Verify users appear in admin dashboard
+- [ ] Test IPFS gateway access
 
 ---
 
-## 📞 **Support**
+## Troubleshooting
 
-- Documentation: `/formal-verification/NFTMembership-spec.md`
-- Monitoring: `/monitoring/nft-membership-monitoring.js`
-- Tests: `/test/NFTMembership.test.cjs`
+### Users not registering on production
+1. Check browser console for errors
+2. Verify `VITE_ADMIN_API_URL` is correct
+3. Check admin server logs
+4. Ensure CORS is configured for your domain
 
-**Happy Launching! 🚀**
+### IPFS not working
+1. Make sure files are pinned (not just uploaded)
+2. Use a gateway like `https://gateway.pinata.cloud/ipfs/YOUR_CID`
+3. Consider using Cloudflare IPFS gateway for better performance
+
+### Vercel build fails
+1. Check build logs in Vercel dashboard
+2. Ensure all dependencies are in package.json
+3. Try building locally first: `npm run build`
+
+---
+
+## Current Status
+
+✅ Localhost development working
+✅ User registration working locally
+❌ Production (www.toklo.xyz) needs deployment
+❌ Admin server needs public deployment
+
+---
+
+## Next Steps
+
+1. Deploy admin server to public URL
+2. Update `.env.production` with admin URL
+3. Build frontend
+4. Deploy to Vercel
+5. Upload to IPFS
+6. Test on production

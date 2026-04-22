@@ -15,6 +15,7 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
+      console.log('🔍 Loading users from API...')
       setLoading(true)
       const params = {
         limit: 50,
@@ -29,14 +30,21 @@ export default function UserManagement() {
         params.search = searchTerm
       }
       
+      console.log('📝 API params:', params)
       const response = await adminAPI.get('/api/admin/users', { params })
       
+      console.log('✅ API response:', response)
+      
       if (response.success) {
+        console.log(`📊 Found ${response.data.total} users`)
         setUsers(response.data.users || [])
         setTotalUsers(response.data.total || 0)
+      } else {
+        console.error('❌ API response not successful:', response)
       }
     } catch (err) {
-      console.error('Failed to load users:', err)
+      console.error('❌ Failed to load users:', err)
+      console.error('Error details:', err.message, err.stack)
     } finally {
       setLoading(false)
     }

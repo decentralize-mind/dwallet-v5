@@ -465,6 +465,7 @@ export function WalletProvider({ children }) {
   }
 
   const confirmWallet = async (walletData, pwd) => {
+    console.log('🔐 confirmWallet CALLED!', { address: walletData.accounts[0]?.address })
     if (!walletData || !pwd) throw new Error('Wallet data and password required')
     const encrypted = await encryptData(JSON.stringify(walletData), pwd)
     localStorage.setItem(STORAGE_KEY, encrypted)
@@ -496,10 +497,13 @@ export function WalletProvider({ children }) {
     // Register user in database
     try {
       const walletAddress = walletData.accounts[0]?.address
+      console.log('🔍 Attempting to register user:', walletAddress)
       if (walletAddress) {
         // Get referral code from URL or localStorage if available
         const urlParams = new URLSearchParams(window.location.search)
         const referralCode = urlParams.get('ref') || localStorage.getItem('referral_code')
+        
+        console.log('📝 Registration params:', { walletAddress, referralCode })
         
         const registrationResult = await adminAPI.registerUser(walletAddress, referralCode)
         
@@ -512,6 +516,8 @@ export function WalletProvider({ children }) {
         } else {
           console.warn('⚠️ User registration failed:', registrationResult.error)
         }
+      } else {
+        console.error('❌ No wallet address found in walletData')
       }
     } catch (error) {
       console.error('❌ Error registering user:', error)

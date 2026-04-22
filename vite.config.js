@@ -16,6 +16,14 @@ export default defineConfig({
         secure: false,
       },
     },
+    // Force reload on file changes
+    hmr: {
+      overlay: true,
+    },
+    // Prevent caching during development
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
   },
   define: {
     global: 'globalThis',
