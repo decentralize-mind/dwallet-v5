@@ -221,7 +221,7 @@ npm run node
 **Solution:**
 Check your private key in `.env`. For local testing, use:
 ```
-MONITOR_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+MONITOR_PRIVATE_KEY=0x[REMOVED_FOR_SECURITY]
 ```
 
 ### Issue: "Contract not deployed" error

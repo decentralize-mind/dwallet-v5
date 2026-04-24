@@ -11,7 +11,7 @@ module.exports = {
   networks: {
     baseSepolia: {
       url: 'https://sepolia.base.org',
-      accounts: [`0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`],
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY || `0x[REMOVED_USE_ENV_VARIABLE]`],
       chainId: 84532,
     }
   }

@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# Pre-commit hook to prevent committing secrets and sensitive data
+# Install: cp .git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+
+echo "🔍 Running security checks before commit..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Track if we found any issues
+ISSUES_FOUND=0
+
+# Check for .env files being committed (but not deletions)
+if git diff --cached --name-only --diff-filter=ACM | grep -qE '\.env(\.|$)'; then
+    echo -e "${RED}❌ ERROR: Attempting to commit .env file!${NC}"
+    echo "   .env files contain sensitive credentials and should never be committed."
+    echo "   Add it to .gitignore if you need to track it."
+    ISSUES_FOUND=1
+fi
+
+# Check for common secret patterns in staged files
+SECRET_PATTERNS=(
+    "PRIVATE_KEY\s*=\s*[a-f0-9]{64}"
+    "SECRET\s*=\s*['\"][a-zA-Z0-9]{32,}['\"]"
+    "PASSWORD\s*=\s*['\"][^'\"]{8,}['\"]"
+    "API_KEY\s*=\s*['\"][a-zA-Z0-9]{20,}['\"]"
+    "TOKEN\s*=\s*['\"][a-zA-Z0-9]{20,}['\"]"
+)
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+for file in $STAGED_FILES; do
+    # Skip binary files
+    if file "$file" | grep -q "binary"; then
+        continue
+    fi
+    
+    # Check each pattern
+    for pattern in "${SECRET_PATTERNS[@]}"; do
+        if git diff --cached -- "$file" | grep -iE "$pattern" > /dev/null 2>&1; then
+            echo -e "${YELLOW}⚠️  WARNING: Possible secret detected in $file${NC}"
+            echo "   Pattern: $pattern"
+            echo "   Please verify this is not a real credential."
+            ISSUES_FOUND=1
+        fi
+    done
+done
+
+# Check for AWS keys
+if git diff --cached | grep -qE 'AKIA[0-9A-Z]{16}'; then
+    echo -e "${RED}❌ ERROR: AWS Access Key detected!${NC}"
+    ISSUES_FOUND=1
+fi
+
+# Check for private keys
+if git diff --cached | grep -iE -- '-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----' > /dev/null 2>&1; then
+    echo -e "${RED}❌ ERROR: Private key detected!${NC}"
+    ISSUES_FOUND=1
+fi
+
+if [ $ISSUES_FOUND -eq 1 ]; then
+    echo -e "\n${RED}❌ Commit blocked due to security issues${NC}"
+    echo "   Please remove sensitive data before committing."
+    echo "   If this is a false positive, use: git commit --no-verify"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Security checks passed${NC}"
+exit 0

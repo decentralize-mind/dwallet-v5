@@ -17,6 +17,7 @@ coverage.json
 .env.preproduction
 .env.preproduction.local
 .env.production.template
+.env.preproduction
 
 # Deployment Logs and Metadata
 *.log
