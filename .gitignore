@@ -105,3 +105,8 @@ microservices/*/.env
 tmp/
 tmp_*/
 .cache/
+
+# Security and Test Scripts (may contain sensitive test data)
+verify-*.sh
+test-*.sh
+scripts/daily-security-scan.sh
