@@ -73,6 +73,8 @@ ultime-protection.md
 # Admin Dashboard Security Files
 server/admin-server.js
 server/admin-*.js
+server/enterprise-*.js
+server/secure-*.cjs
 data/
 db/
 *.sqlite
@@ -81,4 +83,19 @@ logs/
 audit-logs/
 *.key
 *.pem
+*.cert
 admin-private-keys/
+
+# CRITICAL: Security backup files (contain real secrets!)
+.security-backup/
+*.backup
+*.bak
+backups/
+
+# Microservices .env files
+microservices/*/.env
+
+# Temporary and cache
+tmp/
+tmp_*/
+.cache/
