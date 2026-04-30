@@ -11,21 +11,53 @@ import LandingPage from './components/LandingPage'
 import LockScreen from './components/LockScreen'
 import MainWallet from './components/MainWallet'
 import AdminDashboard from './components/AdminDashboard'
+import SupplyChainAdmin from './components/admin/SupplyChainAdmin'
+import SupplyChainAdminV2 from './components/admin/SupplyChainAdminV2'
+import SupplyChainPortal from './components/SupplyChainPortal'
+import SupplyChainLanding from './components/SupplyChainLanding'
+import SupplyChainAuthWrapper from './components/SupplyChainAuthWrapper'
 import { registerServiceWorker } from './utils/pushNotifications'
 import { initializeSessionTracking } from './utils/analytics'
 import { trackRetentionEvent } from './utils/retentionTracking'
+import { SecurityManager } from './utils/security'
 import './index.css'
 
 function AppContent() {
   const { wallet, sessionReady, isLocked } = useWallet()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [showSupplyChainAdmin, setShowSupplyChainAdmin] = useState(false)
+  const [showSupplyChainAdminV2, setShowSupplyChainAdminV2] = useState(false)
+  const [showSupplyChainPortal, setShowSupplyChainPortal] = useState(false)
 
-  // Check URL for admin route
+  // Initialize security utilities on app load
+  useEffect(() => {
+    // Initialize CSRF protection
+    SecurityManager.init().catch(err => {
+      console.error('Failed to initialize security:', err)
+    })
+    
+    // Set up global XSS protection for all outgoing data
+    window.sanitizeOutput = SecurityManager.sanitizeOutput
+    window.sanitizeHTML = SecurityManager.sanitizeHTML
+    
+    console.log('🛡️ Security utilities initialized')
+  }, [])
+
+  // Check URL for admin routes
   useEffect(() => {
     const path = window.location.pathname
     if (path === '/admin' || path.startsWith('/admin')) {
       setShowAdmin(true)
+    }
+    if (path === '/admin-supplychain' || path.startsWith('/admin-supplychain')) {
+      setShowSupplyChainAdmin(true)
+    }
+    if (path === '/admin-supplychain-v2' || path.startsWith('/admin-supplychain-v2')) {
+      setShowSupplyChainAdminV2(true)
+    }
+    if (path === '/supplychain' || path.startsWith('/supplychain')) {
+      setShowSupplyChainPortal(true)
     }
   }, [])
 
@@ -48,6 +80,27 @@ function AppContent() {
     const retention = trackRetentionEvent()
     console.log('📊 Retention tracking:', retention)
   }, [])
+
+  // Show supply chain portal/login based on route
+  if (showSupplyChainPortal) {
+    const path = window.location.pathname
+    // Show landing page for /supplychain or /supplychain/
+    if (path === '/supplychain' || path === '/supplychain/') {
+      return <SupplyChainLanding />
+    }
+    // Show login/portal for all other /supplychain/* routes
+    return <SupplyChainAuthWrapper />
+  }
+
+  // Show supply chain admin V2 (new elegant version)
+  if (showSupplyChainAdminV2) {
+    return <SupplyChainAdminV2 />
+  }
+
+  // Show supply chain admin dashboard if route is /admin-supplychain
+  if (showSupplyChainAdmin) {
+    return <SupplyChainAdmin />
+  }
 
   // Show admin dashboard if route is /admin
   if (showAdmin) {
