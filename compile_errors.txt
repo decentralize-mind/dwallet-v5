@@ -1,6 +1,0 @@
-YulException: Variable _12 is 1 too deep in the stack [ _4 _38 _12 value_4 value2 value3 _2 _3 _8 _7 _4 _45 _10 _40 value6 value5 _46 _44 value_7 ]
-memoryguard was present.
-
-
-Error HH600: Compilation failed
-For more info go to https://v2.hardhat.org/HH600 or run Hardhat with --show-stack-traces
