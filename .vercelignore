@@ -1,0 +1,4 @@
+# Ignore root-owned security scripts
+scripts/daily-security-scan.sh
+scripts/monthly-security-report.sh
+scripts/weekly-vulnerability-assessment.sh
